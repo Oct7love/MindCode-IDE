@@ -27,20 +27,20 @@ export abstract class BaseAIProvider implements AIProvider {
     return Math.ceil(chineseChars / 1.5 + otherChars / 4);
   }
 
-  // 前端模型 ID 到 API 模型名的映射
+  // 前端模型 ID 到 API 模型名的映射（直接使用 Antigravity 代理格式）
   private static modelMapping: Record<string, string> = {
-    // Claude 系列 (Anthropic 原生格式)
-    'claude-4-5-opus': 'claude-opus-4-5-20251101',
-    'claude-4-5-sonnet-thinking': 'claude-sonnet-4-5-20250514',
-    'claude-4-5-sonnet': 'claude-sonnet-4-5-20250514',
-    // Gemini 系列 (Antigravity 格式)
-    'gemini-2-5-flash-thinking': 'gemini-2.5-flash-thinking',
-    'gemini-2-5-flash-lite': 'gemini-2.5-flash-lite',
-    'gemini-2-5-flash': 'gemini-2.5-flash',
-    'gemini-3-pro-image': 'gemini-3-pro-image',
-    'gemini-3-pro-low': 'gemini-3-pro-low',
-    'gemini-3-pro-high': 'gemini-3-pro-high',
+    // Claude 系列 - Anthropic 协议: http://127.0.0.1:8045/v1/messages
+    'claude-opus-4-5-thinking': 'claude-opus-4-5-thinking',
+    'claude-sonnet-4-5-thinking': 'claude-sonnet-4-5-thinking',
+    'claude-sonnet-4-5': 'claude-sonnet-4-5',
+    // Gemini 系列 - Gemini 协议: http://127.0.0.1:8045/v1beta/models
     'gemini-3-flash': 'gemini-3-flash',
+    'gemini-3-pro-high': 'gemini-3-pro-high',
+    'gemini-3-pro-low': 'gemini-3-pro-low',
+    'gemini-3-pro-image': 'gemini-3-pro-image',
+    'gemini-2.5-flash': 'gemini-2.5-flash',
+    'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
+    'gemini-2.5-flash-thinking': 'gemini-2.5-flash-thinking',
   };
 
   protected getModel(): string {

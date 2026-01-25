@@ -11,6 +11,7 @@ interface CodeBlockProps {
   code: string;
   onCopy?: () => void;
   onApply?: () => void;
+  onInsert?: () => void; // 插入到光标位置
 }
 
 // 简单的语法高亮规则
@@ -155,50 +156,58 @@ const highlightCode = (code: string, language: string): React.ReactNode[] => {
   });
 };
 
-export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onCopy, onApply }) => {
+export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onCopy, onApply, onInsert }) => {
   const [copied, setCopied] = useState(false);
+  const [actionText, setActionText] = useState<string | null>(null);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
     setCopied(true);
+    setActionText('已复制!');
     onCopy?.();
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => { setCopied(false); setActionText(null); }, 2000);
   };
+
+  const handleInsert = () => {
+    onInsert?.();
+    setActionText('已插入');
+    setTimeout(() => setActionText(null), 2000);
+  };
+
+  const handleApply = () => {
+    onApply?.();
+    setActionText('已应用');
+    setTimeout(() => setActionText(null), 2000);
+  };
+
+  // 检测是否是 diff 格式
+  const isDiff = code.split('\n').some(line => line.startsWith('+ ') || line.startsWith('- ') || line.startsWith('@@ '));
 
   return (
     <div className="code-block">
       <div className="code-block-header">
-        <span className="code-block-lang">{language || 'text'}</span>
+        <span className="code-block-lang">{language || 'text'}{isDiff && ' (diff)'}</span>
+        {actionText && <span className="code-block-action-text">{actionText}</span>}
         <div className="code-block-actions">
-          <button
-            className="code-block-btn"
-            onClick={handleCopy}
-            title={copied ? '已复制!' : '复制代码'}
-          >
-            {copied ? (
-              <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
-                <path fillRule="evenodd" clipRule="evenodd" d="M14.431 3.323l-8.47 10-.79-.036-3.35-4.77.818-.574 2.978 4.24 8.051-9.506.763.646z"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
-                <path fillRule="evenodd" clipRule="evenodd" d="M4 4l1-1h5.414L14 6.586V14l-1 1H5l-1-1V4zm9 3l-3-3H5v10h8V7zM3 1L2 2v10l1 1V2h6.414l-1-1H3z"/>
-              </svg>
-            )}
+          <button className="code-block-btn" onClick={handleCopy} title={copied ? '已复制!' : '复制'}>
+            {copied ? <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path fillRule="evenodd" clipRule="evenodd" d="M14.431 3.323l-8.47 10-.79-.036-3.35-4.77.818-.574 2.978 4.24 8.051-9.506.763.646z"/></svg> : <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path fillRule="evenodd" clipRule="evenodd" d="M4 4l1-1h5.414L14 6.586V14l-1 1H5l-1-1V4zm9 3l-3-3H5v10h8V7zM3 1L2 2v10l1 1V2h6.414l-1-1H3z"/></svg>}
+            <span>Copy</span>
           </button>
+          {onInsert && (
+            <button className="code-block-btn" onClick={handleInsert} title="插入到光标">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 3H7v4H3v1h4v4h1V8h4V7H8V3z"/></svg>
+              <span>Insert</span>
+            </button>
+          )}
           {onApply && (
-            <button
-              className="code-block-btn code-block-apply"
-              onClick={onApply}
-              title="应用到编辑器"
-            >
-              <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
-                <path d="M14 7v1H8v6H7V8H1V7h6V1h1v6h6z"/>
-              </svg>
+            <button className="code-block-btn code-block-apply" onClick={handleApply} title={isDiff ? '应用差异' : '替换选区'}>
+              <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M14.431 3.323l-8.47 10-.79-.036-3.35-4.77.818-.574 2.978 4.24 8.051-9.506.763.646z"/></svg>
+              <span>{isDiff ? 'Apply Diff' : 'Apply'}</span>
             </button>
           )}
         </div>
       </div>
-      <div className="code-block-content">
+      <div className={`code-block-content ${isDiff ? 'diff-view' : ''}`}>
         <pre><code>{highlightCode(code, language)}</code></pre>
       </div>
     </div>
@@ -209,6 +218,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onCopy, on
 interface MarkdownProps {
   content: string;
   onApplyCode?: (code: string, language: string) => void;
+  onInsertCode?: (code: string, language: string) => void;
 }
 
 interface ParsedBlock {
@@ -309,7 +319,7 @@ const renderText = (text: string): React.ReactNode => {
   });
 };
 
-export const MarkdownRenderer: React.FC<MarkdownProps> = ({ content, onApplyCode }) => {
+export const MarkdownRenderer: React.FC<MarkdownProps> = ({ content, onApplyCode, onInsertCode }) => {
   const blocks = parseMarkdown(content);
 
   return (
@@ -322,13 +332,11 @@ export const MarkdownRenderer: React.FC<MarkdownProps> = ({ content, onApplyCode
               language={block.language || 'text'}
               code={block.content}
               onApply={onApplyCode ? () => onApplyCode(block.content, block.language || 'text') : undefined}
+              onInsert={onInsertCode ? () => onInsertCode(block.content, block.language || 'text') : undefined}
             />
           );
         }
-        if (block.type === 'inline-code') {
-          return <code key={index} className="inline-code">{block.content}</code>;
-        }
-        // 文本块
+        if (block.type === 'inline-code') return <code key={index} className="inline-code">{block.content}</code>;
         return <span key={index}>{renderText(block.content)}</span>;
       })}
     </div>

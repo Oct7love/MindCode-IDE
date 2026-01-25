@@ -28,7 +28,8 @@
     "keytar": "^7.9.0",
     "monaco-editor": "^0.52.0",
     "openai": "^4.70.0",
-    "tiktoken": "^1.0.17"
+    "tiktoken": "^1.0.17",
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -38,7 +39,7 @@
     "@vitejs/plugin-react": "^4.3.0",
     "concurrently": "^9.0.0",
     "cross-env": "^7.0.3",
-    "electron": "^33.0.0",
+    "electron": "^40.0.0",
     "electron-builder": "^25.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

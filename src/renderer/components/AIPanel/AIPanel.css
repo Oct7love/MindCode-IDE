@@ -1,0 +1,14 @@
+/* AI Panel 组件样式 - 基于设计系统 */
+/* 主要样式已在 design-system-v2.css 中定义，这里只添加特定覆盖 */
+
+.ai-panel-v2 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ai-panel-header-btn.active {
+  color: var(--accent-primary);
+  background: var(--semantic-info-bg);
+}

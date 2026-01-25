@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell, MenuItemConstructorOptions } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ClaudeProvider } from '../core/ai/providers/claude';
@@ -79,12 +79,256 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  createMenu();
   if (isDev) {
     setTimeout(createWindow, 2000);
   } else {
     createWindow();
   }
 });
+
+// 创建应用菜单
+function createMenu() {
+  const template: MenuItemConstructorOptions[] = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => createWindow()
+        },
+        {
+          label: 'New File',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => mainWindow?.webContents.send('menu:newFile')
+        },
+        { type: 'separator' },
+        {
+          label: 'Open File...',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow!, {
+              properties: ['openFile'],
+              filters: [
+                { name: 'All Files', extensions: ['*'] },
+                { name: 'TypeScript', extensions: ['ts', 'tsx'] },
+                { name: 'JavaScript', extensions: ['js', 'jsx'] },
+                { name: 'JSON', extensions: ['json'] },
+              ]
+            });
+            if (!result.canceled && result.filePaths.length > 0) {
+              mainWindow?.webContents.send('menu:openFile', result.filePaths[0]);
+            }
+          }
+        },
+        {
+          label: 'Open Folder...',
+          accelerator: 'CmdOrCtrl+K CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog(mainWindow!, {
+              properties: ['openDirectory']
+            });
+            if (!result.canceled && result.filePaths.length > 0) {
+              mainWindow?.webContents.send('menu:openFolder', result.filePaths[0]);
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => mainWindow?.webContents.send('menu:save')
+        },
+        {
+          label: 'Save As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => mainWindow?.webContents.send('menu:saveAs')
+        },
+        { type: 'separator' },
+        {
+          label: 'Close Editor',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => mainWindow?.webContents.send('menu:closeEditor')
+        },
+        {
+          label: 'Close Window',
+          accelerator: 'CmdOrCtrl+Shift+W',
+          click: () => mainWindow?.close()
+        },
+        { type: 'separator' },
+        {
+          label: 'Exit',
+          accelerator: 'Alt+F4',
+          click: () => app.quit()
+        }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: 'Redo', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { type: 'separator' },
+        {
+          label: 'Find',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => mainWindow?.webContents.send('menu:find')
+        },
+        {
+          label: 'Find in Files',
+          accelerator: 'CmdOrCtrl+Shift+F',
+          click: () => mainWindow?.webContents.send('menu:findInFiles')
+        },
+        {
+          label: 'Replace',
+          accelerator: 'CmdOrCtrl+H',
+          click: () => mainWindow?.webContents.send('menu:replace')
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Command Palette...',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => mainWindow?.webContents.send('menu:commandPalette')
+        },
+        { type: 'separator' },
+        {
+          label: 'Explorer',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => mainWindow?.webContents.send('menu:showExplorer')
+        },
+        {
+          label: 'Search',
+          accelerator: 'CmdOrCtrl+Shift+F',
+          click: () => mainWindow?.webContents.send('menu:showSearch')
+        },
+        {
+          label: 'Source Control',
+          accelerator: 'CmdOrCtrl+Shift+G',
+          click: () => mainWindow?.webContents.send('menu:showGit')
+        },
+        { type: 'separator' },
+        {
+          label: 'Terminal',
+          accelerator: 'CmdOrCtrl+`',
+          click: () => mainWindow?.webContents.send('menu:toggleTerminal')
+        },
+        {
+          label: 'AI Chat',
+          accelerator: 'CmdOrCtrl+L',
+          click: () => mainWindow?.webContents.send('menu:toggleAI')
+        },
+        { type: 'separator' },
+        {
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.reload();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Theme',
+          submenu: [
+            {
+              label: 'Dark Themes',
+              submenu: [
+                { label: 'Dark+ (default dark)', click: () => mainWindow?.webContents.send('theme:change', 'dark-plus') },
+                { label: 'Monokai', click: () => mainWindow?.webContents.send('theme:change', 'monokai') },
+                { label: 'GitHub Dark', click: () => mainWindow?.webContents.send('theme:change', 'github-dark') },
+                { label: 'Dracula', click: () => mainWindow?.webContents.send('theme:change', 'dracula') },
+                { label: 'One Dark Pro', click: () => mainWindow?.webContents.send('theme:change', 'one-dark-pro') }
+              ]
+            },
+            {
+              label: 'Light Themes',
+              submenu: [
+                { label: 'Light+ (default light)', click: () => mainWindow?.webContents.send('theme:change', 'light-plus') },
+                { label: 'GitHub Light', click: () => mainWindow?.webContents.send('theme:change', 'github-light') },
+                { label: 'Quiet Light', click: () => mainWindow?.webContents.send('theme:change', 'quiet-light') }
+              ]
+            },
+            {
+              label: 'High Contrast',
+              submenu: [
+                { label: 'Dark High Contrast', click: () => mainWindow?.webContents.send('theme:change', 'hc-black') },
+                { label: 'Light High Contrast', click: () => mainWindow?.webContents.send('theme:change', 'hc-light') }
+              ]
+            },
+            { type: 'separator' },
+            { label: 'Follow System', click: () => mainWindow?.webContents.send('theme:change', 'system') }
+          ]
+        },
+        { type: 'separator' },
+        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', role: 'zoomIn' },
+        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+        { type: 'separator' },
+        { label: 'Toggle Full Screen', accelerator: 'F11', role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Go',
+      submenu: [
+        {
+          label: 'Go to File...',
+          accelerator: 'CmdOrCtrl+P',
+          click: () => mainWindow?.webContents.send('menu:goToFile')
+        },
+        {
+          label: 'Go to Line...',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => mainWindow?.webContents.send('menu:goToLine')
+        }
+      ]
+    },
+    {
+      label: 'Terminal',
+      submenu: [
+        {
+          label: 'New Terminal',
+          accelerator: 'CmdOrCtrl+Shift+`',
+          click: () => mainWindow?.webContents.send('menu:newTerminal')
+        }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'F12',
+          click: () => mainWindow?.webContents.toggleDevTools()
+        },
+        { type: 'separator' },
+        {
+          label: 'About MindCode',
+          click: () => {
+            dialog.showMessageBox(mainWindow!, {
+              type: 'info',
+              title: 'About MindCode',
+              message: 'MindCode',
+              detail: 'AI-Native Code Editor\nVersion 0.1.0\n\nBuilt with Electron + React + TypeScript'
+            });
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -521,4 +765,205 @@ ipcMain.handle('terminal:cd', async (_event, currentDir: string, newDir: string)
 // 获取当前工作目录
 ipcMain.handle('terminal:pwd', async () => {
   return { success: true, data: process.cwd() };
+});
+
+// ==================== Git 操作 ====================
+
+// 执行 Git 命令的辅助函数
+async function execGit(args: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
+  const command = `git ${args.join(' ')}`;
+  const options = {
+    cwd,
+    timeout: 30000,
+    env: { ...process.env },
+    shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/bash'
+  };
+  return execAsync(command, options);
+}
+
+// 检查是否是 Git 仓库
+ipcMain.handle('git:isRepo', async (_event, workspacePath: string) => {
+  try {
+    await execGit(['rev-parse', '--git-dir'], workspacePath);
+    return { success: true, data: true };
+  } catch {
+    return { success: true, data: false };
+  }
+});
+
+// 获取 Git 状态（文件变更列表）
+ipcMain.handle('git:status', async (_event, workspacePath: string) => {
+  try {
+    const { stdout } = await execGit(['status', '--porcelain', '-u'], workspacePath);
+    const files = stdout.trim().split('\n').filter(Boolean).map(line => {
+      const status = line.substring(0, 2);
+      const filePath = line.substring(3);
+      // 解析状态码
+      let state: 'modified' | 'added' | 'deleted' | 'renamed' | 'untracked' | 'conflicted' = 'modified';
+      if (status.includes('?')) state = 'untracked';
+      else if (status.includes('A')) state = 'added';
+      else if (status.includes('D')) state = 'deleted';
+      else if (status.includes('R')) state = 'renamed';
+      else if (status.includes('U')) state = 'conflicted';
+      else if (status.includes('M')) state = 'modified';
+      
+      return { path: filePath, status: state, staged: status[0] !== ' ' && status[0] !== '?' };
+    });
+    return { success: true, data: files };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取当前分支
+ipcMain.handle('git:currentBranch', async (_event, workspacePath: string) => {
+  try {
+    const { stdout } = await execGit(['branch', '--show-current'], workspacePath);
+    return { success: true, data: stdout.trim() };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取所有分支
+ipcMain.handle('git:branches', async (_event, workspacePath: string) => {
+  try {
+    const { stdout } = await execGit(['branch', '-a'], workspacePath);
+    const branches = stdout.trim().split('\n').map(b => {
+      const isCurrent = b.startsWith('*');
+      const name = b.replace(/^\*?\s+/, '').trim();
+      return { name, current: isCurrent };
+    });
+    return { success: true, data: branches };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 暂存文件
+ipcMain.handle('git:stage', async (_event, workspacePath: string, filePaths: string[]) => {
+  try {
+    await execGit(['add', ...filePaths], workspacePath);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 取消暂存
+ipcMain.handle('git:unstage', async (_event, workspacePath: string, filePaths: string[]) => {
+  try {
+    await execGit(['reset', 'HEAD', ...filePaths], workspacePath);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 提交
+ipcMain.handle('git:commit', async (_event, workspacePath: string, message: string) => {
+  try {
+    await execGit(['commit', '-m', `"${message.replace(/"/g, '\\"')}"`], workspacePath);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取文件 Diff
+ipcMain.handle('git:diff', async (_event, workspacePath: string, filePath: string, staged: boolean) => {
+  try {
+    const args = staged ? ['diff', '--cached', filePath] : ['diff', filePath];
+    const { stdout } = await execGit(args, workspacePath);
+    return { success: true, data: stdout };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 切换分支
+ipcMain.handle('git:checkout', async (_event, workspacePath: string, branchName: string) => {
+  try {
+    await execGit(['checkout', branchName], workspacePath);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 创建分支
+ipcMain.handle('git:createBranch', async (_event, workspacePath: string, branchName: string) => {
+  try {
+    await execGit(['checkout', '-b', branchName], workspacePath);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取提交历史
+ipcMain.handle('git:log', async (_event, workspacePath: string, limit: number = 50) => {
+  try {
+    const { stdout } = await execGit([
+      'log',
+      `--max-count=${limit}`,
+      '--pretty=format:%H|%h|%an|%ae|%at|%s'
+    ], workspacePath);
+    const commits = stdout.trim().split('\n').filter(Boolean).map(line => {
+      const [hash, shortHash, author, email, timestamp, message] = line.split('|');
+      return { hash, shortHash, author, email, date: new Date(parseInt(timestamp) * 1000).toISOString(), message };
+    });
+    return { success: true, data: commits };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 放弃文件修改
+ipcMain.handle('git:discard', async (_event, workspacePath: string, filePath: string) => {
+  try {
+    await execGit(['checkout', '--', filePath], workspacePath);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// ==================== Settings ====================
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+function loadSettings(): Record<string, any> {
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+  }
+  return {};
+}
+
+function saveSettings(settings: Record<string, any>): void {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+  }
+}
+
+let settingsCache = loadSettings();
+
+ipcMain.handle('settings:get', (_event, key: string) => {
+  return settingsCache[key];
+});
+
+ipcMain.handle('settings:set', (_event, key: string, value: any) => {
+  settingsCache[key] = value;
+  saveSettings(settingsCache);
+});
+
+// ==================== Theme ====================
+ipcMain.on('theme:change', (_event, themeId: string) => {
+  mainWindow?.webContents.send('theme:change', themeId);
 });

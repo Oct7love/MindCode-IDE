@@ -1,5 +1,5 @@
 /**
- * MindCode Design System v2.0 - Main Stylesheet
+ * MindCode Design System v3.0 - Main Stylesheet
  * Cursor-Inspired Premium Dark Theme
  */
 
@@ -32,11 +32,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* 选中文本 - 紫色高亮 */
+/* 选中文本 - 蓝色高亮 (Cursor 风格) */
 ::selection {
-  background: rgba(139, 92, 246, 0.4);
+  background: rgba(59, 130, 246, 0.35);
   color: var(--color-text-primary);
 }
 
@@ -47,45 +48,19 @@ body {
 
 :focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 /* ============================================
- * 滚动条 - 极简精致
+ * 滚动条 - 使用主题变量
  * ============================================ */
 
-::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border: 4px solid transparent;
-  background-clip: padding-box;
-  border-radius: var(--radius-full);
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border: 4px solid transparent;
-  background-clip: padding-box;
-}
-
-::-webkit-scrollbar-thumb:active {
-  background: rgba(255, 255, 255, 0.2);
-  border: 4px solid transparent;
-  background-clip: padding-box;
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
+::-webkit-scrollbar { width: 14px; height: 14px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-scrollbar, rgba(255, 255, 255, 0.08)); border: 4px solid transparent; background-clip: padding-box; border-radius: var(--radius-full); transition: background var(--duration-fast) var(--ease-out); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.15)); border: 4px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:active { background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.2)); border: 4px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* 细滚动条 */
 .scrollbar-thin::-webkit-scrollbar {
@@ -128,13 +103,13 @@ body {
 }
 
 /* ============================================
- * 标题栏 - Title Bar
+ * 标题栏 - Title Bar (Cursor Style)
  * ============================================ */
 
 .titlebar {
   height: var(--size-titlebar);
   min-height: var(--size-titlebar);
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
@@ -144,22 +119,11 @@ body {
   position: relative;
 }
 
-.titlebar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--gradient-surface);
-  pointer-events: none;
-}
-
 .titlebar-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-tertiary);
-  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 /* ============================================
@@ -173,7 +137,7 @@ body {
 }
 
 /* ============================================
- * Activity Bar - 左侧图标栏
+ * Activity Bar - 左侧图标栏 (Cursor Style)
  * ============================================ */
 
 .activitybar {
@@ -186,39 +150,24 @@ body {
   position: relative;
 }
 
-/* 右侧微光边 */
-.activitybar::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: linear-gradient(180deg,
-    rgba(139, 92, 246, 0.2) 0%,
-    transparent 30%,
-    transparent 70%,
-    rgba(6, 182, 212, 0.2) 100%
-  );
-  pointer-events: none;
-}
-
 .activitybar-top {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-top: var(--space-1);
+  padding-top: var(--space-2);
+  gap: var(--space-0-5);
 }
 
 .activitybar-bottom {
   display: flex;
   flex-direction: column;
   padding-bottom: var(--space-2);
+  gap: var(--space-0-5);
 }
 
 .activity-action {
   width: var(--size-activitybar);
-  height: var(--size-activitybar);
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -226,8 +175,8 @@ body {
   position: relative;
   background: transparent;
   border: none;
-  color: var(--color-text-tertiary);
-  transition: color var(--duration-fast) var(--ease-out);
+  color: var(--color-text-muted);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .activity-action:hover {
@@ -238,7 +187,7 @@ body {
   color: var(--color-text-primary);
 }
 
-/* 激活指示器 - 渐变光条 */
+/* 激活指示器 - 简洁的蓝色线条 */
 .activity-action.active::before {
   content: '';
   position: absolute;
@@ -246,24 +195,19 @@ body {
   top: 50%;
   transform: translateY(-50%);
   width: 2px;
-  height: 24px;
-  background: var(--gradient-ai);
-  border-radius: 0 2px 2px 0;
-  box-shadow: var(--shadow-glow-ai);
+  height: 20px;
+  background: var(--color-accent-blue);
+  border-radius: 0 1px 1px 0;
 }
 
 .activity-action svg {
-  width: 22px;
-  height: 22px;
-  transition: transform var(--duration-fast) var(--ease-out);
-}
-
-.activity-action:hover svg {
-  transform: scale(1.05);
+  width: 20px;
+  height: 20px;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .activity-action:active svg {
-  transform: scale(0.95);
+  transform: scale(0.9);
 }
 
 /* Badge 徽章 */
@@ -277,12 +221,11 @@ body {
   font-size: 9px;
   font-weight: var(--font-weight-bold);
   color: white;
-  background: var(--gradient-ai);
+  background: var(--color-accent-blue);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-glow-ai);
 }
 
 /* ============================================
@@ -489,7 +432,7 @@ body {
 }
 
 /* ============================================
- * 编辑器 Tabs - Premium
+ * 编辑器 Tabs - Cursor Style
  * ============================================ */
 
 .tabs-wrapper {
@@ -513,8 +456,8 @@ body {
 
 .tab {
   height: var(--size-tab-height);
-  min-width: 100px;
-  max-width: 200px;
+  min-width: 90px;
+  max-width: 180px;
   padding: 0 var(--space-3);
   display: flex;
   align-items: center;
@@ -527,17 +470,6 @@ body {
   transition: all var(--duration-fast) var(--ease-out);
 }
 
-.tab::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: transparent;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
 .tab:hover {
   background: var(--color-bg-hover);
 }
@@ -546,19 +478,26 @@ body {
   background: var(--color-bg-base);
 }
 
-.tab.active::before {
-  background: var(--gradient-ai);
-  box-shadow: 0 0 10px var(--color-accent-ai-glow);
+/* 激活标签底部高亮线 */
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-bg-base);
+  z-index: 1;
 }
 
 .tab-icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .tab.active .tab-icon {
@@ -573,7 +512,7 @@ body {
 .tab-label {
   flex: 1;
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -588,15 +527,21 @@ body {
   color: var(--color-text-primary);
 }
 
-/* 修改标记 */
+/* 修改标记 - 圆点 */
 .tab.modified .tab-label::after {
-  content: ' •';
-  color: var(--color-text-tertiary);
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-muted);
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .tab-close {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -604,25 +549,24 @@ body {
   opacity: 0;
   background: transparent;
   border: none;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
   transition: all var(--duration-fast) var(--ease-out);
 }
 
 .tab:hover .tab-close {
-  opacity: 0.6;
+  opacity: 1;
 }
 
 .tab-close:hover {
-  opacity: 1 !important;
   background: var(--color-bg-active);
   color: var(--color-text-primary);
 }
 
 .tab-close svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 /* ============================================
@@ -643,7 +587,7 @@ body {
 }
 
 /* ============================================
- * 欢迎页 - Premium
+ * 欢迎页 - Cursor Premium Style
  * ============================================ */
 
 .welcome {
@@ -655,61 +599,93 @@ body {
   padding: var(--space-12);
   text-align: center;
   position: relative;
+  overflow: hidden;
 }
 
-/* 背景光晕 */
+/* 背景网格 */
 .welcome::before {
   content: '';
   position: absolute;
-  top: 30%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(
-    circle,
-    rgba(139, 92, 246, 0.08) 0%,
-    rgba(6, 182, 212, 0.04) 40%,
-    transparent 70%
-  );
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%);
   pointer-events: none;
 }
 
+/* 背景光晕 */
+.welcome::after {
+  content: '';
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(
+    circle,
+    rgba(139, 92, 246, 0.12) 0%,
+    rgba(59, 130, 246, 0.08) 25%,
+    rgba(6, 182, 212, 0.04) 50%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
 .welcome-logo {
-  font-size: 64px;
-  margin-bottom: var(--space-4);
+  font-size: 72px;
+  margin-bottom: var(--space-5);
   background: var(--gradient-ai);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 20px var(--color-accent-ai-glow));
-  animation: welcomePulse 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px var(--color-accent-ai-glow));
+  animation: logoFloat 3s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
 }
 
-@keyframes welcomePulse {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.02); }
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
 .welcome h1 {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  margin-bottom: var(--space-2);
-  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: var(--space-3);
+  letter-spacing: var(--letter-spacing-tighter);
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-subtitle {
   font-size: var(--font-size-lg);
   color: var(--color-text-tertiary);
-  margin-bottom: var(--space-10);
+  margin-bottom: var(--space-12);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-medium);
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-shortcuts {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  width: 280px;
+  gap: var(--space-2);
+  width: 320px;
+  position: relative;
+  z-index: 1;
 }
 
 .shortcut {
@@ -717,28 +693,32 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  transition: all var(--duration-fast) var(--ease-out);
+  border-radius: var(--radius-xl);
+  transition: all var(--duration-normal) var(--ease-out);
+  cursor: pointer;
+  backdrop-filter: blur(4px);
 }
 
 .shortcut:hover {
-  background: var(--color-bg-hover);
+  background: rgba(255, 255, 255, 0.03);
   border-color: var(--color-border-default);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .shortcut-keys {
   display: flex;
-  gap: var(--space-1);
+  gap: 4px;
 }
 
 .shortcut-keys kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
+  min-width: 26px;
+  height: 26px;
   padding: 0 var(--space-2);
   font-family: var(--font-family-ui);
   font-size: var(--font-size-xs);
@@ -746,46 +726,40 @@ body {
   color: var(--color-text-secondary);
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.shortcut:hover .shortcut-keys kbd {
+  border-color: var(--color-border-strong);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .shortcut-text {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+}
+
+.shortcut:hover .shortcut-text {
+  color: var(--color-text-secondary);
 }
 
 /* ============================================
- * 状态栏 - Status Bar (Premium)
+ * 状态栏 - Status Bar (Cursor Style)
  * ============================================ */
 
 .statusbar {
   height: var(--size-statusbar);
   min-height: var(--size-statusbar);
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-surface);
   border-top: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
-  padding: 0 var(--space-2);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  padding: 0 var(--space-3);
+  font-size: 11px;
+  color: var(--color-text-muted);
   position: relative;
-}
-
-/* 顶部渐变光 */
-.statusbar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg,
-    rgba(139, 92, 246, 0.3) 0%,
-    transparent 20%,
-    transparent 80%,
-    rgba(6, 182, 212, 0.3) 100%
-  );
-  pointer-events: none;
 }
 
 .statusbar-left {
@@ -804,14 +778,12 @@ body {
   padding: 0 var(--space-2);
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 4px;
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
-  border-radius: var(--radius-xs);
 }
 
 .status-item:hover {
-  background: var(--color-bg-hover);
   color: var(--color-text-secondary);
 }
 
@@ -821,39 +793,39 @@ body {
 }
 
 /* ============================================
- * 浮动 AI 按钮 - Chat FAB
+ * 浮动 AI 按钮 - Chat FAB (Cursor Style)
  * ============================================ */
 
 .chat-fab {
   position: fixed;
-  right: var(--space-6);
-  bottom: calc(var(--size-statusbar) + var(--space-6));
-  width: 48px;
-  height: 48px;
+  right: var(--space-5);
+  bottom: calc(var(--size-statusbar) + var(--space-5));
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient-ai);
+  background: var(--color-accent-blue);
   border: none;
   border-radius: var(--radius-xl);
   cursor: pointer;
-  box-shadow: var(--shadow-glow-ai-intense);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
   transition: all var(--duration-normal) var(--ease-out);
   z-index: var(--z-fixed);
 }
 
 .chat-fab:hover {
-  transform: scale(1.08);
-  box-shadow: var(--shadow-glow-ai-intense), var(--shadow-lg);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
 }
 
 .chat-fab:active {
-  transform: scale(0.95);
+  transform: translateY(0) scale(0.95);
 }
 
 .chat-fab svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   color: white;
 }
 

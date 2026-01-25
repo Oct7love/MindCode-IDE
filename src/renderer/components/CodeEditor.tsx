@@ -160,12 +160,54 @@ interface CodeEditorProps {
   lineNumbers?: 'on' | 'off' | 'relative';
   wordWrap?: 'on' | 'off' | 'wordWrapColumn' | 'bounded';
   fontSize?: number;
+  enableGhostText?: boolean; // 启用 Ghost Text 补全
+  completionModel?: string; // 补全使用的模型
   onAIEdit?: (prompt: string, code: string, callbacks: {
     onToken: (token: string) => void;
     onComplete: (result: string) => void;
     onError: (error: string) => void;
   }) => void;
 }
+
+// AI 代码补全提供者
+let inlineCompletionDisposable: monaco.IDisposable | null = null;
+let lastCompletionRequest: AbortController | null = null;
+const completionCache = new Map<string, string>();
+
+const createInlineCompletionProvider = (model: string): monaco.languages.InlineCompletionsProvider => ({
+  provideInlineCompletions: async (monacoModel, position, context, token) => {
+    const textUntilPosition = monacoModel.getValueInRange({ startLineNumber: Math.max(1, position.lineNumber - 20), startColumn: 1, endLineNumber: position.lineNumber, endColumn: position.column });
+    const textAfterPosition = monacoModel.getValueInRange({ startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: Math.min(monacoModel.getLineCount(), position.lineNumber + 5), endColumn: 1000 });
+    
+    if (!textUntilPosition.trim() || textUntilPosition.endsWith(' ') && !textUntilPosition.trim().endsWith('.')) return { items: [] }; // 空行或只有空格不触发
+    
+    const cacheKey = `${monacoModel.uri.toString()}:${position.lineNumber}:${position.column}:${textUntilPosition.slice(-50)}`;
+    if (completionCache.has(cacheKey)) return { items: [{ insertText: completionCache.get(cacheKey)!, range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column) }] };
+    
+    if (lastCompletionRequest) lastCompletionRequest.abort();
+    lastCompletionRequest = new AbortController();
+    
+    if (!window.mindcode?.ai?.chat) return { items: [] };
+    
+    try {
+      const prompt = `你是代码补全助手。只返回补全的代码，不要解释。补全以下代码：\n\n${textUntilPosition}`;
+      const response = await window.mindcode.ai.chat(model, [{ role: 'user', content: prompt }]);
+      if (token.isCancellationRequested || !response.success) return { items: [] };
+      
+      let completion = response.data || '';
+      completion = completion.replace(/^```\w*\n?/, '').replace(/\n?```$/, '').trim(); // 移除代码块标记
+      if (completion.startsWith(textUntilPosition.slice(-20))) completion = completion.slice(textUntilPosition.slice(-20).length); // 移除重复前缀
+      
+      if (completion && completion.length > 0 && completion.length < 500) {
+        completionCache.set(cacheKey, completion);
+        if (completionCache.size > 100) completionCache.delete(completionCache.keys().next().value); // LRU 清理
+        return { items: [{ insertText: completion, range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column) }] };
+      }
+    } catch (e) { /* 忽略错误 */ }
+    return { items: [] };
+  },
+  freeInlineCompletions: () => {},
+});
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
   file,
@@ -176,6 +218,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   lineNumbers = 'on',
   wordWrap = 'off',
   fontSize = 14,
+  enableGhostText = true,
+  completionModel = 'gemini-2.5-flash-lite', // 使用 Gemini 2.5 Flash Lite 做代码补全
   onAIEdit,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -187,6 +231,14 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const [inlineEditPosition, setInlineEditPosition] = useState({ top: 0, left: 0 });
   const [selectedCode, setSelectedCode] = useState('');
   const [selectionRange, setSelectionRange] = useState<monaco.Range | null>(null);
+
+  // 注册 Ghost Text 补全提供者
+  useEffect(() => {
+    if (!enableGhostText) return;
+    inlineCompletionDisposable?.dispose();
+    inlineCompletionDisposable = monaco.languages.registerInlineCompletionsProvider('*', createInlineCompletionProvider(completionModel));
+    return () => { inlineCompletionDisposable?.dispose(); inlineCompletionDisposable = null; };
+  }, [enableGhostText, completionModel]);
 
   // 初始化编辑器
   useEffect(() => {
@@ -229,10 +281,23 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         comments: false,
         strings: false,
       },
+      inlineSuggest: { // Ghost Text 配置
+        enabled: true,
+        mode: 'subwordSmart',
+      },
+      tabCompletion: 'on', // Tab 接受补全
     });
 
     editorRef.current = editor;
     setIsReady(true);
+
+    // 监听主题变化
+    const handleThemeChange = (event: CustomEvent<{ themeId: string; editorTheme: string }>) => {
+      if (editorRef.current) {
+        monaco.editor.setTheme(event.detail.editorTheme);
+      }
+    };
+    window.addEventListener('theme-changed', handleThemeChange as EventListener);
 
     // 内容变化监听
     const disposable = editor.onDidChangeModelContent(() => {
@@ -298,6 +363,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => {
       disposable.dispose();
       editor.dispose();
+      window.removeEventListener('theme-changed', handleThemeChange as EventListener);
     };
   }, []);
 
@@ -364,15 +430,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     if (onAIEdit) {
       onAIEdit(prompt, code, callbacks);
     } else if (window.mindcode?.ai?.chatStream) {
-      // 使用默认 AI 服务
-      window.mindcode.ai.chatStream('claude-4-5-sonnet', [
-        { role: 'user', content: prompt }
-      ], callbacks);
+      window.mindcode.ai.chatStream('claude-sonnet-4-5', [{ role: 'user', content: prompt }], callbacks); // 内联编辑使用 Claude 4.5 Sonnet
     } else {
-      // 开发模式 fallback
-      setTimeout(() => {
-        callbacks.onComplete(code + '\n// AI 编辑示例');
-      }, 500);
+      setTimeout(() => callbacks.onComplete(code + '\n// AI 编辑示例'), 500); // 开发模式 fallback
     }
   }, [onAIEdit]);
 

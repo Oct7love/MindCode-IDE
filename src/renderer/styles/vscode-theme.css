@@ -1,43 +1,44 @@
 /*
- * MindCode - 正宗 VSCode Dark+ 主题
+ * MindCode - Cursor-Inspired Premium Dark Theme
  * 专业级 IDE 界面设计
  */
 
 :root {
-  /* VSCode Dark+ 精确配色 */
+  /* 默认主题值 - 会被 JavaScript 动态覆盖 */
+  /* 这些值作为 fallback，实际值由主题系统控制 */
   --vscode-editor-background: #1e1e1e;
   --vscode-editor-foreground: #d4d4d4;
   --vscode-sideBar-background: #252526;
   --vscode-sideBar-foreground: #cccccc;
-  --vscode-sideBarSectionHeader-background: #383838;
-  --vscode-activityBar-background: #333333;
-  --vscode-activityBar-foreground: #ffffff;
-  --vscode-activityBar-inactiveForeground: rgba(255, 255, 255, 0.4);
+  --vscode-sideBarSectionHeader-background: #2d2d30;
+  --vscode-activityBar-background: #333337;
+  --vscode-activityBar-foreground: #cccccc;
+  --vscode-activityBar-inactiveForeground: #858585;
   --vscode-activityBarBadge-background: #007acc;
   --vscode-titleBar-activeBackground: #3c3c3c;
   --vscode-titleBar-activeForeground: #cccccc;
   --vscode-tab-activeBackground: #1e1e1e;
-  --vscode-tab-inactiveBackground: #2d2d2d;
-  --vscode-tab-border: #252526;
-  --vscode-tab-activeBorderTop: #007acc;
+  --vscode-tab-inactiveBackground: #2d2d30;
+  --vscode-tab-border: rgba(128, 128, 128, 0.2);
+  --vscode-tab-activeBorderTop: transparent;
   --vscode-statusBar-background: #007acc;
   --vscode-statusBar-foreground: #ffffff;
   --vscode-input-background: #3c3c3c;
   --vscode-input-foreground: #cccccc;
-  --vscode-input-border: #3c3c3c;
-  --vscode-focusBorder: #007fd4;
-  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-input-border: rgba(128, 128, 128, 0.35);
+  --vscode-focusBorder: #007acc;
+  --vscode-list-hoverBackground: rgba(128, 128, 128, 0.1);
   --vscode-list-activeSelectionBackground: #094771;
   --vscode-list-activeSelectionForeground: #ffffff;
   --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
   --vscode-scrollbarSlider-hoverBackground: rgba(100, 100, 100, 0.7);
   --vscode-panelTitle-activeBorder: #007acc;
-  --vscode-panel-border: #80808059;
+  --vscode-panel-border: rgba(128, 128, 128, 0.2);
   --vscode-icon-foreground: #c5c5c5;
 
-  /* 字体 */
-  --vscode-font-family: "Segoe WPC", "Segoe UI", sans-serif;
-  --vscode-editor-font-family: Consolas, "Courier New", monospace;
+  /* 字体 - 使用 Inter/Geist */
+  --vscode-font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --vscode-editor-font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
   --vscode-font-size: 13px;
   --vscode-font-weight: 400;
 }
@@ -61,26 +62,28 @@ body {
   font-weight: var(--vscode-font-weight);
   color: var(--vscode-editor-foreground);
   background: var(--vscode-editor-background);
-  line-height: 1.4;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 滚动条 - VSCode 风格 */
+/* 滚动条 - 极简风格 */
 ::-webkit-scrollbar {
-  width: 14px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--vscode-scrollbarSlider-background);
-  border: 3px solid transparent;
+  border: 4px solid transparent;
   background-clip: padding-box;
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--vscode-scrollbarSlider-hoverBackground);
-  border: 3px solid transparent;
+  border: 4px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-corner {
@@ -518,14 +521,14 @@ body {
   color: #858585;
 }
 
-/* ====================== AI Panel - Cursor 风格 ====================== */
+/* ====================== AI Panel - 使用主题变量 ====================== */
 
 .ai-panel {
   width: 420px;
   min-width: 320px;
   max-width: 800px;
-  background: #1a1a1a;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -549,7 +552,7 @@ body {
   background: linear-gradient(180deg, #7c3aed 0%, #2563eb 100%);
 }
 
-/* AI Header - Cursor 风格 */
+/* AI Header - 使用主题变量 */
 .ai-header {
   height: 48px;
   min-height: 48px;
@@ -557,8 +560,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(180deg, #1f1f1f 0%, #1a1a1a 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .ai-header-icon {
@@ -638,7 +641,7 @@ body {
   height: 18px;
 }
 
-/* Messages Area - Cursor 风格 */
+/* Messages Area - 使用主题变量 */
 .ai-messages {
   flex: 1;
   overflow-y: auto;
@@ -646,6 +649,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  background: var(--color-bg-base);
 }
 
 .ai-msg {
@@ -837,11 +841,11 @@ body {
   border-color: rgba(34, 197, 94, 0.4);
 }
 
-/* Input Area - Cursor 风格 */
+/* Input Area - 使用主题变量 */
 .ai-input-area {
   padding: 16px;
-  background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .ai-context-bar {
@@ -854,13 +858,13 @@ body {
 .ai-ctx-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 4px 10px;
   font-size: 12px;
-  font-family: var(--vscode-font-family);
+  font-family: var(--font-family-ui);
   font-weight: 500;
-  color: #737373;
-  background: rgba(255, 255, 255, 0.04);
+  color: #71717a;
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 6px;
   cursor: pointer;
@@ -868,22 +872,22 @@ body {
 }
 
 .ai-ctx-btn:hover {
-  color: #e5e5e5;
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .ai-ctx-btn.active {
-  color: #a78bfa;
-  background: rgba(124, 58, 237, 0.1);
-  border-color: rgba(124, 58, 237, 0.3);
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
-/* 输入框 - 渐变边框效果 */
+/* 输入框 - 使用主题变量 */
 .ai-input-box {
   position: relative;
   display: flex;
-  background: #0f0f0f;
+  background: var(--color-bg-input, var(--color-bg-base));
   border-radius: 12px;
   overflow: hidden;
 }

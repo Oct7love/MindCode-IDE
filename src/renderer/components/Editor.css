@@ -2,16 +2,20 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--color-bg-base);
   overflow: hidden;
 }
 
 .editor-tabs {
   display: flex;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
   height: 35px;
   overflow-x: auto;
+}
+
+.editor-tabs::-webkit-scrollbar {
+  height: 0;
 }
 
 .editor-tab {
@@ -19,17 +23,25 @@
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  background: transparent;
+  border-right: 1px solid var(--color-border-subtle);
   font-size: 13px;
+  color: var(--color-text-muted);
   cursor: pointer;
-  min-width: 100px;
-  max-width: 200px;
+  min-width: 90px;
+  max-width: 180px;
+  transition: all 0.15s ease;
+}
+
+.editor-tab:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
 }
 
 .editor-tab.active {
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--bg-primary);
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-bg-base);
   margin-bottom: -1px;
 }
 
@@ -41,24 +53,24 @@
   opacity: 0;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
   cursor: pointer;
   padding: 2px 4px;
-  border-radius: 2px;
-  transition: opacity 0.2s;
+  border-radius: 4px;
+  transition: all 0.15s ease;
 }
 
 .tab-close:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
 }
 
 .editor-content {
   flex: 1;
   display: flex;
   overflow: auto;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: var(--font-family-code);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -67,11 +79,11 @@
   display: flex;
   flex-direction: column;
   padding: 8px 12px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
+  background: var(--color-bg-base);
+  color: var(--color-text-muted);
   text-align: right;
   user-select: none;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--color-border-subtle);
   min-width: 50px;
 }
 
@@ -87,7 +99,7 @@
 
 .code-content {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--color-text-primary);
   white-space: pre;
 }
 
@@ -95,8 +107,9 @@
   display: flex;
   justify-content: flex-end;
   gap: 16px;
-  padding: 4px 12px;
-  background: var(--accent);
-  color: white;
-  font-size: 12px;
+  padding: 4px 16px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  border-top: 1px solid var(--color-border-subtle);
 }

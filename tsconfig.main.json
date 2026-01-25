@@ -6,6 +6,7 @@
     "outDir": "dist/main",
     "rootDir": "src",
     "baseUrl": ".",
+    "noImplicitAny": false,
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@core/*": ["src/core/*"]

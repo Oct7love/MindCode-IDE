@@ -123,7 +123,7 @@ hello();
     const editor = monaco.editor.create(containerRef.current, {
       value: activeTab?.content || '',
       language: activeTab?.language || 'typescript',
-      theme: 'mindcode-dark',
+      theme: 'vs-dark', // 初始主题，会在主题加载后更新
       fontSize: 14,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
       fontLigatures: true,
@@ -180,8 +180,27 @@ hello();
       onSave?.(activeTabId, value);
     });
 
+    // 监听主题变化
+    const handleThemeChange = (event: CustomEvent<{ themeId: string; editorTheme: string }>) => {
+      if (editorRef.current) {
+        monaco.editor.setTheme(event.detail.editorTheme);
+      }
+    };
+    window.addEventListener('theme-changed', handleThemeChange as EventListener);
+
+    // 加载当前主题
+    import('../utils/themes').then(({ loadTheme, getTheme }) => {
+      loadTheme().then(themeId => {
+        const theme = getTheme(themeId);
+        if (theme) {
+          monaco.editor.setTheme(theme.editorThemeRef);
+        }
+      });
+    });
+
     return () => {
       editor.dispose();
+      window.removeEventListener('theme-changed', handleThemeChange as EventListener);
     };
   }, []);
 

@@ -83,36 +83,48 @@
   text-transform: lowercase;
 }
 
+.code-block-action-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+  margin-left: auto;
+  margin-right: var(--space-2);
+}
+
 .code-block-actions {
   display: flex;
   gap: var(--space-1);
 }
 
 .code-block-btn {
-  width: 28px;
-  height: 28px;
+  height: 24px;
+  padding: 0 var(--space-2);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-1);
   background: transparent;
-  border: none;
+  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-sm);
   color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
   cursor: pointer;
   transition: all var(--duration-micro) var(--ease-out);
 }
 
 .code-block-btn:hover {
   background: var(--color-bg-hover);
+  border-color: var(--color-border-default);
   color: var(--color-text-primary);
 }
 
 .code-block-btn.code-block-apply {
   color: var(--color-success);
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
 .code-block-btn.code-block-apply:hover {
   background: var(--color-success-bg);
+  border-color: var(--color-success);
 }
 
 .code-block-content {
@@ -229,24 +241,38 @@
   padding-left: var(--space-3);
 }
 
-/* Diff 高亮 */
-.code-line.diff-add {
-  background: var(--color-diff-add-bg);
+/* Diff 视图 */
+.code-block-content.diff-view .code-line {
+  position: relative;
 }
 
-.code-line.diff-add .line-number {
-  background: var(--color-diff-add-bg);
-  color: var(--color-success);
+.code-block-content.diff-view .line-content {
+  padding-left: var(--space-4);
 }
+
+/* 以 + 开头的行 */
+.code-block-content.diff-view .code-line:has(.line-content:first-child) {
+  background: transparent;
+}
+
+.diff-view .code-line .line-content::before {
+  position: absolute;
+  left: var(--space-1);
+  color: var(--color-text-tertiary);
+}
+
+/* Diff 高亮 - 兼容层 */
+.code-line.diff-add, .diff-view .code-line:has([class*="syntax"]:first-child) {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.code-line.diff-add .line-number { background: rgba(34, 197, 94, 0.15); color: var(--color-success); }
 
 .code-line.diff-remove {
-  background: var(--color-diff-remove-bg);
+  background: rgba(239, 68, 68, 0.1);
 }
 
-.code-line.diff-remove .line-number {
-  background: var(--color-diff-remove-bg);
-  color: var(--color-error);
-}
+.code-line.diff-remove .line-number { background: rgba(239, 68, 68, 0.15); color: var(--color-error); }
 
 /* ============================================
  * Loading State

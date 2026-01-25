@@ -92,6 +92,52 @@ contextBridge.exposeInMainWorld('mindcode', {
     cd: (currentDir: string, newDir: string) =>
       ipcRenderer.invoke('terminal:cd', currentDir, newDir),
     pwd: () => ipcRenderer.invoke('terminal:pwd'),
+  },
+
+  // Git 操作
+  git: {
+    isRepo: (workspacePath: string) => ipcRenderer.invoke('git:isRepo', workspacePath),
+    status: (workspacePath: string) => ipcRenderer.invoke('git:status', workspacePath),
+    currentBranch: (workspacePath: string) => ipcRenderer.invoke('git:currentBranch', workspacePath),
+    branches: (workspacePath: string) => ipcRenderer.invoke('git:branches', workspacePath),
+    stage: (workspacePath: string, filePaths: string[]) => ipcRenderer.invoke('git:stage', workspacePath, filePaths),
+    unstage: (workspacePath: string, filePaths: string[]) => ipcRenderer.invoke('git:unstage', workspacePath, filePaths),
+    commit: (workspacePath: string, message: string) => ipcRenderer.invoke('git:commit', workspacePath, message),
+    diff: (workspacePath: string, filePath: string, staged?: boolean) => ipcRenderer.invoke('git:diff', workspacePath, filePath, staged || false),
+    checkout: (workspacePath: string, branchName: string) => ipcRenderer.invoke('git:checkout', workspacePath, branchName),
+    createBranch: (workspacePath: string, branchName: string) => ipcRenderer.invoke('git:createBranch', workspacePath, branchName),
+    log: (workspacePath: string, limit?: number) => ipcRenderer.invoke('git:log', workspacePath, limit || 50),
+    discard: (workspacePath: string, filePath: string) => ipcRenderer.invoke('git:discard', workspacePath, filePath),
+  },
+
+  // 菜单事件监听
+  onMenuEvent: (callback: (event: string, data?: any) => void) => {
+    const events = [
+      'menu:newFile', 'menu:openFile', 'menu:openFolder', 'menu:save', 'menu:saveAs',
+      'menu:closeEditor', 'menu:find', 'menu:findInFiles', 'menu:replace',
+      'menu:commandPalette', 'menu:showExplorer', 'menu:showSearch', 'menu:showGit',
+      'menu:toggleTerminal', 'menu:toggleAI', 'menu:goToFile', 'menu:goToLine', 'menu:newTerminal'
+    ];
+    const handlers: { [key: string]: (...args: any[]) => void } = {};
+    events.forEach(event => {
+      handlers[event] = (_: any, data: any) => callback(event, data);
+      ipcRenderer.on(event, handlers[event]);
+    });
+    // 返回清理函数
+    return () => {
+      events.forEach(event => {
+        ipcRenderer.removeListener(event, handlers[event]);
+      });
+    };
+  },
+
+  // 主题切换监听
+  onThemeChange: (callback: (themeId: string) => void) => {
+    const handler = (_: any, themeId: string) => callback(themeId);
+    ipcRenderer.on('theme:change', handler);
+    return () => {
+      ipcRenderer.removeListener('theme:change', handler);
+    };
   }
 });
 
@@ -157,6 +203,34 @@ declare global {
         }>;
         pwd: () => Promise<{ success: boolean; data?: string; error?: string }>;
       };
+      git: {
+        isRepo: (workspacePath: string) => Promise<{ success: boolean; data?: boolean; error?: string }>;
+        status: (workspacePath: string) => Promise<{
+          success: boolean;
+          data?: Array<{ path: string; status: string; staged: boolean }>;
+          error?: string;
+        }>;
+        currentBranch: (workspacePath: string) => Promise<{ success: boolean; data?: string; error?: string }>;
+        branches: (workspacePath: string) => Promise<{
+          success: boolean;
+          data?: Array<{ name: string; current: boolean }>;
+          error?: string;
+        }>;
+        stage: (workspacePath: string, filePaths: string[]) => Promise<{ success: boolean; error?: string }>;
+        unstage: (workspacePath: string, filePaths: string[]) => Promise<{ success: boolean; error?: string }>;
+        commit: (workspacePath: string, message: string) => Promise<{ success: boolean; error?: string }>;
+        diff: (workspacePath: string, filePath: string, staged?: boolean) => Promise<{ success: boolean; data?: string; error?: string }>;
+        checkout: (workspacePath: string, branchName: string) => Promise<{ success: boolean; error?: string }>;
+        createBranch: (workspacePath: string, branchName: string) => Promise<{ success: boolean; error?: string }>;
+        log: (workspacePath: string, limit?: number) => Promise<{
+          success: boolean;
+          data?: Array<{ hash: string; shortHash: string; author: string; email: string; date: string; message: string }>;
+          error?: string;
+        }>;
+        discard: (workspacePath: string, filePath: string) => Promise<{ success: boolean; error?: string }>;
+      };
+      onMenuEvent: (callback: (event: string, data?: any) => void) => () => void;
+      onThemeChange: (callback: (themeId: string) => void) => () => void;
     };
   }
 }

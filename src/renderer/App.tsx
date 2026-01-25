@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import './styles/main.css';
-import './styles/ai-panel.css';
-import './styles/components.css';
-import './styles/markdown.css';
-import './styles/editor.css';
+import './styles/main.css'; // 主布局样式
+import './styles/ai-panel.css'; // AI 面板样式
+import './styles/components.css'; // 组件样式
+import './styles/markdown.css'; // Markdown 样式
+import './styles/editor.css'; // 编辑器样式
 import { MarkdownRenderer } from './components/MarkdownRenderer';
 import CodeEditor from './components/CodeEditor';
 import { CommandPalette } from './components/CommandPalette';
 import { ContextPicker, ContextItem } from './components/ContextPicker';
 import { FileContextMenu, InputDialog, ConfirmDialog } from './components/FileContextMenu';
 import { Terminal } from './components/Terminal';
+import { GitPanel } from './components/GitPanel';
+import { AIPanel } from './components/AIPanel';
+import { applyTheme, loadTheme, saveTheme } from './utils/themes';
 
 // ==================== VSCode 风格 Codicon 图标 ====================
 const Icons = {
@@ -517,7 +520,7 @@ const App: React.FC = () => {
   const [tab, setTab] = useState<'files'|'search'|'git'|'ext'>('files');
   const [showAI, setShowAI] = useState(true);
   const [selected, setSelected] = useState('');
-  const [model, setModel] = useState('claude-4-5-opus');
+  const [model, setModel] = useState('claude-opus-4-5-thinking'); // 默认使用 Claude 4.5 Opus Thinking
   const [aiPanelWidth, setAiPanelWidth] = useState(380);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -1300,6 +1303,140 @@ const App: React.FC = () => {
     },
   ], [handleOpenFolder, activeFile, activeFileId, closeFile, saveFile, createNewConversation]);
 
+  // 使用 ref 存储最新的回调函数，避免 useEffect 依赖变化导致重复注册监听器
+  const openFileRef = useRef(openFile);
+  const loadDirectoryRef = useRef(loadDirectory);
+  const saveFileRef = useRef(saveFile);
+  const closeFileRef = useRef(closeFile);
+  const activeFileRef = useRef(activeFile);
+  const activeFileIdRef = useRef(activeFileId);
+  const editorRefCurrent = useRef(editorRef);
+
+  useEffect(() => {
+    openFileRef.current = openFile;
+    loadDirectoryRef.current = loadDirectory;
+    saveFileRef.current = saveFile;
+    closeFileRef.current = closeFile;
+    activeFileRef.current = activeFile;
+    activeFileIdRef.current = activeFileId;
+    editorRefCurrent.current = editorRef;
+  });
+
+  // 监听菜单事件
+  useEffect(() => {
+    if (!window.mindcode?.onMenuEvent) return;
+    
+    const cleanup = window.mindcode.onMenuEvent(async (event, data) => {
+      switch (event) {
+        case 'menu:newFile':
+          // 创建新的未保存文件
+          const newFile: EditorFile = {
+            id: Date.now().toString(),
+            path: `Untitled-${Date.now()}`,
+            name: 'Untitled',
+            content: '',
+            isDirty: true,
+          };
+          setOpenFiles(prev => [...prev, newFile]);
+          setActiveFileId(newFile.id);
+          break;
+        case 'menu:openFile':
+          if (data) {
+            const fileName = data.split(/[/\\]/).pop() || 'file';
+            openFileRef.current(data, fileName);
+          }
+          break;
+        case 'menu:openFolder':
+          if (data) {
+            setWorkspaceRoot(data);
+            setWorkspaceName(data.split(/[/\\]/).pop() || 'Workspace');
+            const tree = await loadDirectoryRef.current(data, true);
+            setFileTree(tree);
+            setOpenFiles([]);
+            setActiveFileId(null);
+            setSelected('');
+          }
+          break;
+        case 'menu:save':
+          if (activeFileRef.current && editorRefCurrent.current?.current) {
+            const content = editorRefCurrent.current.current.getValue();
+            saveFileRef.current(content);
+          }
+          break;
+        case 'menu:closeEditor':
+          if (activeFileIdRef.current) closeFileRef.current(activeFileIdRef.current);
+          break;
+        case 'menu:commandPalette':
+          setCommandPaletteMode('commands');
+          setShowCommandPalette(true);
+          break;
+        case 'menu:goToFile':
+          setCommandPaletteMode('files');
+          setShowCommandPalette(true);
+          break;
+        case 'menu:showExplorer':
+          setTab('files');
+          break;
+        case 'menu:showSearch':
+          setTab('search');
+          break;
+        case 'menu:showGit':
+          setTab('git');
+          break;
+        case 'menu:toggleTerminal':
+          setShowTerminal(prev => !prev);
+          break;
+        case 'menu:toggleAI':
+          setShowAI(prev => !prev);
+          break;
+        case 'menu:findInFiles':
+          setCommandPaletteMode('search');
+          setShowCommandPalette(true);
+          break;
+      }
+    });
+
+    return cleanup;
+  }, []); // 依赖数组为空，只在组件挂载时注册一次
+
+  // 主题初始化
+  useEffect(() => {
+    // 等待 DOM 和样式加载完成
+    const initTheme = async () => {
+      // 确保 DOM 已加载
+      if (document.readyState === 'loading') {
+        await new Promise(resolve => {
+          document.addEventListener('DOMContentLoaded', resolve);
+        });
+      }
+      // 额外延迟确保样式已加载
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const themeId = await loadTheme();
+      console.log('Initializing theme:', themeId);
+      applyTheme(themeId);
+    };
+    
+    initTheme();
+
+    // 监听 IPC 主题切换（菜单触发）
+    const ipcHandler = (themeId: string) => {
+      if (themeId === 'system') {
+        // TODO: 实现跟随系统主题
+        return;
+      }
+      applyTheme(themeId);
+      saveTheme(themeId);
+    };
+
+    let cleanupIpc: (() => void) | undefined;
+    if (window.mindcode?.onThemeChange) {
+      cleanupIpc = window.mindcode.onThemeChange(ipcHandler);
+    }
+
+    return () => { if (cleanupIpc) cleanupIpc(); };
+  }, []);
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => {
     if (inputRef.current) {
@@ -1431,38 +1568,64 @@ const App: React.FC = () => {
           onDrop={handleDrop}
           style={{ position: 'relative' }}
         >
-          <div className="sidebar-title">Explorer</div>
+          <div className="sidebar-title">
+            {tab === 'files' && 'Explorer'}
+            {tab === 'search' && 'Search'}
+            {tab === 'git' && 'Source Control'}
+            {tab === 'ext' && 'Extensions'}
+          </div>
           <div className="sidebar-body">
-            <div
-              className="tree-header"
-              style={{ cursor: 'pointer' }}
-              onClick={handleOpenFolder}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                if (workspaceRoot) {
-                  handleContextMenu(e, workspaceRoot, workspaceName, true);
-                }
-              }}
-              title="点击打开文件夹"
-            >
-              <span className="tree-header-icon"><Icons.ChevronDown /></span>
-              <span className="tree-header-label">{workspaceName}</span>
-              <button className="tree-header-action" onClick={(e) => { e.stopPropagation(); handleOpenFolder(); }} title="打开文件夹">
-                <Icons.Folder />
-              </button>
-            </div>
-            {fileTree.map((n, i) => (
-              <TreeRow
-                key={(n.path || n.name) + i}
-                node={n}
-                depth={0}
-                selected={selected}
-                contextMenuPath={contextMenu.isOpen ? contextMenu.targetPath : null}
-                onSelect={openFile}
-                onContextMenu={handleContextMenu}
-                onLoadChildren={loadDirectory}
-              />
-            ))}
+            {/* 文件浏览器 */}
+            {tab === 'files' && (
+              <>
+                <div
+                  className="tree-header"
+                  style={{ cursor: 'pointer' }}
+                  onClick={handleOpenFolder}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    if (workspaceRoot) {
+                      handleContextMenu(e, workspaceRoot, workspaceName, true);
+                    }
+                  }}
+                  title="点击打开文件夹"
+                >
+                  <span className="tree-header-icon"><Icons.ChevronDown /></span>
+                  <span className="tree-header-label">{workspaceName}</span>
+                  <button className="tree-header-action" onClick={(e) => { e.stopPropagation(); handleOpenFolder(); }} title="打开文件夹">
+                    <Icons.Folder />
+                  </button>
+                </div>
+                {fileTree.map((n, i) => (
+                  <TreeRow
+                    key={(n.path || n.name) + i}
+                    node={n}
+                    depth={0}
+                    selected={selected}
+                    contextMenuPath={contextMenu.isOpen ? contextMenu.targetPath : null}
+                    onSelect={openFile}
+                    onContextMenu={handleContextMenu}
+                    onLoadChildren={loadDirectory}
+                  />
+                ))}
+              </>
+            )}
+            {/* Git 面板 */}
+            {tab === 'git' && (
+              <GitPanel workspacePath={workspaceRoot} />
+            )}
+            {/* 搜索面板 */}
+            {tab === 'search' && (
+              <div className="git-empty">
+                <p>使用 Ctrl+Shift+F 进行全局搜索</p>
+              </div>
+            )}
+            {/* 扩展面板 */}
+            {tab === 'ext' && (
+              <div className="git-empty">
+                <p>扩展功能开发中...</p>
+              </div>
+            )}
           </div>
           {/* 拖拽上传指示器 */}
           {isDragging && (
@@ -1586,226 +1749,30 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* AI Panel */}
+        {/* AI Panel - 新设计系统 */}
         {showAI && (
-          <div className="ai-panel" style={{ width: aiPanelWidth }}>
+          <div style={{ position: 'relative' }}>
             {/* 拖动条 */}
             <div
               className="ai-panel-resizer"
               onMouseDown={handleMouseDown}
+              style={{
+                position: 'absolute',
+                left: -2,
+                top: 0,
+                bottom: 0,
+                width: 6,
+                cursor: 'ew-resize',
+                background: 'transparent',
+                zIndex: 1000
+              }}
             />
-            <div className="ai-header">
-              <span className="ai-header-icon"><Icons.Sparkle /></span>
-              <span className="ai-header-title">AI Chat</span>
-              <select className="ai-model-select" value={model} onChange={e => setModel(e.target.value)}>
-                <optgroup label="Claude">
-                  <option value="claude-4-5-opus">Claude 4.5 Opus</option>
-                  <option value="claude-4-5-sonnet-thinking">Claude 4.5 Sonnet (Thinking)</option>
-                  <option value="claude-4-5-sonnet">Claude 4.5 Sonnet</option>
-                </optgroup>
-                <optgroup label="Gemini 2.5">
-                  <option value="gemini-2-5-flash-thinking">Gemini 2.5 Flash (Thinking)</option>
-                  <option value="gemini-2-5-flash-lite">Gemini 2.5 Flash Lite</option>
-                  <option value="gemini-2-5-flash">Gemini 2.5 Flash</option>
-                </optgroup>
-                <optgroup label="Gemini 3">
-                  <option value="gemini-3-pro-image">Gemini 3 Pro (Image)</option>
-                  <option value="gemini-3-pro-low">Gemini 3 Pro Low</option>
-                  <option value="gemini-3-pro-high">Gemini 3 Pro High</option>
-                  <option value="gemini-3-flash">Gemini 3 Flash</option>
-                </optgroup>
-              </select>
-              <span className="ai-header-spacer" />
-              <button className="ai-header-btn" onClick={() => setShowHistory(!showHistory)} title="对话历史"><Icons.History /></button>
-              <button className="ai-header-btn" onClick={createNewConversation} title="新建对话"><Icons.Plus /></button>
-              <button className="ai-header-btn" onClick={() => setShowAI(false)} title="关闭"><Icons.Close /></button>
-            </div>
-
-            {/* 历史对话面板 */}
-            {showHistory && (
-              <div className="ai-history-panel">
-                <div className="ai-history-title">对话历史</div>
-                <div className="ai-history-list">
-                  {conversations.map(conv => (
-                    <div
-                      key={conv.id}
-                      className={`ai-history-item${conv.id === activeConversationId ? ' active' : ''}`}
-                      onClick={() => switchConversation(conv.id)}
-                    >
-                      <div className="ai-history-item-title">{conv.title}</div>
-                      <div className="ai-history-item-meta">
-                        <span>{new Date(conv.createdAt).toLocaleDateString()}</span>
-                        <span>{conv.messages.length} 条消息</span>
-                      </div>
-                      {conversations.length > 1 && (
-                        <button
-                          className="ai-history-item-delete"
-                          onClick={(e) => deleteConversation(conv.id, e)}
-                          title="删除对话"
-                        >
-                          <Icons.Close />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="ai-messages">
-              {msgs.map(m => (
-                <div key={m.id} className={`ai-msg ${m.role}`}>
-                  <div className="ai-msg-header">
-                    <div className="ai-msg-avatar">{m.role === 'user' ? 'U' : '✦'}</div>
-                    <span className="ai-msg-name">{m.role === 'user' ? 'You' : 'MindCode'}</span>
-                    <span className="ai-msg-time">{m.time}</span>
-                  </div>
-                  <div className="ai-msg-body">
-                    <MarkdownRenderer
-                      content={m.text}
-                      onApplyCode={(code, lang) => {
-                        applyCodeToEditor(code, lang);
-                      }}
-                    />
-                  </div>
-                  {m.role === 'assistant' && (
-                    <div className="ai-msg-actions">
-                      <button
-                        className="ai-action-btn"
-                        title="复制"
-                        onClick={() => {
-                          navigator.clipboard.writeText(m.text);
-                        }}
-                      >
-                        <Icons.Copy /> 复制
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {loading && (
-                <div className="ai-msg assistant">
-                  <div className="ai-msg-header">
-                    <div className="ai-msg-avatar">✦</div>
-                    <span className="ai-msg-name">MindCode</span>
-                  </div>
-                  <div className="ai-msg-body">
-                    {streamingText ? (
-                      <MarkdownRenderer content={streamingText} />
-                    ) : (
-                      <div className="typing-dots"><span/><span/><span/></div>
-                    )}
-                  </div>
-                  <div className="ai-msg-actions">
-                    <button className="ai-stop-btn" onClick={stopGeneration} title="停止生成">
-                      <Icons.Stop /> 停止生成
-                    </button>
-                  </div>
-                </div>
-              )}
-              <div ref={endRef} />
-            </div>
-
-            <div className="ai-input-area">
-              {/* 附加的上下文标签 */}
-              {attachedContexts.length > 0 && (
-                <div className="ai-context-tags">
-                  {attachedContexts.map((ctx, idx) => (
-                    <span key={`${ctx.type}-${idx}`} className="ai-context-tag">
-                      @{ctx.label}
-                      <button
-                        className="ai-context-tag-remove"
-                        onClick={() => setAttachedContexts(prev => prev.filter((_, i) => i !== idx))}
-                      >×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="ai-context-bar">
-                <button
-                  className="ai-ctx-btn"
-                  onClick={() => {
-                    setShowContextPicker(true);
-                    setContextQuery('');
-                    setContextPickerPosition({ top: 60, left: 10 });
-                  }}
-                >
-                  @ Add context
-                </button>
-              </div>
-              <div className="ai-input-box" style={{ position: 'relative' }}>
-                <textarea
-                  ref={inputRef}
-                  placeholder="Ask anything... (@ to add context, Enter to send)"
-                  value={input}
-                  onChange={e => {
-                    const newValue = e.target.value;
-                    setInput(newValue);
-
-                    // 检测 @ 符号
-                    const cursorPos = e.target.selectionStart;
-                    const textBeforeCursor = newValue.slice(0, cursorPos);
-                    const atMatch = textBeforeCursor.match(/@(\w*)$/);
-
-                    if (atMatch) {
-                      setContextQuery(atMatch[0]);
-                      setShowContextPicker(true);
-                      // 计算位置
-                      if (inputRef.current) {
-                        const rect = inputRef.current.getBoundingClientRect();
-                        setContextPickerPosition({
-                          top: rect.height + 10,
-                          left: 0
-                        });
-                      }
-                    } else {
-                      setShowContextPicker(false);
-                    }
-                  }}
-                  onKeyDown={e => {
-                    if (showContextPicker) {
-                      if (e.key === 'Escape') {
-                        e.preventDefault();
-                        setShowContextPicker(false);
-                      }
-                      // 上下键和 Enter 由 ContextPicker 处理
-                      if (['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
-                        return;
-                      }
-                    }
-                    if (e.key === 'Enter' && !e.shiftKey && !showContextPicker) {
-                      e.preventDefault();
-                      send();
-                    }
-                  }}
-                  rows={1}
-                />
-                <button className="ai-send-btn" onClick={send} disabled={!input.trim() || loading}><Icons.Send /></button>
-
-                {/* 上下文选择器 */}
-                <ContextPicker
-                  isOpen={showContextPicker}
-                  query={contextQuery}
-                  position={contextPickerPosition}
-                  workspacePath={workspaceRoot}
-                  currentFile={activeFile ? { path: activeFile.path, content: activeFile.content } : undefined}
-                  onSelect={(ctx) => {
-                    // 从输入中移除 @ 查询
-                    const cursorPos = inputRef.current?.selectionStart || 0;
-                    const textBeforeCursor = input.slice(0, cursorPos);
-                    const newTextBeforeCursor = textBeforeCursor.replace(/@\w*$/, '');
-                    const textAfterCursor = input.slice(cursorPos);
-                    setInput(newTextBeforeCursor + textAfterCursor);
-
-                    // 添加上下文
-                    setAttachedContexts(prev => [...prev, ctx]);
-                    setShowContextPicker(false);
-                    inputRef.current?.focus();
-                  }}
-                  onClose={() => setShowContextPicker(false)}
-                />
-              </div>
-            </div>
+            <AIPanel
+              model={model}
+              onModelChange={setModel}
+              onClose={() => setShowAI(false)}
+              width={aiPanelWidth}
+            />
           </div>
         )}
       </div>

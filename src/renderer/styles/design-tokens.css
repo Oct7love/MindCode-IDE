@@ -1,115 +1,131 @@
 /**
- * MindCode Design System v2.0 - Cursor-Inspired Premium Dark Theme
- * 灵感来源：Cursor、Warp Terminal、Linear
+ * MindCode Design System v3.0 - Cursor-Inspired Premium Dark Theme
+ * 灵感来源：Cursor、Vercel、Linear
  */
+
+/* 引入 Geist 字体 (Cursor 同款) */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   /* ============================================
-   * 色彩系统 - Neo Cyberpunk + Cursor 质感
+   * 色彩系统 - Cursor Premium Dark
    * ============================================ */
 
-  /* 背景层级 - 带蓝调的深色 */
-  --color-bg-base: #0c0c0f;           /* 最深背景 - 编辑器 */
-  --color-bg-surface: #111116;        /* 面板背景 */
-  --color-bg-elevated: #18181d;       /* 浮层/卡片 */
-  --color-bg-overlay: rgba(0, 0, 0, 0.7); /* 遮罩层 */
-  --color-bg-hover: rgba(255, 255, 255, 0.04);  /* hover - 微光 */
-  --color-bg-active: rgba(255, 255, 255, 0.08); /* active */
-  --color-bg-selected: rgba(139, 92, 246, 0.12); /* 选中态 - 紫调 */
+  /* 背景层级 - 更深沉的蓝黑色调 */
+  --color-bg-base: #09090b;           /* 最深背景 - 编辑器 (Cursor 黑) */
+  --color-bg-surface: #0f0f12;        /* 面板背景 */
+  --color-bg-elevated: #151519;       /* 浮层/卡片 */
+  --color-bg-overlay: rgba(0, 0, 0, 0.8); /* 遮罩层 */
+  --color-bg-hover: rgba(255, 255, 255, 0.03);  /* hover - 极微光 */
+  --color-bg-active: rgba(255, 255, 255, 0.06); /* active */
+  --color-bg-selected: rgba(59, 130, 246, 0.08); /* 选中态 - 蓝调 */
+  --color-bg-input: #0c0c0e;          /* 输入框背景 */
+  --color-bg-primary: #09090b;
+  --color-bg-secondary: #0f0f12;
 
-  /* 边框与分割 - 极致细腻 */
-  --color-border-subtle: rgba(255, 255, 255, 0.04);  /* 几乎不可见 */
-  --color-border-default: rgba(255, 255, 255, 0.08); /* 默认边框 */
-  --color-border-strong: rgba(255, 255, 255, 0.12);  /* 强调边框 */
-  --color-border-focus: #8b5cf6;      /* 聚焦边框 - 紫 */
+  /* 边框与分割 - 更细腻的边缘 */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-subtle: rgba(255, 255, 255, 0.03);  /* 几乎不可见 */
+  --color-border-default: rgba(255, 255, 255, 0.06); /* 默认边框 */
+  --color-border-strong: rgba(255, 255, 255, 0.1);  /* 强调边框 */
+  --color-border-focus: #3b82f6;      /* 聚焦边框 - 蓝 */
 
-  /* 文本层级 - 清晰但不刺眼 */
-  --color-text-primary: #f0f0f3;      /* 主要文本 - 略带蓝调的白 */
-  --color-text-secondary: #9898a4;    /* 次要文本 */
-  --color-text-tertiary: #636370;     /* 辅助文本 */
-  --color-text-disabled: #45454d;     /* 禁用态 */
-  --color-text-inverse: #0c0c0f;      /* 反色文本 */
-  --color-text-link: #a78bfa;         /* 链接 - 亮紫 */
+  /* 文本层级 - 更清晰的层次 */
+  --color-text-primary: #fafafa;      /* 主要文本 - 纯净白 */
+  --color-text-secondary: #a1a1aa;    /* 次要文本 */
+  --color-text-tertiary: #71717a;     /* 辅助文本 */
+  --color-text-muted: #52525b;        /* 静音文本 */
+  --color-text-disabled: #3f3f46;     /* 禁用态 */
+  --color-text-inverse: #09090b;      /* 反色文本 */
+  --color-text-link: #60a5fa;         /* 链接 - 亮蓝 */
 
-  /* 强调色 - 紫+青双色系统 */
-  --color-accent-primary: #8b5cf6;    /* 主强调 - 魅紫 */
-  --color-accent-secondary: #a78bfa;  /* 次强调 - 亮紫 */
-  --color-accent-tertiary: #c4b5fd;   /* 弱强调 */
-  --color-accent-ai: #8b5cf6;         /* AI 专用 */
-  --color-accent-ai-secondary: #06b6d4; /* AI 次色 - 青 */
-  --color-accent-ai-glow: rgba(139, 92, 246, 0.35);
+  /* 强调色 - 蓝色系 (Cursor 风格) */
+  --color-accent-primary: #3b82f6;    /* 主强调 - 经典蓝 */
+  --color-accent-secondary: #60a5fa;  /* 次强调 - 亮蓝 */
+  --color-accent-tertiary: #93c5fd;   /* 弱强调 */
+  --color-accent-blue: #3b82f6;       /* 蓝色 */
+  
+  /* AI 强调色 - 紫+青渐变 */
+  --color-accent-ai: #8b5cf6;         /* AI 紫 */
+  --color-accent-ai-secondary: #06b6d4; /* AI 青 */
+  --color-accent-ai-glow: rgba(139, 92, 246, 0.4);
   --color-accent-cyan: #06b6d4;       /* 青色强调 */
-  --color-accent-cyan-glow: rgba(6, 182, 212, 0.3);
+  --color-accent-cyan-glow: rgba(6, 182, 212, 0.35);
 
-  /* 渐变 */
-  --gradient-ai: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
-  --gradient-ai-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
-  --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%);
+  /* 渐变 - 更柔和 */
+  --gradient-ai: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%);
+  --gradient-ai-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(59, 130, 246, 0.12) 50%, rgba(6, 182, 212, 0.12) 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0) 100%);
+  --gradient-shine: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  --gradient-border: linear-gradient(135deg, rgba(139, 92, 246, 0.5) 0%, rgba(59, 130, 246, 0.3) 50%, rgba(6, 182, 212, 0.5) 100%);
 
-  /* 语义色 - 柔和版本 */
-  --color-success: #34d399;
-  --color-success-bg: rgba(52, 211, 153, 0.1);
-  --color-success-border: rgba(52, 211, 153, 0.25);
+  /* 语义色 - 更柔和现代 */
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.08);
+  --color-success-border: rgba(34, 197, 94, 0.2);
 
-  --color-warning: #fbbf24;
-  --color-warning-bg: rgba(251, 191, 36, 0.1);
-  --color-warning-border: rgba(251, 191, 36, 0.25);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.08);
+  --color-warning-border: rgba(245, 158, 11, 0.2);
 
-  --color-error: #f87171;
-  --color-error-bg: rgba(248, 113, 113, 0.1);
-  --color-error-border: rgba(248, 113, 113, 0.25);
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.08);
+  --color-error-border: rgba(239, 68, 68, 0.2);
 
-  --color-info: #60a5fa;
-  --color-info-bg: rgba(96, 165, 250, 0.1);
-  --color-info-border: rgba(96, 165, 250, 0.25);
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.08);
+  --color-info-border: rgba(59, 130, 246, 0.2);
 
-  /* 代码高亮色 - VSCode 风格但更柔和 */
-  --color-syntax-keyword: #c792ea;    /* 紫粉 */
-  --color-syntax-string: #c3e88d;     /* 青绿 */
-  --color-syntax-number: #f78c6c;     /* 橙 */
-  --color-syntax-function: #82aaff;   /* 蓝 */
-  --color-syntax-variable: #89ddff;   /* 青 */
-  --color-syntax-type: #ffcb6b;       /* 金 */
-  --color-syntax-comment: #545c6a;    /* 灰 */
-  --color-syntax-operator: #89ddff;
+  /* 代码高亮色 - One Dark Pro 风格 */
+  --color-syntax-keyword: #c678dd;    /* 紫 */
+  --color-syntax-string: #98c379;     /* 绿 */
+  --color-syntax-number: #d19a66;     /* 橙 */
+  --color-syntax-function: #61afef;   /* 蓝 */
+  --color-syntax-variable: #e5c07b;   /* 金 */
+  --color-syntax-type: #e5c07b;       /* 金 */
+  --color-syntax-comment: #5c6370;    /* 灰 */
+  --color-syntax-operator: #56b6c2;   /* 青 */
 
   /* Diff 颜色 */
-  --color-diff-add-bg: rgba(52, 211, 153, 0.08);
-  --color-diff-add-highlight: rgba(52, 211, 153, 0.2);
-  --color-diff-add-border: #34d399;
+  --color-diff-add-bg: rgba(34, 197, 94, 0.06);
+  --color-diff-add-highlight: rgba(34, 197, 94, 0.15);
+  --color-diff-add-border: #22c55e;
 
-  --color-diff-remove-bg: rgba(248, 113, 113, 0.08);
-  --color-diff-remove-highlight: rgba(248, 113, 113, 0.2);
-  --color-diff-remove-border: #f87171;
+  --color-diff-remove-bg: rgba(239, 68, 68, 0.06);
+  --color-diff-remove-highlight: rgba(239, 68, 68, 0.15);
+  --color-diff-remove-border: #ef4444;
 
-  --color-diff-modify-bg: rgba(251, 191, 36, 0.08);
-  --color-diff-modify-highlight: rgba(251, 191, 36, 0.2);
-  --color-diff-modify-border: #fbbf24;
+  --color-diff-modify-bg: rgba(59, 130, 246, 0.06);
+  --color-diff-modify-highlight: rgba(59, 130, 246, 0.15);
+  --color-diff-modify-border: #3b82f6;
 
   /* ============================================
-   * 字体系统 - 现代清晰
+   * 字体系统 - Geist (Cursor 同款)
    * ============================================ */
 
-  --font-family-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-                    Roboto, "Helvetica Neue", sans-serif;
-  --font-family-code: "JetBrains Mono", "Fira Code", "SF Mono",
-                      "Cascadia Code", Consolas, monospace;
+  --font-family-ui: "Geist", "Inter", -apple-system, BlinkMacSystemFont, 
+                    "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-family-code: "Geist Mono", "JetBrains Mono", "Fira Code", 
+                      "SF Mono", Consolas, monospace;
+  --font-family-mono: var(--font-family-code);
 
-  /* 字号 - 稍大更易读 */
-  --font-size-xs: 10px;
-  --font-size-sm: 11px;
-  --font-size-base: 12px;
-  --font-size-md: 13px;
-  --font-size-lg: 14px;
-  --font-size-xl: 16px;
+  /* 字号 - 更现代的比例 */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 17px;
   --font-size-2xl: 20px;
-  --font-size-3xl: 24px;
+  --font-size-3xl: 26px;
+  --font-size-4xl: 32px;
 
   /* 行高 */
-  --line-height-tight: 1.2;
+  --line-height-tight: 1.25;
   --line-height-normal: 1.5;
-  --line-height-relaxed: 1.65;
-  --line-height-code: 1.6;
+  --line-height-relaxed: 1.625;
+  --line-height-code: 1.7;
 
   /* 字重 */
   --font-weight-normal: 400;
@@ -118,12 +134,14 @@
   --font-weight-bold: 700;
 
   /* 字间距 */
-  --letter-spacing-tight: -0.02em;
+  --letter-spacing-tighter: -0.03em;
+  --letter-spacing-tight: -0.015em;
   --letter-spacing-normal: 0;
-  --letter-spacing-wide: 0.02em;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
 
   /* ============================================
-   * 间距系统 - 8px 基准
+   * 间距系统 - 4px 基准
    * ============================================ */
 
   --space-0: 0;
@@ -137,27 +155,31 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
+  --space-9: 36px;
   --space-10: 40px;
   --space-12: 48px;
+  --space-14: 56px;
   --space-16: 64px;
+  --space-20: 80px;
 
   /* ============================================
    * 尺寸系统
    * ============================================ */
 
   /* 布局尺寸 */
-  --size-titlebar: 38px;
-  --size-statusbar: 24px;
+  --size-titlebar: 36px;
+  --size-statusbar: 22px;
   --size-activitybar: 48px;
-  --size-sidebar-default: 260px;
-  --size-sidebar-min: 200px;
+  --size-sidebar-default: 240px;
+  --size-sidebar-min: 180px;
   --size-sidebar-max: 400px;
-  --size-ai-panel-default: 420px;
-  --size-ai-panel-min: 340px;
-  --size-ai-panel-max: 640px;
-  --size-tab-height: 36px;
-  --size-tree-row: 26px;
+  --size-ai-panel-default: 400px;
+  --size-ai-panel-min: 320px;
+  --size-ai-panel-max: 600px;
+  --size-tab-height: 35px;
+  --size-tree-row: 24px;
 
   /* 组件尺寸 */
   --size-icon-xs: 12px;
@@ -165,16 +187,16 @@
   --size-icon-md: 16px;
   --size-icon-lg: 20px;
   --size-icon-xl: 24px;
-  --size-avatar-sm: 22px;
-  --size-avatar-md: 28px;
-  --size-avatar-lg: 36px;
-  --size-button-height-sm: 26px;
-  --size-button-height-md: 32px;
-  --size-button-height-lg: 40px;
-  --size-input-height: 34px;
+  --size-avatar-sm: 20px;
+  --size-avatar-md: 26px;
+  --size-avatar-lg: 34px;
+  --size-button-height-sm: 24px;
+  --size-button-height-md: 30px;
+  --size-button-height-lg: 38px;
+  --size-input-height: 32px;
 
   /* ============================================
-   * 圆角系统 - 稍大更现代
+   * 圆角系统 - 更圆润现代
    * ============================================ */
 
   --radius-none: 0;
@@ -182,55 +204,60 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
+  --radius-xl: 10px;
+  --radius-2xl: 14px;
+  --radius-3xl: 18px;
   --radius-full: 9999px;
 
   /* ============================================
-   * 阴影系统 - 带色彩的光晕
+   * 阴影系统 - 更深邃柔和
    * ============================================ */
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
 
-  /* 聚焦光晕 */
-  --shadow-focus: 0 0 0 2px rgba(139, 92, 246, 0.4);
-  --shadow-focus-lg: 0 0 0 3px rgba(139, 92, 246, 0.3);
+  /* 聚焦光晕 - 蓝色系 */
+  --shadow-focus: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  --shadow-focus-lg: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  --shadow-focus-ring: 0 0 0 2px var(--color-bg-base), 0 0 0 4px rgba(59, 130, 246, 0.4);
 
-  /* AI 光晕效果 */
-  --shadow-glow-ai: 0 0 20px rgba(139, 92, 246, 0.3),
-                    0 0 40px rgba(139, 92, 246, 0.15);
-  --shadow-glow-ai-intense: 0 0 30px rgba(139, 92, 246, 0.4),
-                            0 0 60px rgba(139, 92, 246, 0.2),
-                            0 0 100px rgba(6, 182, 212, 0.1);
-  --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.3);
+  /* AI 光晕效果 - 更强烈 */
+  --shadow-glow-ai: 0 0 15px rgba(139, 92, 246, 0.35),
+                    0 0 30px rgba(59, 130, 246, 0.15);
+  --shadow-glow-ai-intense: 0 0 20px rgba(139, 92, 246, 0.5),
+                            0 0 40px rgba(59, 130, 246, 0.25),
+                            0 0 60px rgba(6, 182, 212, 0.15);
+  --shadow-glow-cyan: 0 0 15px rgba(6, 182, 212, 0.35);
+  --shadow-glow-blue: 0 0 15px rgba(59, 130, 246, 0.35);
 
   /* 内阴影 */
-  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 
   /* ============================================
-   * 动效系统 - 流畅精致
+   * 动效系统 - 更流畅
    * ============================================ */
 
   /* 时长 */
-  --duration-instant: 50ms;
-  --duration-micro: 100ms;
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --duration-emphasis: 400ms;
+  --duration-instant: 0ms;
+  --duration-micro: 75ms;
+  --duration-fast: 125ms;
+  --duration-normal: 175ms;
+  --duration-slow: 250ms;
+  --duration-emphasis: 350ms;
   --duration-elaborate: 500ms;
 
-  /* 缓动曲线 - Cursor 风格 */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);        /* 快出 */
-  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);         /* 快入 */
-  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);   /* 对称 */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 弹性 */
+  /* 缓动曲线 - Vercel 风格 */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);         /* 流畅出 */
+  --ease-in: cubic-bezier(0.64, 0, 0.78, 0);          /* 流畅入 */
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);     /* 对称 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* 弹性 */
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);       /* 平滑 */
 
   /* ============================================
    * Z-Index 层级
@@ -252,14 +279,16 @@
    * ============================================ */
 
   /* 毛玻璃效果 */
+  --blur-xs: 2px;
   --blur-sm: 4px;
   --blur-md: 8px;
   --blur-lg: 16px;
   --blur-xl: 24px;
 
   /* 背景模糊 */
-  --backdrop-blur: blur(12px);
-  --backdrop-saturate: saturate(180%);
+  --backdrop-blur: blur(16px);
+  --backdrop-saturate: saturate(150%);
+  --backdrop-effect: blur(16px) saturate(150%);
 }
 
 /* ============================================
@@ -282,9 +311,9 @@
  * ============================================ */
 @media (prefers-contrast: high) {
   :root {
-    --color-border-subtle: rgba(255, 255, 255, 0.15);
-    --color-border-default: rgba(255, 255, 255, 0.25);
-    --color-text-secondary: #b0b0b8;
-    --color-text-tertiary: #808088;
+    --color-border-subtle: rgba(255, 255, 255, 0.12);
+    --color-border-default: rgba(255, 255, 255, 0.2);
+    --color-text-secondary: #d4d4d8;
+    --color-text-tertiary: #a1a1aa;
   }
 }
