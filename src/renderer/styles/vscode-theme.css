@@ -1,0 +1,1059 @@
+/*
+ * MindCode - 正宗 VSCode Dark+ 主题
+ * 专业级 IDE 界面设计
+ */
+
+:root {
+  /* VSCode Dark+ 精确配色 */
+  --vscode-editor-background: #1e1e1e;
+  --vscode-editor-foreground: #d4d4d4;
+  --vscode-sideBar-background: #252526;
+  --vscode-sideBar-foreground: #cccccc;
+  --vscode-sideBarSectionHeader-background: #383838;
+  --vscode-activityBar-background: #333333;
+  --vscode-activityBar-foreground: #ffffff;
+  --vscode-activityBar-inactiveForeground: rgba(255, 255, 255, 0.4);
+  --vscode-activityBarBadge-background: #007acc;
+  --vscode-titleBar-activeBackground: #3c3c3c;
+  --vscode-titleBar-activeForeground: #cccccc;
+  --vscode-tab-activeBackground: #1e1e1e;
+  --vscode-tab-inactiveBackground: #2d2d2d;
+  --vscode-tab-border: #252526;
+  --vscode-tab-activeBorderTop: #007acc;
+  --vscode-statusBar-background: #007acc;
+  --vscode-statusBar-foreground: #ffffff;
+  --vscode-input-background: #3c3c3c;
+  --vscode-input-foreground: #cccccc;
+  --vscode-input-border: #3c3c3c;
+  --vscode-focusBorder: #007fd4;
+  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-list-activeSelectionBackground: #094771;
+  --vscode-list-activeSelectionForeground: #ffffff;
+  --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
+  --vscode-scrollbarSlider-hoverBackground: rgba(100, 100, 100, 0.7);
+  --vscode-panelTitle-activeBorder: #007acc;
+  --vscode-panel-border: #80808059;
+  --vscode-icon-foreground: #c5c5c5;
+
+  /* 字体 */
+  --vscode-font-family: "Segoe WPC", "Segoe UI", sans-serif;
+  --vscode-editor-font-family: Consolas, "Courier New", monospace;
+  --vscode-font-size: 13px;
+  --vscode-font-weight: 400;
+}
+
+/* Reset */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editor-background);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 滚动条 - VSCode 风格 */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ====================== 主布局 ====================== */
+
+.workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--vscode-editor-background);
+}
+
+/* 标题栏 */
+.titlebar {
+  height: 30px;
+  min-height: 30px;
+  background: var(--vscode-titleBar-activeBackground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.titlebar-title {
+  font-size: 12px;
+  color: var(--vscode-titleBar-activeForeground);
+}
+
+/* 主内容区 */
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ====================== Activity Bar ====================== */
+
+.activitybar {
+  width: 48px;
+  min-width: 48px;
+  background: var(--vscode-activityBar-background);
+  display: flex;
+  flex-direction: column;
+}
+
+.activitybar-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.activitybar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.activity-action {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  background: transparent;
+  border: none;
+  color: var(--vscode-activityBar-inactiveForeground);
+  transition: color 0.1s;
+}
+
+.activity-action:hover {
+  color: var(--vscode-activityBar-foreground);
+}
+
+.activity-action.active {
+  color: var(--vscode-activityBar-foreground);
+}
+
+.activity-action.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--vscode-activityBar-foreground);
+}
+
+.activity-action svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ====================== Sidebar ====================== */
+
+.sidebar {
+  width: 260px;
+  min-width: 170px;
+  max-width: 500px;
+  background: var(--vscode-sideBar-background);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--vscode-panel-border);
+}
+
+.sidebar-title {
+  height: 35px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--vscode-sideBar-foreground);
+}
+
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Tree Section */
+.tree-header {
+  height: 22px;
+  padding: 0 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--vscode-sideBarSectionHeader-background);
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tree-header-icon {
+  width: 16px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-header-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tree-header-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-sideBar-foreground);
+}
+
+/* Tree Row */
+.tree-row {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--vscode-sideBar-foreground);
+}
+
+.tree-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.tree-row.selected {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.tree-indent {
+  flex-shrink: 0;
+}
+
+.tree-toggle {
+  width: 16px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tree-toggle svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+
+.tree-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tree-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tree-label {
+  flex: 1;
+  font-size: 13px;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ====================== Editor Area ====================== */
+
+.editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--vscode-editor-background);
+}
+
+/* Tabs */
+.tabs-wrapper {
+  height: 35px;
+  min-height: 35px;
+  background: var(--vscode-tab-inactiveBackground);
+  display: flex;
+  overflow: hidden;
+  border-bottom: 1px solid var(--vscode-tab-border);
+}
+
+.tabs-scroll {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tabs-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab {
+  height: 35px;
+  min-width: 120px;
+  max-width: 200px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--vscode-tab-inactiveBackground);
+  border-right: 1px solid var(--vscode-tab-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab.active {
+  background: var(--vscode-tab-activeBackground);
+}
+
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--vscode-tab-activeBorderTop);
+}
+
+.tab-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tab-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tab-label {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab.active .tab-label {
+  color: var(--vscode-editor-foreground);
+}
+
+.tab-close {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--vscode-editor-foreground);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close {
+  opacity: 0.6;
+}
+
+.tab-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Editor Content */
+.editor-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Welcome Page */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 48px;
+  text-align: center;
+}
+
+.welcome-logo {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 20px;
+  color: var(--vscode-activityBarBadge-background);
+}
+
+.welcome-logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+.welcome h1 {
+  font-size: 26px;
+  font-weight: 200;
+  color: var(--vscode-editor-foreground);
+  margin-bottom: 8px;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: #858585;
+  margin-bottom: 48px;
+}
+
+.welcome-shortcuts {
+  display: flex;
+  gap: 48px;
+}
+
+.shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 11px;
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid #454545;
+  border-radius: 3px;
+}
+
+.shortcut-text {
+  font-size: 12px;
+  color: #858585;
+}
+
+/* ====================== AI Panel - Cursor 风格 ====================== */
+
+.ai-panel {
+  width: 420px;
+  min-width: 320px;
+  max-width: 800px;
+  background: #1a1a1a;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 拖动调整大小条 */
+.ai-panel-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 100;
+}
+
+.ai-panel-resizer:hover,
+.ai-panel-resizer:active {
+  background: linear-gradient(180deg, #7c3aed 0%, #2563eb 100%);
+}
+
+/* AI Header - Cursor 风格 */
+.ai-header {
+  height: 48px;
+  min-height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(180deg, #1f1f1f 0%, #1a1a1a 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-header-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.ai-header-icon svg {
+  width: 16px;
+  height: 16px;
+  color: #ffffff;
+}
+
+.ai-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e5e5;
+  letter-spacing: -0.01em;
+}
+
+.ai-model-select {
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  color: #a3a3a3;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s;
+}
+
+.ai-model-select:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e5e5e5;
+}
+
+.ai-model-select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.ai-header-spacer {
+  flex: 1;
+}
+
+.ai-header-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #737373;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ai-header-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e5e5;
+}
+
+.ai-header-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Messages Area - Cursor 风格 */
+.ai-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ai-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: msgFadeIn 0.3s ease-out;
+}
+
+@keyframes msgFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.ai-msg.user .ai-msg-avatar {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: #e5e5e5;
+}
+
+.ai-msg.assistant .ai-msg-avatar {
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+}
+
+.ai-msg-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e5e5;
+}
+
+.ai-msg-time {
+  font-size: 11px;
+  color: #525252;
+  margin-left: auto;
+}
+
+.ai-msg-body {
+  margin-left: 38px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 用户消息特殊样式 */
+.ai-msg.user .ai-msg-body {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* AI 消息中的代码 */
+.ai-msg-body code {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 13px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  color: #f472b6;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* 代码块样式 */
+.ai-msg-body pre {
+  margin: 12px 0;
+  padding: 16px;
+  background: #0d0d0d;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-x: auto;
+}
+
+.ai-msg-body pre code {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #e5e5e5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Typing Indicator - 现代风格 */
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 0;
+}
+
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.16s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    opacity: 0.4;
+    transform: scale(0.8) translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1) translateY(-4px);
+  }
+}
+
+/* AI Action Buttons - 现代风格 */
+.ai-msg-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-left: 38px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ai-msg:hover .ai-msg-actions {
+  opacity: 1;
+}
+
+.ai-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  font-weight: 500;
+  color: #a3a3a3;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ai-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e5e5e5;
+}
+
+.ai-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ai-action-btn.accept {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.ai-action-btn.accept:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* Input Area - Cursor 风格 */
+.ai-input-area {
+  padding: 16px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-context-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.ai-ctx-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  font-weight: 500;
+  color: #737373;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ai-ctx-btn:hover {
+  color: #e5e5e5;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ai-ctx-btn.active {
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+/* 输入框 - 渐变边框效果 */
+.ai-input-box {
+  position: relative;
+  display: flex;
+  background: #0f0f0f;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ai-input-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3) 0%, rgba(37, 99, 235, 0.3) 50%, rgba(124, 58, 237, 0.1) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.ai-input-box:focus-within::before {
+  opacity: 1;
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 50%, #7c3aed 100%);
+}
+
+.ai-input-box textarea {
+  flex: 1;
+  padding: 14px 16px;
+  font-family: var(--vscode-font-family);
+  font-size: 14px;
+  line-height: 1.5;
+  color: #e5e5e5;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  min-height: 24px;
+  max-height: 200px;
+}
+
+.ai-input-box textarea::placeholder {
+  color: #525252;
+}
+
+.ai-send-btn {
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ai-send-btn svg {
+  width: 20px;
+  height: 20px;
+  color: #7c3aed;
+  transition: all 0.15s;
+}
+
+.ai-send-btn:hover:not(:disabled) svg {
+  color: #a78bfa;
+  transform: translateX(2px);
+}
+
+.ai-send-btn:disabled {
+  cursor: default;
+}
+
+.ai-send-btn:disabled svg {
+  color: #404040;
+}
+
+/* 快捷键提示 */
+.ai-input-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.ai-input-hint span {
+  font-size: 11px;
+  color: #525252;
+}
+
+.ai-input-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-family: var(--vscode-font-family);
+  font-size: 10px;
+  color: #525252;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+}
+
+/* ====================== Status Bar ====================== */
+
+.statusbar {
+  height: 22px;
+  min-height: 22px;
+  background: var(--vscode-statusBar-background);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--vscode-statusBar-foreground);
+}
+
+.statusbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.statusbar-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.status-item {
+  height: 22px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.status-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.status-item svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ====================== FAB ====================== */
+
+.chat-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 40px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--vscode-activityBarBadge-background);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 100;
+}
+
+.chat-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.chat-fab svg {
+  width: 22px;
+  height: 22px;
+}

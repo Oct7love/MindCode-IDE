@@ -1,0 +1,705 @@
+/**
+ * MindCode Design System v2.0 - Code Editor Styles
+ * Cursor-Inspired Premium Monaco Editor
+ */
+
+/* ============================================
+ * Editor Container - Premium
+ * ============================================ */
+
+.code-editor-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-base);
+}
+
+.code-editor {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================
+ * Loading State - Premium
+ * ============================================ */
+
+.code-editor-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  background: var(--color-bg-base);
+  z-index: 10;
+}
+
+.code-editor-loading span {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  animation: loadingFade 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingFade {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* 渐变旋转加载器 */
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid transparent;
+  border-top-color: var(--color-accent-primary);
+  border-right-color: var(--color-accent-cyan);
+  border-radius: var(--radius-full);
+  animation: spinGradient 1s linear infinite;
+  position: relative;
+}
+
+.loading-spinner::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid transparent;
+  border-top-color: rgba(139, 92, 246, 0.3);
+  border-right-color: rgba(6, 182, 212, 0.3);
+  border-radius: var(--radius-full);
+  animation: spinGradient 1.5s linear infinite reverse;
+}
+
+@keyframes spinGradient {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+ * Monaco Editor Overrides - Premium
+ * ============================================ */
+
+/* 确保编辑器填满容器 */
+.monaco-editor {
+  width: 100% !important;
+}
+
+/* 隐藏滚动装饰 */
+.monaco-editor .scroll-decoration {
+  display: none;
+}
+
+/* 行号区域 */
+.monaco-editor .margin {
+  background: transparent !important;
+}
+
+.monaco-editor .line-numbers {
+  color: var(--color-text-disabled) !important;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.monaco-editor .line-numbers:hover {
+  color: var(--color-text-tertiary) !important;
+}
+
+.monaco-editor .current-line ~ .line-numbers {
+  color: var(--color-text-secondary) !important;
+}
+
+/* 当前行高亮 */
+.monaco-editor .view-overlays .current-line {
+  background: rgba(139, 92, 246, 0.04) !important;
+  border-left: 2px solid var(--color-accent-primary) !important;
+}
+
+/* 光标样式 */
+.monaco-editor .cursor {
+  background: var(--color-accent-primary) !important;
+  border-color: var(--color-accent-primary) !important;
+}
+
+/* 选中文本 */
+.monaco-editor .selected-text {
+  background: rgba(139, 92, 246, 0.25) !important;
+}
+
+.monaco-editor .selectionHighlight {
+  background: rgba(139, 92, 246, 0.12) !important;
+}
+
+/* 单词高亮 */
+.monaco-editor .wordHighlight {
+  background: rgba(139, 92, 246, 0.15) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  border-radius: var(--radius-xs) !important;
+}
+
+.monaco-editor .wordHighlightStrong {
+  background: rgba(6, 182, 212, 0.15) !important;
+  border: 1px solid rgba(6, 182, 212, 0.3) !important;
+  border-radius: var(--radius-xs) !important;
+}
+
+/* ============================================
+ * Context Menu - Premium
+ * ============================================ */
+
+.monaco-editor .monaco-menu {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(139, 92, 246, 0.1) !important;
+  padding: var(--space-1) !important;
+  backdrop-filter: var(--backdrop-blur);
+}
+
+.monaco-editor .monaco-menu .monaco-action-bar.vertical .action-item {
+  padding: 0 !important;
+}
+
+.monaco-editor .monaco-menu .monaco-action-bar.vertical .action-label {
+  padding: var(--space-1-5) var(--space-3) !important;
+  font-size: var(--font-size-sm) !important;
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .monaco-menu .monaco-action-bar.vertical .action-label:hover {
+  background: var(--color-bg-hover) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.monaco-editor .monaco-menu .monaco-action-bar.vertical .action-label.focused {
+  background: rgba(139, 92, 246, 0.1) !important;
+}
+
+/* 菜单分隔线 */
+.monaco-editor .monaco-menu .monaco-action-bar.vertical .action-item.disabled {
+  border-top: 1px solid var(--color-border-subtle) !important;
+  margin: var(--space-1) 0 !important;
+}
+
+/* ============================================
+ * Autocomplete Widget - Premium
+ * ============================================ */
+
+.monaco-editor .suggest-widget {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(139, 92, 246, 0.1) !important;
+  backdrop-filter: var(--backdrop-blur);
+}
+
+/* 顶部渐变光效 */
+.monaco-editor .suggest-widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.4) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.monaco-editor .suggest-widget .monaco-list {
+  padding: var(--space-1) !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list-row {
+  padding: var(--space-1-5) var(--space-2) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list-row.focused {
+  background: var(--color-bg-hover) !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list-row.selected,
+.monaco-editor .suggest-widget .monaco-list-row.focused.selected {
+  background: rgba(139, 92, 246, 0.15) !important;
+}
+
+/* 补全项图标 */
+.monaco-editor .suggest-widget .monaco-list-row .suggest-icon {
+  color: var(--color-accent-primary) !important;
+}
+
+/* 补全详情面板 */
+.monaco-editor .suggest-details {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ============================================
+ * Hover Widget - Premium
+ * ============================================ */
+
+.monaco-editor .monaco-hover {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: var(--backdrop-blur);
+}
+
+.monaco-editor .monaco-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.3) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.monaco-editor .monaco-hover-content {
+  padding: var(--space-3) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.monaco-editor .monaco-hover code {
+  background: var(--color-bg-base) !important;
+  padding: 2px 6px !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: var(--font-family-code) !important;
+  color: var(--color-accent-secondary) !important;
+}
+
+/* ============================================
+ * Find/Replace Widget - Premium
+ * ============================================ */
+
+.monaco-editor .find-widget {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(139, 92, 246, 0.1) !important;
+  padding: var(--space-3) !important;
+  top: 10px !important;
+  right: 20px !important;
+}
+
+/* 顶部渐变光效 */
+.monaco-editor .find-widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-ai);
+  opacity: 0.5;
+  pointer-events: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.monaco-editor .find-widget .monaco-inputbox {
+  background: var(--color-bg-base) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox:hover {
+  border-color: var(--color-border-strong) !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox.synthetic-focus {
+  border-color: var(--color-accent-primary) !important;
+  box-shadow: var(--shadow-focus) !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox input {
+  color: var(--color-text-primary) !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox input::placeholder {
+  color: var(--color-text-disabled) !important;
+}
+
+/* 查找按钮 */
+.monaco-editor .find-widget .button {
+  background: transparent !important;
+  border-radius: var(--radius-sm) !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .find-widget .button:hover {
+  background: var(--color-bg-hover) !important;
+}
+
+.monaco-editor .find-widget .button.checked {
+  background: rgba(139, 92, 246, 0.15) !important;
+  color: var(--color-accent-primary) !important;
+}
+
+/* 匹配计数 */
+.monaco-editor .find-widget .matchesCount {
+  color: var(--color-text-tertiary) !important;
+  font-size: var(--font-size-xs) !important;
+}
+
+/* ============================================
+ * Breadcrumbs - Premium
+ * ============================================ */
+
+.monaco-breadcrumbs {
+  background: var(--color-bg-surface) !important;
+  padding: 0 var(--space-4) !important;
+  height: 24px !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+}
+
+.monaco-breadcrumbs .monaco-breadcrumb-item {
+  color: var(--color-text-tertiary) !important;
+  font-size: var(--font-size-sm) !important;
+  transition: color var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-breadcrumbs .monaco-breadcrumb-item:hover {
+  color: var(--color-text-primary) !important;
+}
+
+.monaco-breadcrumbs .monaco-breadcrumb-item.focused {
+  color: var(--color-accent-primary) !important;
+}
+
+/* ============================================
+ * Diff Editor - Premium
+ * ============================================ */
+
+.monaco-diff-editor .diffOverview {
+  background: var(--color-bg-surface) !important;
+  border-left: 1px solid var(--color-border-subtle) !important;
+}
+
+.monaco-diff-editor .diffViewport {
+  background: rgba(139, 92, 246, 0.2) !important;
+}
+
+/* 新增行 - 青绿色 */
+.monaco-editor .line-insert,
+.monaco-editor .char-insert {
+  background: var(--color-diff-add-bg) !important;
+}
+
+.monaco-editor .line-insert {
+  border-left: 3px solid var(--color-success) !important;
+}
+
+.monaco-diff-editor .line-insert .glyph-margin {
+  background: var(--color-success) !important;
+}
+
+/* 删除行 - 红色 */
+.monaco-editor .line-delete,
+.monaco-editor .char-delete {
+  background: var(--color-diff-remove-bg) !important;
+}
+
+.monaco-editor .line-delete {
+  border-left: 3px solid var(--color-error) !important;
+}
+
+.monaco-diff-editor .line-delete .glyph-margin {
+  background: var(--color-error) !important;
+}
+
+/* 修改行 - 金色 */
+.monaco-editor .line-modify {
+  background: var(--color-diff-modify-bg) !important;
+  border-left: 3px solid var(--color-warning) !important;
+}
+
+/* ============================================
+ * AI Inline Suggestions - Premium
+ * ============================================ */
+
+.monaco-editor .ai-suggestion-decoration {
+  background: rgba(139, 92, 246, 0.08) !important;
+  border-left: 2px solid var(--color-accent-primary) !important;
+  position: relative;
+}
+
+.monaco-editor .ai-suggestion-decoration::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gradient-ai);
+  box-shadow: var(--shadow-glow-ai);
+}
+
+.monaco-editor .ai-inline-suggestion {
+  color: var(--color-text-disabled) !important;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* AI 建议高亮 */
+.monaco-editor .ghost-text-decoration {
+  color: var(--color-accent-primary) !important;
+  opacity: 0.6;
+}
+
+/* ============================================
+ * Peek View - Premium
+ * ============================================ */
+
+.monaco-editor .peekview-widget {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-accent-primary) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg), var(--shadow-glow-ai) !important;
+  overflow: hidden;
+}
+
+.monaco-editor .peekview-widget .head {
+  background: var(--color-bg-surface) !important;
+  border-bottom: 1px solid var(--color-border-default) !important;
+  padding: var(--space-2) var(--space-3) !important;
+}
+
+.monaco-editor .peekview-widget .head .peekview-title .filename {
+  color: var(--color-text-primary) !important;
+  font-weight: var(--font-weight-medium) !important;
+}
+
+.monaco-editor .peekview-widget .head .peekview-title .dirname {
+  color: var(--color-text-tertiary) !important;
+}
+
+.monaco-editor .peekview-widget .head .peekview-actions .action-label {
+  color: var(--color-text-tertiary) !important;
+  transition: color var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .peekview-widget .head .peekview-actions .action-label:hover {
+  color: var(--color-text-primary) !important;
+}
+
+/* ============================================
+ * Parameter Hints - Premium
+ * ============================================ */
+
+.monaco-editor .parameter-hints-widget {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md), 0 0 20px rgba(139, 92, 246, 0.1) !important;
+  backdrop-filter: var(--backdrop-blur);
+}
+
+/* 顶部渐变光效 */
+.monaco-editor .parameter-hints-widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.3) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.monaco-editor .parameter-hints-widget .signature {
+  padding: var(--space-3) !important;
+}
+
+.monaco-editor .parameter-hints-widget .signature .parameter.active {
+  color: var(--color-accent-primary) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  background: rgba(139, 92, 246, 0.1) !important;
+  padding: 0 4px !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* ============================================
+ * Code Lens - Premium
+ * ============================================ */
+
+.monaco-editor .codelens-decoration {
+  color: var(--color-text-disabled) !important;
+  font-size: var(--font-size-xs) !important;
+  font-style: italic;
+  transition: color var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .codelens-decoration:hover {
+  color: var(--color-accent-primary) !important;
+}
+
+.monaco-editor .codelens-decoration > a {
+  color: inherit !important;
+}
+
+/* ============================================
+ * Minimap - Premium
+ * ============================================ */
+
+.monaco-editor .minimap {
+  opacity: 0.5;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.monaco-editor:hover .minimap,
+.monaco-editor.focused .minimap {
+  opacity: 1;
+}
+
+.monaco-editor .minimap-slider {
+  background: rgba(139, 92, 246, 0.1) !important;
+  border-radius: var(--radius-sm) !important;
+  transition: background var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .minimap-slider:hover {
+  background: rgba(139, 92, 246, 0.2) !important;
+}
+
+.monaco-editor .minimap-slider.active {
+  background: rgba(139, 92, 246, 0.3) !important;
+}
+
+/* 小地图搜索高亮 */
+.monaco-editor .minimap-search-decoration {
+  background: var(--color-warning) !important;
+}
+
+/* ============================================
+ * Scrollbar - Premium
+ * ============================================ */
+
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-full) !important;
+  transition: background var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider.active {
+  background: rgba(139, 92, 246, 0.3) !important;
+}
+
+/* ============================================
+ * Error/Warning Decorations
+ * ============================================ */
+
+.monaco-editor .squiggly-error {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath fill='none' stroke='%23f87171' stroke-width='1' d='M0 2.5 L1 0.5 L2 2.5 L3 0.5 L4 2.5'/%3E%3C/svg%3E") repeat-x bottom left !important;
+}
+
+.monaco-editor .squiggly-warning {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath fill='none' stroke='%23fbbf24' stroke-width='1' d='M0 2.5 L1 0.5 L2 2.5 L3 0.5 L4 2.5'/%3E%3C/svg%3E") repeat-x bottom left !important;
+}
+
+.monaco-editor .squiggly-info {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath fill='none' stroke='%2360a5fa' stroke-width='1' d='M0 2.5 L1 0.5 L2 2.5 L3 0.5 L4 2.5'/%3E%3C/svg%3E") repeat-x bottom left !important;
+}
+
+.monaco-editor .squiggly-hint {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath fill='none' stroke='%238b5cf6' stroke-width='1' d='M0 2.5 L1 0.5 L2 2.5 L3 0.5 L4 2.5'/%3E%3C/svg%3E") repeat-x bottom left !important;
+}
+
+/* ============================================
+ * Bracket Matching
+ * ============================================ */
+
+.monaco-editor .bracket-match {
+  background: rgba(139, 92, 246, 0.2) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  border-radius: var(--radius-xs) !important;
+}
+
+/* ============================================
+ * Indent Guides
+ * ============================================ */
+
+.monaco-editor .view-overlays .indent-guide {
+  border-left: 1px solid var(--color-border-subtle) !important;
+  transition: border-color var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .view-overlays .indent-guide.indent-active {
+  border-color: var(--color-accent-primary) !important;
+  box-shadow: -1px 0 0 var(--color-accent-primary) !important;
+}
+
+/* ============================================
+ * Folding Controls
+ * ============================================ */
+
+.monaco-editor .margin-view-overlays .folding {
+  background: transparent !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .margin-view-overlays .folding:hover {
+  background: var(--color-bg-hover) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.monaco-editor .margin-view-overlays .folding.collapsed {
+  color: var(--color-accent-primary) !important;
+}
+
+/* ============================================
+ * Quick Input Widget
+ * ============================================ */
+
+.monaco-editor .quick-input-widget {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl), 0 0 40px rgba(139, 92, 246, 0.15) !important;
+}
+
+.monaco-editor .quick-input-widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-ai);
+  opacity: 0.6;
+  pointer-events: none;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.monaco-editor .quick-input-widget .monaco-inputbox {
+  background: var(--color-bg-base) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.monaco-editor .quick-input-widget .monaco-inputbox.synthetic-focus {
+  border-color: var(--color-accent-primary) !important;
+  box-shadow: var(--shadow-focus) !important;
+}

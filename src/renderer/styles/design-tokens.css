@@ -1,0 +1,290 @@
+/**
+ * MindCode Design System v2.0 - Cursor-Inspired Premium Dark Theme
+ * 灵感来源：Cursor、Warp Terminal、Linear
+ */
+
+:root {
+  /* ============================================
+   * 色彩系统 - Neo Cyberpunk + Cursor 质感
+   * ============================================ */
+
+  /* 背景层级 - 带蓝调的深色 */
+  --color-bg-base: #0c0c0f;           /* 最深背景 - 编辑器 */
+  --color-bg-surface: #111116;        /* 面板背景 */
+  --color-bg-elevated: #18181d;       /* 浮层/卡片 */
+  --color-bg-overlay: rgba(0, 0, 0, 0.7); /* 遮罩层 */
+  --color-bg-hover: rgba(255, 255, 255, 0.04);  /* hover - 微光 */
+  --color-bg-active: rgba(255, 255, 255, 0.08); /* active */
+  --color-bg-selected: rgba(139, 92, 246, 0.12); /* 选中态 - 紫调 */
+
+  /* 边框与分割 - 极致细腻 */
+  --color-border-subtle: rgba(255, 255, 255, 0.04);  /* 几乎不可见 */
+  --color-border-default: rgba(255, 255, 255, 0.08); /* 默认边框 */
+  --color-border-strong: rgba(255, 255, 255, 0.12);  /* 强调边框 */
+  --color-border-focus: #8b5cf6;      /* 聚焦边框 - 紫 */
+
+  /* 文本层级 - 清晰但不刺眼 */
+  --color-text-primary: #f0f0f3;      /* 主要文本 - 略带蓝调的白 */
+  --color-text-secondary: #9898a4;    /* 次要文本 */
+  --color-text-tertiary: #636370;     /* 辅助文本 */
+  --color-text-disabled: #45454d;     /* 禁用态 */
+  --color-text-inverse: #0c0c0f;      /* 反色文本 */
+  --color-text-link: #a78bfa;         /* 链接 - 亮紫 */
+
+  /* 强调色 - 紫+青双色系统 */
+  --color-accent-primary: #8b5cf6;    /* 主强调 - 魅紫 */
+  --color-accent-secondary: #a78bfa;  /* 次强调 - 亮紫 */
+  --color-accent-tertiary: #c4b5fd;   /* 弱强调 */
+  --color-accent-ai: #8b5cf6;         /* AI 专用 */
+  --color-accent-ai-secondary: #06b6d4; /* AI 次色 - 青 */
+  --color-accent-ai-glow: rgba(139, 92, 246, 0.35);
+  --color-accent-cyan: #06b6d4;       /* 青色强调 */
+  --color-accent-cyan-glow: rgba(6, 182, 212, 0.3);
+
+  /* 渐变 */
+  --gradient-ai: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  --gradient-ai-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%);
+
+  /* 语义色 - 柔和版本 */
+  --color-success: #34d399;
+  --color-success-bg: rgba(52, 211, 153, 0.1);
+  --color-success-border: rgba(52, 211, 153, 0.25);
+
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(251, 191, 36, 0.1);
+  --color-warning-border: rgba(251, 191, 36, 0.25);
+
+  --color-error: #f87171;
+  --color-error-bg: rgba(248, 113, 113, 0.1);
+  --color-error-border: rgba(248, 113, 113, 0.25);
+
+  --color-info: #60a5fa;
+  --color-info-bg: rgba(96, 165, 250, 0.1);
+  --color-info-border: rgba(96, 165, 250, 0.25);
+
+  /* 代码高亮色 - VSCode 风格但更柔和 */
+  --color-syntax-keyword: #c792ea;    /* 紫粉 */
+  --color-syntax-string: #c3e88d;     /* 青绿 */
+  --color-syntax-number: #f78c6c;     /* 橙 */
+  --color-syntax-function: #82aaff;   /* 蓝 */
+  --color-syntax-variable: #89ddff;   /* 青 */
+  --color-syntax-type: #ffcb6b;       /* 金 */
+  --color-syntax-comment: #545c6a;    /* 灰 */
+  --color-syntax-operator: #89ddff;
+
+  /* Diff 颜色 */
+  --color-diff-add-bg: rgba(52, 211, 153, 0.08);
+  --color-diff-add-highlight: rgba(52, 211, 153, 0.2);
+  --color-diff-add-border: #34d399;
+
+  --color-diff-remove-bg: rgba(248, 113, 113, 0.08);
+  --color-diff-remove-highlight: rgba(248, 113, 113, 0.2);
+  --color-diff-remove-border: #f87171;
+
+  --color-diff-modify-bg: rgba(251, 191, 36, 0.08);
+  --color-diff-modify-highlight: rgba(251, 191, 36, 0.2);
+  --color-diff-modify-border: #fbbf24;
+
+  /* ============================================
+   * 字体系统 - 现代清晰
+   * ============================================ */
+
+  --font-family-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, "Helvetica Neue", sans-serif;
+  --font-family-code: "JetBrains Mono", "Fira Code", "SF Mono",
+                      "Cascadia Code", Consolas, monospace;
+
+  /* 字号 - 稍大更易读 */
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-base: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+
+  /* 行高 */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+  --line-height-code: 1.6;
+
+  /* 字重 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 字间距 */
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.02em;
+
+  /* ============================================
+   * 间距系统 - 8px 基准
+   * ============================================ */
+
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ============================================
+   * 尺寸系统
+   * ============================================ */
+
+  /* 布局尺寸 */
+  --size-titlebar: 38px;
+  --size-statusbar: 24px;
+  --size-activitybar: 48px;
+  --size-sidebar-default: 260px;
+  --size-sidebar-min: 200px;
+  --size-sidebar-max: 400px;
+  --size-ai-panel-default: 420px;
+  --size-ai-panel-min: 340px;
+  --size-ai-panel-max: 640px;
+  --size-tab-height: 36px;
+  --size-tree-row: 26px;
+
+  /* 组件尺寸 */
+  --size-icon-xs: 12px;
+  --size-icon-sm: 14px;
+  --size-icon-md: 16px;
+  --size-icon-lg: 20px;
+  --size-icon-xl: 24px;
+  --size-avatar-sm: 22px;
+  --size-avatar-md: 28px;
+  --size-avatar-lg: 36px;
+  --size-button-height-sm: 26px;
+  --size-button-height-md: 32px;
+  --size-button-height-lg: 40px;
+  --size-input-height: 34px;
+
+  /* ============================================
+   * 圆角系统 - 稍大更现代
+   * ============================================ */
+
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* ============================================
+   * 阴影系统 - 带色彩的光晕
+   * ============================================ */
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+
+  /* 聚焦光晕 */
+  --shadow-focus: 0 0 0 2px rgba(139, 92, 246, 0.4);
+  --shadow-focus-lg: 0 0 0 3px rgba(139, 92, 246, 0.3);
+
+  /* AI 光晕效果 */
+  --shadow-glow-ai: 0 0 20px rgba(139, 92, 246, 0.3),
+                    0 0 40px rgba(139, 92, 246, 0.15);
+  --shadow-glow-ai-intense: 0 0 30px rgba(139, 92, 246, 0.4),
+                            0 0 60px rgba(139, 92, 246, 0.2),
+                            0 0 100px rgba(6, 182, 212, 0.1);
+  --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.3);
+
+  /* 内阴影 */
+  --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+
+  /* ============================================
+   * 动效系统 - 流畅精致
+   * ============================================ */
+
+  /* 时长 */
+  --duration-instant: 50ms;
+  --duration-micro: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-emphasis: 400ms;
+  --duration-elaborate: 500ms;
+
+  /* 缓动曲线 - Cursor 风格 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);        /* 快出 */
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);         /* 快入 */
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);   /* 对称 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 弹性 */
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ============================================
+   * Z-Index 层级
+   * ============================================ */
+
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 250;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-tooltip: 600;
+  --z-toast: 700;
+  --z-max: 9999;
+
+  /* ============================================
+   * 特殊效果
+   * ============================================ */
+
+  /* 毛玻璃效果 */
+  --blur-sm: 4px;
+  --blur-md: 8px;
+  --blur-lg: 16px;
+  --blur-xl: 24px;
+
+  /* 背景模糊 */
+  --backdrop-blur: blur(12px);
+  --backdrop-saturate: saturate(180%);
+}
+
+/* ============================================
+ * 减少动效模式
+ * ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-micro: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --duration-emphasis: 0ms;
+    --duration-elaborate: 0ms;
+  }
+}
+
+/* ============================================
+ * 高对比度模式
+ * ============================================ */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border-subtle: rgba(255, 255, 255, 0.15);
+    --color-border-default: rgba(255, 255, 255, 0.25);
+    --color-text-secondary: #b0b0b8;
+    --color-text-tertiary: #808088;
+  }
+}

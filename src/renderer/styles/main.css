@@ -1,0 +1,911 @@
+/**
+ * MindCode Design System v2.0 - Main Stylesheet
+ * Cursor-Inspired Premium Dark Theme
+ */
+
+@import './design-tokens.css';
+
+/* ============================================
+ * CSS Reset & Base
+ * ============================================ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 选中文本 - 紫色高亮 */
+::selection {
+  background: rgba(139, 92, 246, 0.4);
+  color: var(--color-text-primary);
+}
+
+/* 聚焦态 */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ============================================
+ * 滚动条 - 极简精致
+ * ============================================ */
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.2);
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 细滚动条 */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+}
+
+/* ============================================
+ * 主布局 - Workbench
+ * ============================================ */
+
+.workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--color-bg-base);
+  position: relative;
+}
+
+/* 全局微光效果 */
+.workbench::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.3) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: var(--z-max);
+}
+
+/* ============================================
+ * 标题栏 - Title Bar
+ * ============================================ */
+
+.titlebar {
+  height: var(--size-titlebar);
+  min-height: var(--size-titlebar);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  user-select: none;
+  position: relative;
+}
+
+.titlebar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-surface);
+  pointer-events: none;
+}
+
+.titlebar-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* ============================================
+ * 主内容区布局
+ * ============================================ */
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ============================================
+ * Activity Bar - 左侧图标栏
+ * ============================================ */
+
+.activitybar {
+  width: var(--size-activitybar);
+  min-width: var(--size-activitybar);
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 右侧微光边 */
+.activitybar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(6, 182, 212, 0.2) 100%
+  );
+  pointer-events: none;
+}
+
+.activitybar-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-1);
+}
+
+.activitybar-bottom {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-2);
+}
+
+.activity-action {
+  width: var(--size-activitybar);
+  height: var(--size-activitybar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.activity-action:hover {
+  color: var(--color-text-secondary);
+}
+
+.activity-action.active {
+  color: var(--color-text-primary);
+}
+
+/* 激活指示器 - 渐变光条 */
+.activity-action.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 24px;
+  background: var(--gradient-ai);
+  border-radius: 0 2px 2px 0;
+  box-shadow: var(--shadow-glow-ai);
+}
+
+.activity-action svg {
+  width: 22px;
+  height: 22px;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.activity-action:hover svg {
+  transform: scale(1.05);
+}
+
+.activity-action:active svg {
+  transform: scale(0.95);
+}
+
+/* Badge 徽章 */
+.activity-action .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  color: white;
+  background: var(--gradient-ai);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-glow-ai);
+}
+
+/* ============================================
+ * Sidebar - 侧边栏
+ * ============================================ */
+
+.sidebar {
+  width: var(--size-sidebar-default);
+  min-width: var(--size-sidebar-min);
+  max-width: var(--size-sidebar-max);
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.sidebar-title {
+  height: var(--size-tab-height);
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ============================================
+ * 文件树 - File Tree (Premium)
+ * ============================================ */
+
+.tree-header {
+  height: 28px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.tree-header:hover {
+  background: var(--color-bg-hover);
+}
+
+.tree-header-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.tree-header-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.tree-header-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-header-action {
+  opacity: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tree-header:hover .tree-header-action {
+  opacity: 1;
+}
+
+.tree-header-action:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+.tree-header-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 树形行 - Premium */
+.tree-row {
+  height: var(--size-tree-row);
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text-secondary);
+  position: relative;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tree-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.tree-row:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.tree-row.selected {
+  background: var(--color-bg-selected);
+  color: var(--color-text-primary);
+}
+
+.tree-row.selected::before {
+  background: var(--color-accent-primary);
+  box-shadow: 0 0 8px var(--color-accent-ai-glow);
+}
+
+.tree-toggle {
+  width: 16px;
+  height: var(--size-tree-row);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-text-disabled);
+}
+
+.tree-toggle svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.tree-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tree-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tree-label {
+  flex: 1;
+  font-size: var(--font-size-md);
+  line-height: var(--size-tree-row);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+ * 编辑器区域 - Editor Area
+ * ============================================ */
+
+.editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-bg-base);
+}
+
+/* ============================================
+ * 编辑器 Tabs - Premium
+ * ============================================ */
+
+.tabs-wrapper {
+  height: var(--size-tab-height);
+  min-height: var(--size-tab-height);
+  background: var(--color-bg-surface);
+  display: flex;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tabs-scroll {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tabs-scroll::-webkit-scrollbar {
+  height: 0;
+}
+
+.tab {
+  height: var(--size-tab-height);
+  min-width: 100px;
+  max-width: 200px;
+  padding: 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border-right: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: transparent;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.tab:hover {
+  background: var(--color-bg-hover);
+}
+
+.tab.active {
+  background: var(--color-bg-base);
+}
+
+.tab.active::before {
+  background: var(--gradient-ai);
+  box-shadow: 0 0 10px var(--color-accent-ai-glow);
+}
+
+.tab-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.tab.active .tab-icon {
+  opacity: 1;
+}
+
+.tab-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tab-label {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.tab:hover .tab-label {
+  color: var(--color-text-secondary);
+}
+
+.tab.active .tab-label {
+  color: var(--color-text-primary);
+}
+
+/* 修改标记 */
+.tab.modified .tab-label::after {
+  content: ' •';
+  color: var(--color-text-tertiary);
+}
+
+.tab-close {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tab:hover .tab-close {
+  opacity: 0.6;
+}
+
+.tab-close:hover {
+  opacity: 1 !important;
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+.tab-close svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ============================================
+ * 编辑器内容
+ * ============================================ */
+
+.editor-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  background: var(--color-bg-base);
+}
+
+.editor-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ============================================
+ * 欢迎页 - Premium
+ * ============================================ */
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-12);
+  text-align: center;
+  position: relative;
+}
+
+/* 背景光晕 */
+.welcome::before {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(
+    circle,
+    rgba(139, 92, 246, 0.08) 0%,
+    rgba(6, 182, 212, 0.04) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.welcome-logo {
+  font-size: 64px;
+  margin-bottom: var(--space-4);
+  background: var(--gradient-ai);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px var(--color-accent-ai-glow));
+  animation: welcomePulse 3s ease-in-out infinite;
+}
+
+@keyframes welcomePulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+.welcome h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.welcome-subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-10);
+}
+
+.welcome-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 280px;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.shortcut:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-default);
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-2);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+}
+
+.shortcut-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ============================================
+ * 状态栏 - Status Bar (Premium)
+ * ============================================ */
+
+.statusbar {
+  height: var(--size-statusbar);
+  min-height: var(--size-statusbar);
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  position: relative;
+}
+
+/* 顶部渐变光 */
+.statusbar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(139, 92, 246, 0.3) 0%,
+    transparent 20%,
+    transparent 80%,
+    rgba(6, 182, 212, 0.3) 100%
+  );
+  pointer-events: none;
+}
+
+.statusbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.statusbar-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.status-item {
+  height: var(--size-statusbar);
+  padding: 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  border-radius: var(--radius-xs);
+}
+
+.status-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+}
+
+.status-item svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ============================================
+ * 浮动 AI 按钮 - Chat FAB
+ * ============================================ */
+
+.chat-fab {
+  position: fixed;
+  right: var(--space-6);
+  bottom: calc(var(--size-statusbar) + var(--space-6));
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-ai);
+  border: none;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  box-shadow: var(--shadow-glow-ai-intense);
+  transition: all var(--duration-normal) var(--ease-out);
+  z-index: var(--z-fixed);
+}
+
+.chat-fab:hover {
+  transform: scale(1.08);
+  box-shadow: var(--shadow-glow-ai-intense), var(--shadow-lg);
+}
+
+.chat-fab:active {
+  transform: scale(0.95);
+}
+
+.chat-fab svg {
+  width: 22px;
+  height: 22px;
+  color: white;
+}
+
+/* ============================================
+ * 动画关键帧
+ * ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* 闪光加载效果 */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
