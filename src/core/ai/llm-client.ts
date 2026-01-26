@@ -13,10 +13,11 @@ export const LLM_CONFIG = {
   CIRCUIT_BREAKER_THRESHOLD: 5, // 熔断阈值 (连续失败次数)
   CIRCUIT_BREAKER_RESET_MS: 60000, // 熔断恢复时间
   FALLBACK_MODELS: { // 降级链
-    'claude-opus-4-5-thinking': ['claude-sonnet-4-5-thinking', 'claude-sonnet-4-5', 'deepseek-chat'],
-    'claude-sonnet-4-5-thinking': ['claude-sonnet-4-5', 'deepseek-chat'],
-    'gemini-3-pro-high': ['gemini-3-flash', 'gemini-2.5-flash'],
-    'deepseek-reasoner': ['deepseek-chat'],
+    'claude-opus-4-5-thinking': ['claude-sonnet-4-5-thinking', 'claude-sonnet-4-5', 'deepseek-chat', 'glm-4.7-flashx'],
+    'claude-sonnet-4-5-thinking': ['claude-sonnet-4-5', 'deepseek-chat', 'glm-4.7-flashx'],
+    'gemini-3-pro-high': ['gemini-3-flash', 'gemini-2.5-flash', 'deepseek-chat'],
+    'deepseek-reasoner': ['deepseek-chat', 'glm-4.7-flashx'],
+    'glm-4.7': ['glm-4.7-flashx', 'deepseek-chat'],
   } as Record<string, string[]>,
 };
 
