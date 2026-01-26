@@ -1,0 +1,114 @@
+/* MessageItem - 单条消息组件样式 */
+
+.chat-message {
+  display: flex;
+  gap: var(--chat-spacing-md, 12px);
+  padding: var(--chat-spacing-md, 12px) var(--chat-spacing-lg, 16px);
+  position: relative;
+  transition: background var(--chat-transition-fast, 100ms);
+  border-left: 3px solid transparent;
+}
+.chat-message:hover { background: var(--chat-bg-hover, #333); }
+
+/* 角色区分 */
+.chat-message--user { background: var(--chat-user-bg, #2d4a3e); border-left-color: var(--chat-user-border, #3d5a4e); }
+.chat-message--assistant { background: transparent; }
+.chat-message--error { border-left-color: var(--chat-danger, #f14c4c); }
+.chat-message--interrupted { border-left-color: var(--chat-warning, #faad14); }
+
+/* 头像 */
+.chat-message__avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--chat-radius-md, 6px);
+  background: var(--chat-bg-tertiary, #2d2d30);
+  color: var(--chat-text-secondary, #a0a0a0);
+}
+.chat-message--user .chat-message__avatar { background: var(--chat-accent, #0078d4); color: white; }
+.chat-message--assistant .chat-message__avatar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+
+/* 消息体 */
+.chat-message__body { flex: 1; min-width: 0; }
+
+.chat-message__header {
+  display: flex;
+  align-items: center;
+  gap: var(--chat-spacing-sm, 8px);
+  margin-bottom: var(--chat-spacing-xs, 4px);
+  font-size: var(--chat-font-size-sm, 12px);
+}
+.chat-message__role { font-weight: 600; color: var(--chat-text-primary, #e0e0e0); }
+.chat-message__time { color: var(--chat-text-tertiary, #6e6e6e); }
+.chat-message__model { 
+  color: var(--chat-text-tertiary, #6e6e6e); 
+  font-size: var(--chat-font-size-xs, 11px);
+  padding: 2px 6px;
+  background: var(--chat-bg-tertiary, #2d2d30);
+  border-radius: var(--chat-radius-sm, 4px);
+}
+
+/* 内容 */
+.chat-message__content { line-height: var(--chat-line-height, 1.6); color: var(--chat-text-primary, #e0e0e0); }
+.chat-message__cursor { 
+  display: inline-block; 
+  animation: blink 1s step-end infinite; 
+  color: var(--chat-accent, #0078d4);
+  font-weight: bold;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* 状态提示 */
+.chat-message__status {
+  display: flex;
+  align-items: center;
+  gap: var(--chat-spacing-sm, 8px);
+  margin-top: var(--chat-spacing-sm, 8px);
+  padding: var(--chat-spacing-sm, 8px) var(--chat-spacing-md, 12px);
+  border-radius: var(--chat-radius-md, 6px);
+  font-size: var(--chat-font-size-sm, 12px);
+}
+.chat-message__status--error { background: var(--chat-callout-error-bg); color: var(--chat-callout-error-text); }
+.chat-message__status--interrupted { background: var(--chat-callout-warn-bg); color: var(--chat-callout-warn-text); }
+
+/* 操作按钮 */
+.chat-message__actions {
+  position: absolute;
+  top: var(--chat-spacing-sm, 8px);
+  right: var(--chat-spacing-md, 12px);
+  display: flex;
+  gap: var(--chat-spacing-xs, 4px);
+  opacity: 0;
+  transition: opacity var(--chat-transition-fast, 100ms);
+  background: var(--chat-bg-secondary, #252526);
+  padding: 4px;
+  border-radius: var(--chat-radius-md, 6px);
+  border: 1px solid var(--chat-border, #3c3c3c);
+  box-shadow: var(--chat-shadow-sm);
+}
+.chat-message:hover .chat-message__actions { opacity: 1; }
+
+.chat-message__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--chat-radius-sm, 4px);
+  background: transparent;
+  color: var(--chat-text-secondary, #a0a0a0);
+  cursor: pointer;
+  font-size: var(--chat-font-size-xs, 11px);
+  transition: all var(--chat-transition-fast, 100ms);
+}
+.chat-message__action-btn:hover { background: var(--chat-bg-hover, #333); color: var(--chat-text-primary, #e0e0e0); }
+.chat-message__status .chat-message__action-btn {
+  background: var(--chat-bg-tertiary, #2d2d30);
+  border: 1px solid var(--chat-border, #3c3c3c);
+  padding: 4px 10px;
+}
+.chat-message__status .chat-message__action-btn:hover { background: var(--chat-bg-hover, #333); }

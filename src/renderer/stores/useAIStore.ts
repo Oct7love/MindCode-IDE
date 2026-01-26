@@ -11,12 +11,18 @@ export interface ContextItem {
   locked?: boolean;
 }
 
+export interface ToolCallStatus { id: string; name: string; args: any; status: 'pending' | 'running' | 'success' | 'failed'; result?: any; error?: string; }
+
 export interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   timestamp: Date;
+  mode?: AIMode; // 发送时的模式
   contexts?: ContextItem[]; // 消息关联的上下文
+  toolCalls?: ToolCallStatus[]; // 工具调用及状态
+  toolCallId?: string; // tool 消息的调用 ID
+  plan?: Plan; // Plan 模式生成的计划
 }
 
 export interface Conversation {
@@ -48,7 +54,8 @@ export interface AgentStep {
 
 interface AIState {
   mode: AIMode; // 当前模式
-  model: string; // 当前模型
+  model: string; // 当前模型（effectiveModel）
+  modelByMode: Record<AIMode, string>; // 每模式独立存储模型选择
   conversations: Conversation[]; // 对话列表
   activeConversationId: string | null; // 当前对话 ID
   contexts: ContextItem[]; // 当前上下文
@@ -70,11 +77,13 @@ interface AIActions {
   setStreamingText: (text: string) => void;
   appendStreamingText: (text: string) => void;
   setPinned: (pinned: boolean) => void;
-  createConversation: () => string; // 返回新对话 ID
+  createConversation: () => string;
   switchConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
-  updateLastMessage: (content: string) => void;
+  updateLastMessage: (content: string, extra?: Partial<Message>) => void;
+  updateLastMessageToolCall: (toolCallId: string, update: Partial<ToolCallStatus>) => void;
+  deleteLastMessage: () => void;
   getCurrentConversation: () => Conversation | undefined;
   setPlan: (plan: Plan | null) => void;
   updatePlanTask: (taskId: string, completed: boolean) => void;
@@ -83,17 +92,19 @@ interface AIActions {
   setDebugInfo: (info: AIState['debugInfo']) => void;
 }
 
+const DEFAULT_MODEL = 'claude-opus-4-5-thinking';
 const defaultConversation: Conversation = {
   id: '1',
   title: '新对话',
   messages: [{ id: '1', role: 'assistant', content: '有什么我可以帮你的吗？', timestamp: new Date() }],
   createdAt: new Date().toISOString(),
-  model: 'claude-opus-4-5-thinking'
+  model: DEFAULT_MODEL
 };
 
 export const useAIStore = create<AIState & AIActions>((set, get) => ({
   mode: 'chat',
-  model: 'claude-opus-4-5-thinking',
+  model: DEFAULT_MODEL,
+  modelByMode: { chat: DEFAULT_MODEL, plan: DEFAULT_MODEL, agent: DEFAULT_MODEL, debug: DEFAULT_MODEL },
   conversations: [defaultConversation],
   activeConversationId: '1',
   contexts: [],
@@ -104,8 +115,8 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
   agentSteps: [],
   debugInfo: null,
 
-  setMode: (mode) => set({ mode }),
-  setModel: (model) => set({ model }),
+  setMode: (mode) => set((state) => ({ mode, model: state.modelByMode[mode] })), // 切换模式时自动切换 model
+  setModel: (model) => set((state) => ({ model, modelByMode: { ...state.modelByMode, [state.mode]: model } })), // 同时更新 modelByMode
   
   addContext: (item) => set((state) => ({ contexts: [...state.contexts, item] })),
   removeContext: (id) => set((state) => ({ contexts: state.contexts.filter(c => c.id !== id && !c.locked) })),
@@ -142,24 +153,40 @@ export const useAIStore = create<AIState & AIActions>((set, get) => ({
   }),
 
   addMessage: (message) => set((state) => {
-    const msg: Message = { ...message, id: Date.now().toString(), timestamp: new Date() };
+    const msg: Message = { ...message, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, timestamp: new Date(), mode: message.mode || state.mode };
     return {
       conversations: state.conversations.map(c => {
         if (c.id !== state.activeConversationId) return c;
-        const title = message.role === 'user' && c.messages.length <= 1 
-          ? message.content.slice(0, 20) + (message.content.length > 20 ? '...' : '') 
-          : c.title;
+        const title = message.role === 'user' && c.messages.length <= 1 ? message.content.slice(0, 20) + (message.content.length > 20 ? '...' : '') : c.title;
         return { ...c, messages: [...c.messages, msg], title };
       })
     };
   }),
 
-  updateLastMessage: (content) => set((state) => ({
+  updateLastMessage: (content, extra) => set((state) => ({
     conversations: state.conversations.map(c => {
       if (c.id !== state.activeConversationId) return c;
       const msgs = [...c.messages];
-      if (msgs.length > 0) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
+      if (msgs.length > 0) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content, ...extra };
       return { ...c, messages: msgs };
+    })
+  })),
+
+  updateLastMessageToolCall: (toolCallId, update) => set((state) => ({
+    conversations: state.conversations.map(c => {
+      if (c.id !== state.activeConversationId) return c;
+      const msgs = [...c.messages];
+      if (msgs.length > 0 && msgs[msgs.length - 1].toolCalls) {
+        msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], toolCalls: msgs[msgs.length - 1].toolCalls!.map(tc => tc.id === toolCallId ? { ...tc, ...update } : tc) };
+      }
+      return { ...c, messages: msgs };
+    })
+  })),
+
+  deleteLastMessage: () => set((state) => ({
+    conversations: state.conversations.map(c => {
+      if (c.id !== state.activeConversationId) return c;
+      return { ...c, messages: c.messages.slice(0, -1) };
     })
   })),
 

@@ -1,120 +1,210 @@
-import React, { useState } from 'react';
-import { useAIStore } from '../../stores';
+import React, { useState, useCallback } from 'react';
+import { useAIStore, useFileStore } from '../../stores';
+import { ModelPicker } from './ModelPicker';
 import './DebugView.css';
 
-interface FixOption { id: string; title: string; description: string; diff?: string; }
-interface DebugIssue { title: string; description: string; observations: string[]; hypotheses: { id: string; text: string }[]; verificationSteps: { id: string; text: string; completed: boolean }[]; fixOptions: FixOption[]; }
+interface DebugIssue {
+  title: string; description: string; empathy: string;
+  hypotheses: { rank: number; probability: string; cause: string; evidence: string }[];
+  evidence: { type: string; description: string; command?: string }[];
+  steps: { order: number; action: string; command?: string; expected: string }[];
+  branches: { condition: string; nextAction: string }[];
+  fixes: { id: string; title: string; description: string; diff?: string }[];
+}
 
 export const DebugView: React.FC = () => {
-  const { debugInfo, setDebugInfo, model, addContext } = useAIStore();
-  const [showLogs, setShowLogs] = useState(false);
-  const [showStack, setShowStack] = useState(false);
+  const { debugInfo, setDebugInfo, model, setModel, addContext, setMode } = useAIStore();
+  const { workspaceRoot, getActiveFile } = useFileStore();
+  const [errorInput, setErrorInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [issue, setIssue] = useState<DebugIssue | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [collectedLogs, setCollectedLogs] = useState<string>('');
 
-  const analyzeError = async (errorText: string) => { // AI 分析错误
+  const collectFromTerminal = useCallback(async () => { // 从终端收集错误
+    const res = await window.mindcode?.terminal?.execute?.('echo "[模拟终端输出]"', workspaceRoot || undefined);
+    if (res?.success) { setCollectedLogs(res.data?.stdout || res.data?.stderr || ''); setErrorInput(prev => prev + '\n' + (res.data?.stderr || res.data?.stdout || '')); }
+  }, [workspaceRoot]);
+
+  const collectFromGit = useCallback(async () => { // 从 Git 收集信息
+    const status = await window.mindcode?.git?.status?.(workspaceRoot || '');
+    if (status?.success) { const files = status.data?.map((f: any) => `${f.status}: ${f.path}`).join('\n'); setErrorInput(prev => prev + '\n[Git Status]\n' + files); }
+  }, [workspaceRoot]);
+
+  const analyzeError = useCallback(async () => { // AI 分析错误
+    if (!errorInput.trim()) return;
     setIsAnalyzing(true);
-    const prompt = `分析以下错误并提供调试建议，返回 JSON 格式:
-{ "title": "错误标题", "description": "错误描述", "observations": ["观察1"], "hypotheses": [{"id":"1","text":"假设1"}], "verificationSteps": [{"id":"1","text":"验证步骤","completed":false}], "fixOptions": [{"id":"1","title":"修复标题","description":"描述","diff":"代码差异"}] }
+    const activeFile = getActiveFile();
+    const prompt = `你是一个专业的调试专家。分析以下错误并提供调试方案。
 
-错误内容:
-${errorText}`;
-    if (window.mindcode?.ai?.chat) {
-      try {
-        const res = await window.mindcode.ai.chat(model, [{ role: 'user', content: prompt }]);
-        const jsonMatch = res.data?.match(/\{[\s\S]*\}/);
+【工作区】${workspaceRoot || '未知'}
+【当前文件】${activeFile?.path || '无'}
+
+【错误信息】
+${errorInput}
+
+请以 JSON 格式返回调试方案：
+{
+  "title": "错误标题（简短）",
+  "description": "错误描述",
+  "empathy": "一句安抚性的话",
+  "hypotheses": [{"rank": 1, "probability": "70%", "cause": "可能原因", "evidence": "判断依据"}],
+  "evidence": [{"type": "file|terminal|config", "description": "需要收集的证据", "command": "可执行命令"}],
+  "steps": [{"order": 1, "action": "操作步骤", "command": "可执行命令", "expected": "预期结果"}],
+  "branches": [{"condition": "如果...情况", "nextAction": "则..."}],
+  "fixes": [{"id": "1", "title": "修复方案", "description": "说明", "diff": "代码差异"}]
+}`;
+    try {
+      const res = await window.mindcode?.ai?.chat?.(model, [{ role: 'user', content: prompt }]);
+      if (res?.success && res.data) {
+        const jsonMatch = res.data.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]) as DebugIssue;
           setIssue(parsed);
-          setDebugInfo({ title: parsed.title, description: parsed.description, observations: parsed.observations });
+          setDebugInfo({ title: parsed.title, description: parsed.description, observations: parsed.hypotheses.map(h => h.cause) });
         }
-      } catch (e) { console.error('Debug analysis error:', e); }
-    }
+      }
+    } catch (e) { console.error('Debug analysis error:', e); }
     setIsAnalyzing(false);
-  };
+  }, [errorInput, model, workspaceRoot, getActiveFile, setDebugInfo]);
 
-  const applyFix = async (fix: FixOption) => { // 应用修复
-    if (fix.diff) navigator.clipboard.writeText(fix.diff.replace(/^[-+]\s*/gm, ''));
-    // TODO: 实际应用到编辑器
-  };
+  const executeStep = useCallback(async (step: DebugIssue['steps'][0]) => { // 执行验证步骤
+    if (step.command) {
+      const res = await window.mindcode?.terminal?.execute?.(step.command, workspaceRoot || undefined);
+      if (res) { setCollectedLogs(prev => prev + `\n[Step ${step.order}] ${step.command}\n${res.data?.stdout || res.data?.stderr || res.error || ''}`); }
+    }
+    setCompletedSteps(s => new Set([...s, step.order]));
+  }, [workspaceRoot]);
 
-  const captureFromTerminal = () => { // 从终端捕获错误
-    addContext({ id: `error-${Date.now()}`, type: 'error', label: '终端错误', data: { content: debugInfo?.description || '' } });
-  };
+  const applyFix = useCallback(async (fix: DebugIssue['fixes'][0]) => { // 应用修复
+    if (fix.diff) navigator.clipboard.writeText(fix.diff);
+    // 提示用户切换到 Agent 模式应用修复
+    if (confirm(`是否切换到 Agent 模式自动应用修复？\n\n${fix.title}`)) {
+      addContext({ id: `fix-${Date.now()}`, type: 'error', label: '修复方案', data: { content: `应用修复: ${fix.title}\n\n${fix.description}\n\n${fix.diff || ''}` } });
+      setMode('agent');
+    }
+  }, [addContext, setMode]);
 
-  if (!issue && !debugInfo) {
+  const clearDebug = useCallback(() => { setIssue(null); setDebugInfo(null); setErrorInput(''); setCompletedSteps(new Set()); setCollectedLogs(''); }, [setDebugInfo]);
+
+  if (!issue) {
     return (
-      <div className="ai-empty-state">
-        <div className="ai-empty-state-icon"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 4C12.96 4 4 12.96 4 24s8.96 20 20 20 20-8.96 20-20S35.04 4 24 4zm2 30h-4v-4h4v4zm0-8h-4V14h4v12z"/></svg></div>
-        <div className="ai-empty-state-text">{isAnalyzing ? '正在分析错误...' : '没有检测到错误'}</div>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <button className="ai-plan-btn" onClick={captureFromTerminal}>从终端捕获</button>
-          <button className="ai-plan-btn primary" onClick={() => analyzeError('示例错误: TypeError')} disabled={isAnalyzing}>手动输入错误</button>
+      <div className="ai-debug-view">
+        <div className="ai-debug-input-section">
+          <div className="ai-debug-section-title">📋 粘贴或输入错误信息</div>
+          <textarea className="ai-debug-error-input" value={errorInput} onChange={e => setErrorInput(e.target.value)} placeholder="粘贴错误日志、堆栈跟踪或描述遇到的问题..." rows={6} />
+          <div className="ai-debug-collect-actions">
+            <button className="ai-debug-btn" onClick={collectFromTerminal}>从终端收集</button>
+            <button className="ai-debug-btn" onClick={collectFromGit}>从 Git 收集</button>
+          </div>
+          <button className="ai-debug-btn primary" onClick={analyzeError} disabled={!errorInput.trim() || isAnalyzing}>{isAnalyzing ? '分析中...' : '开始分析'}</button>
         </div>
+        {!errorInput && (
+          <div className="ai-empty-state">
+            <div className="ai-empty-state-icon">🐛</div>
+            <div className="ai-empty-state-text">Debug 模式帮你系统排查问题</div>
+            <div className="ai-empty-state-hint">粘贴错误信息或从终端/Git 收集，AI 会分析原因并给出解决方案</div>
+          </div>
+        )}
+        <div className="ai-debug-footer"><ModelPicker model={model} onModelChange={setModel} disabled={isAnalyzing} /></div>
       </div>
     );
   }
 
-  const displayIssue = issue || { title: debugInfo?.title || '', description: debugInfo?.description || '', observations: debugInfo?.observations || [], hypotheses: [], verificationSteps: [], fixOptions: [] };
-
   return (
     <div className="ai-debug-view">
       <div className="ai-debug-issue-card">
-        <div className="ai-debug-issue-title">🐛 {displayIssue.title}</div>
-        <div className="ai-debug-issue-description">{displayIssue.description}</div>
+        <div className="ai-debug-issue-title">🐛 {issue.title}</div>
+        <div className="ai-debug-issue-empathy">{issue.empathy}</div>
+        <div className="ai-debug-issue-description">{issue.description}</div>
       </div>
 
-      {displayIssue.observations.length > 0 && (
+      <div className="ai-debug-section">
+        <div className="ai-debug-section-title">💡 可能原因 (Top {issue.hypotheses.length})</div>
+        <div className="ai-debug-hypotheses">
+          {issue.hypotheses.map(h => (
+            <div key={h.rank} className="ai-debug-hypothesis">
+              <div className="ai-debug-hypothesis-header">
+                <span className="ai-debug-hypothesis-rank">#{h.rank}</span>
+                <span className="ai-debug-hypothesis-prob">{h.probability}</span>
+              </div>
+              <div className="ai-debug-hypothesis-cause">{h.cause}</div>
+              <div className="ai-debug-hypothesis-evidence">依据: {h.evidence}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {issue.evidence.length > 0 && (
         <div className="ai-debug-section">
-          <div className="ai-debug-section-title">📊 观察</div>
-          <div className="ai-debug-section-content"><ul style={{ margin: 0, paddingLeft: '20px' }}>{displayIssue.observations.map((obs, i) => <li key={i}>{obs}</li>)}</ul></div>
+          <div className="ai-debug-section-title">📊 需要收集的证据</div>
+          {issue.evidence.map((e, i) => (
+            <div key={i} className="ai-debug-evidence-item">
+              <span className="ai-debug-evidence-type">[{e.type}]</span>
+              <span className="ai-debug-evidence-desc">{e.description}</span>
+              {e.command && <code className="ai-debug-evidence-cmd">{e.command}</code>}
+            </div>
+          ))}
         </div>
       )}
 
-      {displayIssue.hypotheses.length > 0 && (
+      <div className="ai-debug-section">
+        <div className="ai-debug-section-title">🔍 验证步骤</div>
+        {issue.steps.map(step => (
+          <div key={step.order} className={`ai-debug-step ${completedSteps.has(step.order) ? 'completed' : ''}`}>
+            <div className="ai-debug-step-header">
+              <input type="checkbox" checked={completedSteps.has(step.order)} onChange={() => setCompletedSteps(s => { const n = new Set(s); n.has(step.order) ? n.delete(step.order) : n.add(step.order); return n; })} />
+              <span className="ai-debug-step-order">步骤 {step.order}</span>
+              {step.command && <button className="ai-debug-step-run" onClick={() => executeStep(step)}>执行</button>}
+            </div>
+            <div className="ai-debug-step-action">{step.action}</div>
+            {step.command && <code className="ai-debug-step-cmd">{step.command}</code>}
+            <div className="ai-debug-step-expected">预期: {step.expected}</div>
+          </div>
+        ))}
+      </div>
+
+      {issue.branches.length > 0 && (
         <div className="ai-debug-section">
-          <div className="ai-debug-section-title">💡 假设</div>
-          <div className="ai-debug-section-content">{displayIssue.hypotheses.map(h => <div key={h.id} style={{ marginBottom: 'var(--space-2)' }}><span style={{ color: 'var(--accent-primary)', marginRight: 'var(--space-2)' }}>[H{h.id}]</span>{h.text}</div>)}</div>
+          <div className="ai-debug-section-title">🔀 分支处理</div>
+          {issue.branches.map((b, i) => (
+            <div key={i} className="ai-debug-branch">
+              <span className="ai-debug-branch-condition">{b.condition}</span>
+              <span className="ai-debug-branch-action">→ {b.nextAction}</span>
+            </div>
+          ))}
         </div>
       )}
 
-      {displayIssue.verificationSteps.length > 0 && (
+      {issue.fixes.length > 0 && (
         <div className="ai-debug-section">
-          <div className="ai-debug-section-title">🔍 验证步骤</div>
-          <div className="ai-debug-section-content">{displayIssue.verificationSteps.map(step => <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}><input type="checkbox" checked={step.completed} onChange={() => setIssue(issue ? { ...issue, verificationSteps: issue.verificationSteps.map(s => s.id === step.id ? { ...s, completed: !s.completed } : s) } : null)} /><span>{step.text}</span></div>)}</div>
-        </div>
-      )}
-
-      {displayIssue.fixOptions.length > 0 && (
-        <div className="ai-debug-section">
-          <div className="ai-debug-section-title">🔧 修复选项</div>
-          {displayIssue.fixOptions.map(option => (
-            <div key={option.id} className="ai-debug-fix-option">
-              <div className="ai-debug-fix-option-title">{option.title}</div>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>{option.description}</div>
-              {option.diff && <pre style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', fontFamily: 'var(--font-code)', marginBottom: 'var(--space-2)', overflow: 'auto' }}>{option.diff}</pre>}
+          <div className="ai-debug-section-title">🔧 修复方案</div>
+          {issue.fixes.map(fix => (
+            <div key={fix.id} className="ai-debug-fix">
+              <div className="ai-debug-fix-title">{fix.title}</div>
+              <div className="ai-debug-fix-desc">{fix.description}</div>
+              {fix.diff && <pre className="ai-debug-fix-diff">{fix.diff}</pre>}
               <div className="ai-debug-fix-actions">
-                <button className="ai-debug-fix-btn" onClick={() => navigator.clipboard.writeText(option.diff || '')}>复制</button>
-                <button className="ai-debug-fix-btn primary" onClick={() => applyFix(option)}>应用</button>
+                <button className="ai-debug-btn" onClick={() => navigator.clipboard.writeText(fix.diff || fix.description)}>复制</button>
+                <button className="ai-debug-btn primary" onClick={() => applyFix(fix)}>应用修复</button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-        <button className="ai-debug-fix-btn" onClick={() => setShowLogs(!showLogs)}>{showLogs ? '隐藏' : '查看'}日志</button>
-        <button className="ai-debug-fix-btn" onClick={() => setShowStack(!showStack)}>{showStack ? '隐藏' : '查看'}堆栈</button>
-        <button className="ai-debug-fix-btn" onClick={() => { setIssue(null); setDebugInfo(null); }}>清除</button>
-        <button className="ai-debug-fix-btn primary" onClick={() => analyzeError(displayIssue.description)} disabled={isAnalyzing}>重新分析</button>
-      </div>
-
-      {showLogs && (
-        <div className="ai-debug-section" style={{ marginTop: 'var(--space-4)' }}>
-          <div className="ai-debug-section-title">📋 日志</div>
-          <pre style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', fontFamily: 'var(--font-code)', maxHeight: '200px', overflow: 'auto' }}>{`[${new Date().toISOString()}] ERROR: ${displayIssue.title}\n${displayIssue.description}`}</pre>
+      {collectedLogs && (
+        <div className="ai-debug-section">
+          <div className="ai-debug-section-title">📋 收集的日志</div>
+          <pre className="ai-debug-logs">{collectedLogs}</pre>
         </div>
       )}
+
+      <div className="ai-debug-actions">
+        <button className="ai-debug-btn" onClick={clearDebug}>清除</button>
+        <button className="ai-debug-btn" onClick={analyzeError} disabled={isAnalyzing}>重新分析</button>
+      </div>
+      <div className="ai-debug-footer"><ModelPicker model={model} onModelChange={setModel} disabled={isAnalyzing} /></div>
     </div>
   );
 };

@@ -1,47 +1,18 @@
 // AI 服务配置
+export interface AIProviderSettings { apiKey: string; baseUrl: string; model: string; }
 export interface AIConfig {
-  claude: {
-    apiKey: string;
-    baseUrl: string;
-    model: string;
-  };
-  openai: {
-    apiKey: string;
-    baseUrl: string;
-    model: string;
-  };
-  gemini: {
-    apiKey: string;
-    baseUrl: string;
-    model: string;
-  };
-  deepseek: {
-    apiKey: string;
-    baseUrl: string;
-    model: string;
-  };
+  claude: AIProviderSettings;
+  openai: AIProviderSettings;
+  gemini: AIProviderSettings;
+  deepseek: AIProviderSettings;
+  glm: AIProviderSettings;
 }
 
-// 默认配置 - 使用 Antigravity 本地代理
+// 默认配置
 export const defaultAIConfig: AIConfig = {
-  claude: { // Anthropic 协议: http://127.0.0.1:8045/v1/messages
-    apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632',
-    baseUrl: 'http://127.0.0.1:8045',
-    model: 'claude-opus-4-5-thinking'
-  },
-  openai: { // OpenAI 协议: http://127.0.0.1:8045/v1
-    apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632',
-    baseUrl: 'http://127.0.0.1:8045/v1',
-    model: 'gpt-4o'
-  },
-  gemini: { // OpenAI 兼容协议
-    apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632',
-    baseUrl: 'http://127.0.0.1:8045/v1',
-    model: 'gemini-2.5-flash'
-  },
-  deepseek: {
-    apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632',
-    baseUrl: 'http://127.0.0.1:8045/v1',
-    model: 'deepseek-chat'
-  }
+  claude: { apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632', baseUrl: 'http://127.0.0.1:8045', model: 'claude-opus-4-5-thinking' }, // Antigravity 反代
+  openai: { apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632', baseUrl: 'http://127.0.0.1:8045/v1', model: 'gpt-4o' },
+  gemini: { apiKey: 'sk-2193ee6b1da84eeaa112fbbcf2e81632', baseUrl: 'http://127.0.0.1:8045/v1', model: 'gemini-2.5-flash' },
+  deepseek: { apiKey: 'sk-cdbe9cd807884f3fb0adaea29c4ac05b', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  glm: { apiKey: '942f209dc0c64ed58d54ac72b5ccf1f6.aHL4DBjxxAihYBY8', baseUrl: 'https://open.bigmodel.cn/api/anthropic', model: 'glm-4.7-flashx' },
 };

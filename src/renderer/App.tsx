@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './styles/main.css'; // 主布局样式
+import './styles/chat-tokens.css'; // Chat CSS 变量（必须在 markdown.css 之前）
 import './styles/ai-panel.css'; // AI 面板样式
 import './styles/components.css'; // 组件样式
 import './styles/markdown.css'; // Markdown 样式

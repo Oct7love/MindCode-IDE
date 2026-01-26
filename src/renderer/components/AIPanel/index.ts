@@ -1,4 +1,10 @@
 export { AIPanel } from './AIPanel';
+export { ChatView } from './ChatView';
+export { UnifiedChatView } from './UnifiedChatView';
 export { ContextChip } from './ContextChip';
 export { ContextPicker } from './ContextPicker';
-export type { AIMode, ContextItem } from '../../stores';
+export { MessageItem } from './MessageItem';
+export { ModelPicker, MODELS, TOOL_CAPABLE_MODELS } from './ModelPicker';
+export { QuickActions } from './QuickActions';
+export type { AIMode, ContextItem, ToolCallStatus } from '../../stores';
+export type { ModelInfo } from './ModelPicker';

@@ -1,1 +1,54 @@
-/* Plan View 样式已在 design-system-v2.css 中定义 */
+.ai-plan-view { display: flex; flex-direction: column; height: 100%; background: var(--bg-primary); }
+.ai-plan-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.ai-plan-msg { display: flex; gap: 12px; animation: planFadeIn 0.2s ease; }
+.ai-plan-msg-avatar { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; background: var(--bg-tertiary); }
+.ai-plan-msg-user .ai-plan-msg-avatar { background: var(--accent-primary); color: white; }
+.ai-plan-msg-body { flex: 1; min-width: 0; }
+.ai-plan-msg-content { background: var(--bg-secondary); border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.6; }
+.ai-plan-msg-user .ai-plan-msg-content { background: var(--accent-primary); color: white; }
+.ai-plan-loading { display: flex; gap: 4px; padding: 12px 16px; }
+.ai-plan-loading span { width: 8px; height: 8px; background: var(--accent-primary); border-radius: 50%; animation: planBounce 1.4s ease-in-out infinite; }
+.ai-plan-loading span:nth-child(2) { animation-delay: 0.2s; }
+.ai-plan-loading span:nth-child(3) { animation-delay: 0.4s; }
+.ai-plan-card { margin: 0 16px 16px; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%); border: 1px solid var(--border-primary); border-radius: 12px; padding: 16px; animation: planSlideUp 0.3s ease; }
+.ai-plan-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ai-plan-card-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.ai-plan-card-status { font-size: 11px; padding: 3px 8px; border-radius: 10px; background: var(--bg-primary); color: var(--text-muted); }
+.ai-plan-card-goal { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5; }
+.ai-plan-card-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.ai-plan-card-progress-bar { flex: 1; height: 4px; background: var(--bg-primary); border-radius: 2px; overflow: hidden; }
+.ai-plan-card-progress-fill { height: 100%; background: var(--accent-primary); border-radius: 2px; transition: width 0.3s ease; }
+.ai-plan-card-progress-text { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.ai-plan-card-tasks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.ai-plan-card-task { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg-primary); border-radius: 6px; cursor: pointer; transition: all 0.15s ease; }
+.ai-plan-card-task:hover { background: var(--bg-hover); }
+.ai-plan-card-task.completed { opacity: 0.6; }
+.ai-plan-card-task.completed .ai-plan-card-task-label { text-decoration: line-through; }
+.ai-plan-card-task-check { font-size: 12px; color: var(--text-muted); width: 16px; text-align: center; }
+.ai-plan-card-task.completed .ai-plan-card-task-check { color: var(--semantic-success); }
+.ai-plan-card-task-label { font-size: 12px; color: var(--text-primary); flex: 1; }
+.ai-plan-card-more { font-size: 11px; color: var(--text-muted); text-align: center; padding: 4px; }
+.ai-plan-card-actions { display: flex; gap: 8px; }
+.ai-plan-card-btn { flex: 1; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid var(--border-primary); background: var(--bg-primary); color: var(--text-primary); transition: all 0.15s ease; }
+.ai-plan-card-btn:hover { background: var(--bg-hover); }
+.ai-plan-card-btn.primary { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+.ai-plan-card-btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.ai-plan-card-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-plan-composer { padding: 12px 16px; border-top: 1px solid var(--border-primary); background: var(--bg-secondary); }
+.ai-plan-composer textarea { width: 100%; border: 1px solid var(--border-primary); border-radius: 8px; padding: 10px 12px; font-size: 13px; resize: none; background: var(--bg-primary); color: var(--text-primary); font-family: inherit; }
+.ai-plan-composer textarea:focus { outline: none; border-color: var(--accent-primary); }
+.ai-plan-composer textarea:disabled { opacity: 0.6; }
+.ai-plan-composer-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.ai-plan-composer-left { display: flex; align-items: center; gap: 8px; }
+.ai-plan-clear-btn { padding: 4px 8px; font-size: 11px; color: var(--text-muted); background: transparent; border: 1px solid var(--border-primary); border-radius: 4px; cursor: pointer; }
+.ai-plan-clear-btn:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+.ai-plan-send-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; border: none; background: var(--accent-primary); color: white; }
+.ai-plan-send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.ai-plan-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; padding: 40px; }
+.ai-empty-icon { font-size: 48px; margin-bottom: 16px; }
+.ai-empty-title { font-size: 16px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
+.ai-empty-desc { font-size: 13px; line-height: 1.6; max-width: 280px; }
+@keyframes planFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes planSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes planBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }

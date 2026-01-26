@@ -7,19 +7,15 @@ export class DeepSeekProvider extends BaseAIProvider {
   displayName = 'DeepSeek';
 
   models: ModelInfo[] = [
-    { id: 'deepseek-coder', name: 'DeepSeek Coder', contextWindow: 128000, inputPrice: 0.14, outputPrice: 0.28 },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat', contextWindow: 128000, inputPrice: 0.14, outputPrice: 0.28 },
+    { id: 'deepseek-chat', name: 'DeepSeek V3', contextWindow: 128000, inputPrice: 0.14, outputPrice: 0.28 },
+    { id: 'deepseek-reasoner', name: 'DeepSeek R2', contextWindow: 128000, inputPrice: 0.55, outputPrice: 2.19 },
   ];
 
   private client: OpenAI;
 
   constructor(config: AIProviderConfig) {
     super(config);
-    // DeepSeek 使用 OpenAI 兼容接口
-    this.client = new OpenAI({
-      apiKey: config.apiKey,
-      baseURL: config.baseUrl || 'https://api.deepseek.com/v1'
-    });
+    this.client = new OpenAI({ apiKey: config.apiKey, baseURL: config.baseUrl || 'https://api.deepseek.com' }); // DeepSeek OpenAI 兼容
   }
 
   async chat(messages: ChatMessage[]): Promise<string> {
@@ -27,28 +23,20 @@ export class DeepSeekProvider extends BaseAIProvider {
       model: this.getModel(),
       max_tokens: this.getMaxTokens(),
       temperature: this.getTemperature(),
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }))
+      messages: messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
     });
-
     return response.choices[0]?.message?.content || '';
   }
 
   async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void> {
     let fullText = '';
-
     try {
       const stream = await this.client.chat.completions.create({
         model: this.getModel(),
         max_tokens: this.getMaxTokens(),
         temperature: this.getTemperature(),
         stream: true,
-        messages: messages.map(m => ({
-          role: m.role,
-          content: m.content
-        }))
+        messages: messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
       });
 
       for await (const chunk of stream) {

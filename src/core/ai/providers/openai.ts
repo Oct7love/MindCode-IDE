@@ -28,28 +28,20 @@ export class OpenAIProvider extends BaseAIProvider {
       model: this.getModel(),
       max_tokens: this.getMaxTokens(),
       temperature: this.getTemperature(),
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }))
+      messages: messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
     });
-
     return response.choices[0]?.message?.content || '';
   }
 
   async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void> {
     let fullText = '';
-
     try {
       const stream = await this.client.chat.completions.create({
         model: this.getModel(),
         max_tokens: this.getMaxTokens(),
         temperature: this.getTemperature(),
         stream: true,
-        messages: messages.map(m => ({
-          role: m.role,
-          content: m.content
-        }))
+        messages: messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
       });
 
       for await (const chunk of stream) {

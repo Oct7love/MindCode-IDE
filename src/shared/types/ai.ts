@@ -1,6 +1,6 @@
 // AI 服务相关类型定义
 
-export type AIProviderType = 'claude' | 'openai' | 'gemini' | 'deepseek';
+export type AIProviderType = 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm';
 
 export interface AIProviderConfig {
   apiKey: string;
@@ -11,8 +11,22 @@ export interface AIProviderConfig {
 }
 
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  toolCalls?: ToolCallInfo[];
+  toolCallId?: string;
+}
+
+export interface ToolSchema {
+  name: string;
+  description: string;
+  parameters: { type: 'object'; properties: Record<string, any>; required?: string[] };
+}
+
+export interface ToolCallInfo { id: string; name: string; arguments: Record<string, any>; }
+
+export interface ToolCallbacks extends StreamCallbacks {
+  onToolCall: (calls: ToolCallInfo[]) => void;
 }
 
 export interface StreamCallbacks {

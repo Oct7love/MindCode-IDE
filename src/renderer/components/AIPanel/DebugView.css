@@ -1,1 +1,53 @@
-/* Debug View 样式已在 design-system-v2.css 中定义 */
+/* Debug View 样式 */
+.ai-debug-view { display: flex; flex-direction: column; height: 100%; padding: var(--space-3); gap: var(--space-3); overflow-y: auto; }
+.ai-debug-input-section { display: flex; flex-direction: column; gap: var(--space-2); }
+.ai-debug-error-input { width: 100%; padding: var(--space-3); border: 1px solid var(--border-1); border-radius: var(--radius-md); background: var(--bg-2); color: var(--text-primary); font-family: var(--font-code); font-size: var(--font-size-sm); resize: vertical; min-height: 100px; }
+.ai-debug-error-input:focus { outline: none; border-color: var(--accent-primary); }
+.ai-debug-collect-actions { display: flex; gap: var(--space-2); }
+.ai-debug-btn { padding: var(--space-2) var(--space-3); border: 1px solid var(--border-1); border-radius: var(--radius-md); background: var(--bg-3); color: var(--text-primary); font-size: var(--font-size-sm); cursor: pointer; transition: all 0.15s; }
+.ai-debug-btn:hover:not(:disabled) { background: var(--bg-hover); }
+.ai-debug-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-debug-btn.primary { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+.ai-debug-btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.ai-debug-section-title { font-size: var(--font-size-sm); font-weight: var(--font-ui-weight-semibold); color: var(--text-secondary); margin-bottom: var(--space-2); }
+.ai-debug-issue-card { background: linear-gradient(135deg, var(--semantic-error-bg, rgba(239,68,68,0.1)), var(--bg-2)); border: 1px solid var(--semantic-error); border-radius: var(--radius-lg); padding: var(--space-4); }
+.ai-debug-issue-title { font-size: var(--font-size-lg); font-weight: var(--font-ui-weight-semibold); color: var(--semantic-error); margin-bottom: var(--space-2); }
+.ai-debug-issue-empathy { font-size: var(--font-size-sm); color: var(--text-secondary); font-style: italic; margin-bottom: var(--space-2); }
+.ai-debug-issue-description { color: var(--text-primary); }
+.ai-debug-section { background: var(--bg-2); border-radius: var(--radius-md); padding: var(--space-3); }
+.ai-debug-hypotheses { display: flex; flex-direction: column; gap: var(--space-2); }
+.ai-debug-hypothesis { background: var(--bg-3); border-radius: var(--radius-md); padding: var(--space-3); }
+.ai-debug-hypothesis-header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+.ai-debug-hypothesis-rank { font-weight: var(--font-ui-weight-semibold); color: var(--accent-primary); }
+.ai-debug-hypothesis-prob { font-size: var(--font-size-xs); color: var(--text-muted); background: var(--bg-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+.ai-debug-hypothesis-cause { color: var(--text-primary); margin-bottom: var(--space-1); }
+.ai-debug-hypothesis-evidence { font-size: var(--font-size-xs); color: var(--text-muted); }
+.ai-debug-evidence-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border-1); font-size: var(--font-size-sm); }
+.ai-debug-evidence-item:last-child { border-bottom: none; }
+.ai-debug-evidence-type { color: var(--accent-primary); font-weight: var(--font-ui-weight-medium); }
+.ai-debug-evidence-desc { flex: 1; color: var(--text-primary); }
+.ai-debug-evidence-cmd { font-family: var(--font-code); font-size: var(--font-size-xs); background: var(--bg-3); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+.ai-debug-step { background: var(--bg-3); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-2); }
+.ai-debug-step.completed { opacity: 0.7; }
+.ai-debug-step-header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.ai-debug-step-order { font-weight: var(--font-ui-weight-medium); color: var(--text-secondary); }
+.ai-debug-step-run { margin-left: auto; padding: var(--space-1) var(--space-2); font-size: var(--font-size-xs); background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; }
+.ai-debug-step-action { color: var(--text-primary); margin-bottom: var(--space-1); }
+.ai-debug-step-cmd { display: block; font-family: var(--font-code); font-size: var(--font-size-xs); background: var(--bg-1); padding: var(--space-2); border-radius: var(--radius-sm); margin: var(--space-2) 0; }
+.ai-debug-step-expected { font-size: var(--font-size-xs); color: var(--text-muted); }
+.ai-debug-branch { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border-1); font-size: var(--font-size-sm); }
+.ai-debug-branch:last-child { border-bottom: none; }
+.ai-debug-branch-condition { color: var(--text-secondary); }
+.ai-debug-branch-action { color: var(--accent-primary); }
+.ai-debug-fix { background: var(--bg-3); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-2); }
+.ai-debug-fix-title { font-weight: var(--font-ui-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-1); }
+.ai-debug-fix-desc { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--space-2); }
+.ai-debug-fix-diff { background: var(--bg-1); padding: var(--space-2); border-radius: var(--radius-sm); font-family: var(--font-code); font-size: var(--font-size-xs); overflow-x: auto; max-height: 150px; margin-bottom: var(--space-2); }
+.ai-debug-fix-actions { display: flex; gap: var(--space-2); }
+.ai-debug-logs { background: var(--bg-1); padding: var(--space-2); border-radius: var(--radius-sm); font-family: var(--font-code); font-size: var(--font-size-xs); max-height: 200px; overflow: auto; white-space: pre-wrap; }
+.ai-debug-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.ai-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center; color: var(--text-muted); }
+.ai-empty-state-icon { font-size: 48px; margin-bottom: var(--space-3); }
+.ai-empty-state-text { font-size: var(--font-size-lg); margin-bottom: var(--space-2); }
+.ai-empty-state-hint { font-size: var(--font-size-sm); }
+.ai-debug-footer { padding: var(--space-3); border-top: 1px solid var(--border-1); margin-top: auto; }

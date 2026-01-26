@@ -4,6 +4,7 @@
  */
 
 @import './design-tokens.css';
+@import './chat-tokens.css';
 
 /* ============================================
  * CSS Reset & Base

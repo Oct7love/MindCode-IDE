@@ -1,132 +1,217 @@
-import React, { useState, useEffect } from 'react';
-import { useAIStore, AgentStep } from '../../stores';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useAIStore, useFileStore } from '../../stores';
+import { ModelPicker, TOOL_CAPABLE_MODELS } from './ModelPicker';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 import './AgentView.css';
 
-interface FileChange { id: string; fileName: string; additions: number; deletions: number; isNew: boolean; content?: string; }
+interface ToolCall { id: string; name: string; args: any; status: 'pending' | 'running' | 'success' | 'failed'; result?: any; error?: string; }
+interface AgentMessage { id: string; role: 'user' | 'assistant' | 'tool'; content: string; toolCalls?: ToolCall[]; timestamp: number; }
 
-// Agent 工具定义
-const agentTools = {
-  readFile: { name: 'readFile', description: '读取文件内容', requiresConfirmation: false },
-  writeFile: { name: 'writeFile', description: '写入文件内容', requiresConfirmation: true },
-  runCommand: { name: 'runCommand', description: '执行终端命令', requiresConfirmation: true },
-  searchSymbol: { name: 'searchSymbol', description: '搜索符号定义', requiresConfirmation: false },
-};
+export const AgentView: React.FC = memo(() => {
+  const { model, setModel, contexts } = useAIStore();
+  const { workspaceRoot, getActiveFile } = useFileStore();
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [pendingConfirm, setPendingConfirm] = useState<{ call: ToolCall; resolve: (ok: boolean) => void } | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef(false);
 
-export const AgentView: React.FC = () => {
-  const { currentPlan, agentSteps, setAgentSteps, updateAgentStep, setPlan, setMode } = useAIStore();
-  const [changes, setChanges] = useState<FileChange[]>([]);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [pendingConfirm, setPendingConfirm] = useState<{ step: AgentStep; action: () => Promise<void> } | null>(null);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, streamingText]);
+  useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'; } }, [input]);
 
-  useEffect(() => { // 从 Plan 生成初始 Agent 步骤
-    if (currentPlan && agentSteps.length === 0) {
-      const steps: AgentStep[] = currentPlan.tasks.filter(t => !t.completed).map((t, i) => ({ id: t.id, label: t.label, status: 'queued' as const }));
-      if (steps.length > 0) setAgentSteps(steps);
-    }
-  }, [currentPlan]);
+  const resolvePath = useCallback((p: string) => p?.match(/^[a-zA-Z]:[/\\]/) || p?.startsWith('/') ? p : workspaceRoot ? `${workspaceRoot}/${p}`.replace(/\\/g, '/') : p, [workspaceRoot]);
 
-  const executeStep = async (step: AgentStep) => { // 执行单个步骤
-    updateAgentStep(step.id, 'running');
+  const executeTool = useCallback(async (name: string, args: any): Promise<{ success: boolean; data?: any; error?: string }> => {
     try {
-      await new Promise(r => setTimeout(r, 1000)); // 模拟执行
-      // TODO: 实际执行工具调用 - 调用 window.mindcode.fs/terminal API
-      updateAgentStep(step.id, 'succeeded');
-      return true;
-    } catch (e) {
-      updateAgentStep(step.id, 'failed');
-      return false;
+      switch (name) {
+        case 'workspace.listDir': return await window.mindcode?.fs?.readDir?.(resolvePath(args.path)) || { success: false, error: 'API 不可用' };
+        case 'workspace.readFile': { const res = await window.mindcode?.fs?.readFile?.(resolvePath(args.path)); if (!res?.success) return res || { success: false, error: '读取失败' }; let content = res.data || ''; if (args.startLine || args.endLine) { const lines = content.split('\n'); content = lines.slice((args.startLine || 1) - 1, args.endLine || lines.length).join('\n'); } return { success: true, data: { content, lines: res.data?.split('\n').length } }; }
+        case 'workspace.writeFile': return await window.mindcode?.fs?.writeFile?.(resolvePath(args.path), args.content) || { success: false, error: '写入失败' };
+        case 'workspace.search': return await window.mindcode?.fs?.searchInFiles?.({ workspacePath: workspaceRoot || '', query: args.query, maxResults: args.maxResults || 50 }) || { success: false, error: '搜索失败' };
+        case 'editor.getActiveFile': { const f = getActiveFile(); return { success: true, data: f ? { path: f.path, content: f.content } : null }; }
+        case 'terminal.execute': return await window.mindcode?.terminal?.execute?.(args.command, args.cwd ? resolvePath(args.cwd) : workspaceRoot || undefined) || { success: false, error: '执行失败' };
+        case 'git.status': return await window.mindcode?.git?.status?.(workspaceRoot || '') || { success: false, error: 'Git 不可用' };
+        case 'git.diff': return await window.mindcode?.git?.diff?.(workspaceRoot || '', args.path, args.staged) || { success: false, error: 'Git 不可用' };
+        default: return { success: false, error: `未知工具: ${name}` };
+      }
+    } catch (e: any) { return { success: false, error: e.message }; }
+  }, [workspaceRoot, getActiveFile, resolvePath]);
+
+  const confirmTool = useCallback((call: ToolCall): Promise<boolean> => new Promise(resolve => setPendingConfirm({ call, resolve })), []);
+
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isRunning) return;
+    const userMsg: AgentMessage = { id: `msg-${Date.now()}`, role: 'user', content: input.trim(), timestamp: Date.now() };
+    setMessages(m => [...m, userMsg]);
+    setInput('');
+    setIsRunning(true);
+    setStreamingText('');
+    abortRef.current = false;
+
+    const activeFile = getActiveFile();
+    const systemPrompt = `你是 MindCode Agent，一个智能编程助手，可以通过工具自主完成编程任务。
+【工作区】${workspaceRoot || '未打开'}
+【当前文件】${activeFile?.path || '无'}
+【可用工具】workspace.listDir, workspace.readFile, workspace.writeFile, workspace.search, editor.getActiveFile, terminal.execute, git.status, git.diff
+【行为准则】
+1. 理解用户需求，必要时询问澄清
+2. 需要查看代码时主动使用工具
+3. 修改文件前先读取内容确认
+4. 每次只做必要的改动
+5. 完成后清晰说明所做的事情
+6. 遇到问题时说明原因并提供建议`;
+
+    const tools = [
+      { name: 'workspace.listDir', description: '列出目录内容', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '目录路径' } }, required: ['path'] } },
+      { name: 'workspace.readFile', description: '读取文件内容', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
+      { name: 'workspace.writeFile', description: '写入/创建文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
+      { name: 'workspace.search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
+      { name: 'editor.getActiveFile', description: '获取当前编辑文件', parameters: { type: 'object' as const, properties: {} } },
+      { name: 'terminal.execute', description: '执行终端命令', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
+      { name: 'git.status', description: '获取 Git 状态', parameters: { type: 'object' as const, properties: {} } },
+      { name: 'git.diff', description: '获取文件差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
+    ];
+
+    const chatHistory = messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: userMsg.content }];
+    const requiresConfirm = ['workspace.writeFile', 'terminal.execute'];
+    let iterations = 0, maxIterations = 15;
+
+    while (iterations < maxIterations && !abortRef.current) {
+      iterations++;
+      let responseText = '', toolCalls: any[] = [];
+      try {
+        await new Promise<void>((resolve, reject) => {
+          if (!window.mindcode?.ai?.chatStreamWithTools) { reject(new Error('API 不可用')); return; }
+          window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
+            onToken: (token) => { responseText += token; setStreamingText(prev => prev + token); },
+            onToolCall: (calls) => { toolCalls = calls; },
+            onComplete: () => resolve(),
+            onError: (err) => reject(new Error(err))
+          });
+        });
+      } catch (e: any) {
+        setMessages(m => [...m, { id: `msg-${Date.now()}`, role: 'assistant', content: `错误: ${e.message}`, timestamp: Date.now() }]);
+        break;
+      }
+
+      if (abortRef.current) break;
+
+      if (toolCalls.length === 0) { // 无工具调用，对话结束
+        if (responseText) setMessages(m => [...m, { id: `msg-${Date.now()}`, role: 'assistant', content: responseText, timestamp: Date.now() }]);
+        break;
+      }
+
+      // 有工具调用
+      const calls: ToolCall[] = toolCalls.map(tc => ({ id: tc.id, name: tc.name, args: tc.arguments, status: 'pending' as const }));
+      const assistantMsg: AgentMessage = { id: `msg-${Date.now()}`, role: 'assistant', content: responseText, toolCalls: calls, timestamp: Date.now() };
+      setMessages(m => [...m, assistantMsg]);
+      setStreamingText('');
+      apiMessages.push({ role: 'assistant', content: responseText, toolCalls });
+
+      for (const call of calls) {
+        if (abortRef.current) break;
+        // 更新状态为 pending
+        setMessages(m => m.map(msg => msg.id === assistantMsg.id ? { ...msg, toolCalls: msg.toolCalls?.map(c => c.id === call.id ? { ...c, status: 'pending' as const } : c) } : msg));
+
+        if (requiresConfirm.includes(call.name)) {
+          const confirmed = await confirmTool(call);
+          if (!confirmed) {
+            setMessages(m => m.map(msg => msg.id === assistantMsg.id ? { ...msg, toolCalls: msg.toolCalls?.map(c => c.id === call.id ? { ...c, status: 'failed' as const, error: '用户取消' } : c) } : msg));
+            apiMessages.push({ role: 'tool', toolCallId: call.id, content: JSON.stringify({ error: '用户取消操作' }) });
+            continue;
+          }
+        }
+
+        setMessages(m => m.map(msg => msg.id === assistantMsg.id ? { ...msg, toolCalls: msg.toolCalls?.map(c => c.id === call.id ? { ...c, status: 'running' as const } : c) } : msg));
+        const result = await executeTool(call.name, call.args);
+        setMessages(m => m.map(msg => msg.id === assistantMsg.id ? { ...msg, toolCalls: msg.toolCalls?.map(c => c.id === call.id ? { ...c, status: result.success ? 'success' as const : 'failed' as const, result: result.data, error: result.error } : c) } : msg));
+        apiMessages.push({ role: 'tool', toolCallId: call.id, content: JSON.stringify(result.success ? result.data : { error: result.error }) });
+      }
     }
-  };
+    setIsRunning(false);
+    setStreamingText('');
+  }, [input, isRunning, model, messages, workspaceRoot, getActiveFile, executeTool, confirmTool]);
 
-  const executeAll = async () => { // 执行所有步骤
-    setIsExecuting(true);
-    for (const step of agentSteps) {
-      if (step.status !== 'queued') continue;
-      const success = await executeStep(step);
-      if (!success) break;
-    }
-    setIsExecuting(false);
-    if (agentSteps.every(s => s.status === 'succeeded') && currentPlan) setPlan({ ...currentPlan, status: 'completed' });
-  };
+  const handleStop = useCallback(() => { abortRef.current = true; setIsRunning(false); setStreamingText(''); }, []);
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } if (e.key === 'Escape' && isRunning) handleStop(); };
+  const handleConfirm = useCallback((ok: boolean) => { pendingConfirm?.resolve(ok); setPendingConfirm(null); }, [pendingConfirm]);
+  const clearChat = useCallback(() => { setMessages([]); setStreamingText(''); }, []);
 
-  const cancelExecution = () => {
-    setIsExecuting(false);
-    agentSteps.filter(s => s.status === 'running' || s.status === 'queued').forEach(s => updateAgentStep(s.id, 'cancelled'));
-  };
-
-  const rollback = () => { // 回滚所有更改
-    setChanges([]);
-    setAgentSteps([]);
-    if (currentPlan) setPlan({ ...currentPlan, status: 'locked' });
-  };
-
-  const applyChange = async (change: FileChange) => { // 应用单个文件更改
-    if (window.mindcode?.fs?.writeFile && change.content) {
-      await window.mindcode.fs.writeFile(change.fileName, change.content);
-      setChanges(cs => cs.filter(c => c.id !== change.id));
-    }
-  };
-
-  const statusIcons: Record<string, string> = { queued: '○', running: '⟳', succeeded: '✓', failed: '✗', cancelled: '⊘' };
-  const statusColors: Record<string, string> = { queued: 'var(--text-muted)', running: 'var(--accent-primary)', succeeded: 'var(--semantic-success)', failed: 'var(--semantic-error)', cancelled: 'var(--text-muted)' };
-
-  if (!currentPlan || agentSteps.length === 0) {
-    return (
-      <div className="ai-empty-state">
-        <div className="ai-empty-state-icon"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 4L6 16v16l18 12 18-12V16L24 4zm0 3.5L38.5 18v12L24 35.5 9.5 30V18L24 7.5z"/></svg></div>
-        <div className="ai-empty-state-text">请先创建并锁定 Plan，然后点击"执行"</div>
-        <button className="ai-plan-btn primary" onClick={() => setMode('plan')}>创建 Plan</button>
-      </div>
-    );
-  }
+  const statusIcon = { pending: '○', running: '⟳', success: '✓', failed: '✗' };
+  const statusColor = { pending: 'var(--text-muted)', running: 'var(--accent-primary)', success: 'var(--semantic-success)', failed: 'var(--semantic-error)' };
 
   return (
     <div className="ai-agent-view">
-      <div style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>执行 Plan: {currentPlan.title}</div>
-
-      <div className="ai-agent-stepper">
-        {agentSteps.map(step => (
-          <div key={step.id} className="ai-agent-step">
-            <div className="ai-agent-step-icon" style={{ color: statusColors[step.status], animation: step.status === 'running' ? 'spin 1s linear infinite' : 'none' }}>{statusIcons[step.status]}</div>
-            <div className="ai-agent-step-label">{step.label}</div>
-            <div className="ai-agent-step-status">{step.status}</div>
+      <div className="ai-agent-messages">
+        {messages.length === 0 && !streamingText && (
+          <div className="ai-empty-state">
+            <div className="ai-empty-icon">🤖</div>
+            <div className="ai-empty-title">Agent 模式</div>
+            <div className="ai-empty-desc">我可以自主使用工具帮你完成编程任务<br/>读取文件、修改代码、执行命令，一步到位</div>
+          </div>
+        )}
+        {messages.map(msg => (
+          <div key={msg.id} className={`ai-agent-msg ai-agent-msg-${msg.role}`}>
+            <div className="ai-agent-msg-avatar">{msg.role === 'user' ? '👤' : '🤖'}</div>
+            <div className="ai-agent-msg-body">
+              {msg.content && <div className="ai-agent-msg-content"><MarkdownRenderer content={msg.content} /></div>}
+              {msg.toolCalls && msg.toolCalls.length > 0 && (
+                <div className="ai-agent-tools">
+                  {msg.toolCalls.map(tc => (
+                    <div key={tc.id} className={`ai-agent-tool ai-agent-tool-${tc.status}`}>
+                      <span className="ai-agent-tool-icon" style={{ color: statusColor[tc.status] }}>{statusIcon[tc.status]}</span>
+                      <span className="ai-agent-tool-name">{tc.name}</span>
+                      <span className="ai-agent-tool-args">{JSON.stringify(tc.args).slice(0, 60)}{JSON.stringify(tc.args).length > 60 ? '...' : ''}</span>
+                      {tc.error && <span className="ai-agent-tool-error">{tc.error}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
+        {streamingText && (
+          <div className="ai-agent-msg ai-agent-msg-assistant">
+            <div className="ai-agent-msg-avatar">🤖</div>
+            <div className="ai-agent-msg-body"><div className="ai-agent-msg-content"><MarkdownRenderer content={streamingText} /></div></div>
+          </div>
+        )}
+        {isRunning && !streamingText && <div className="ai-agent-loading"><span /><span /><span /></div>}
+        <div ref={messagesEndRef} />
       </div>
 
-      {changes.length > 0 && (
-        <div className="ai-agent-changes">
-          <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-ui-weight-semibold)', color: 'var(--text-primary)', marginBottom: 'var(--space-3)' }}>变更预览:</div>
-          {changes.map(change => (
-            <div key={change.id} className="ai-agent-change-item">
-              <div className="ai-agent-change-info">
-                <span style={{ marginRight: 'var(--space-2)' }}>📄</span>
-                <div className="ai-agent-change-name">{change.fileName}</div>
-                <div className="ai-agent-change-count">{change.isNew ? 'new' : `+${change.additions}, -${change.deletions}`}</div>
-              </div>
-              <button className="ai-agent-change-btn" onClick={() => applyChange(change)}>应用</button>
-            </div>
-          ))}
+      <div className="ai-agent-composer">
+        <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="描述你想完成的任务... (Enter 发送)" disabled={isRunning} rows={1} />
+        <div className="ai-agent-composer-footer">
+          <div className="ai-agent-composer-left">
+            <ModelPicker model={model} onModelChange={setModel} whitelist={TOOL_CAPABLE_MODELS} disabled={isRunning} />
+            {messages.length > 0 && <button className="ai-agent-clear-btn" onClick={clearChat} disabled={isRunning}>清空</button>}
+          </div>
+          {isRunning ? (
+            <button className="ai-agent-stop-btn" onClick={handleStop}><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1"/></svg>停止</button>
+          ) : (
+            <button className="ai-agent-send-btn" onClick={handleSend} disabled={!input.trim()}><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1.17 2.32L14.5 8l-13.33 5.68.17-4.18L8.5 8l-7.16-1.5-.17-4.18z"/></svg></button>
+          )}
         </div>
-      )}
-
-      <div className="ai-agent-actions">
-        <button className="ai-agent-btn" onClick={cancelExecution} disabled={!isExecuting}>取消</button>
-        <button className="ai-agent-btn primary" onClick={executeAll} disabled={isExecuting || agentSteps.every(s => s.status !== 'queued')}>{isExecuting ? '执行中...' : '执行全部'}</button>
-        <button className="ai-agent-btn danger" onClick={rollback}>回滚</button>
       </div>
 
       {pendingConfirm && (
-        <div className="ai-confirm-modal" style={{ position: 'absolute', inset: 0, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg-2)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', maxWidth: '300px' }}>
-            <div style={{ marginBottom: 'var(--space-3)' }}>确认执行: {pendingConfirm.step.label}?</div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <button className="ai-agent-btn" onClick={() => setPendingConfirm(null)}>取消</button>
-              <button className="ai-agent-btn primary" onClick={() => { pendingConfirm.action(); setPendingConfirm(null); }}>确认</button>
+        <div className="ai-agent-confirm-overlay">
+          <div className="ai-agent-confirm-dialog">
+            <div className="ai-agent-confirm-title">⚠️ 确认执行</div>
+            <div className="ai-agent-confirm-tool">{pendingConfirm.call.name}</div>
+            <pre className="ai-agent-confirm-args">{JSON.stringify(pendingConfirm.call.args, null, 2)}</pre>
+            <div className="ai-agent-confirm-actions">
+              <button onClick={() => handleConfirm(false)}>取消</button>
+              <button className="primary" onClick={() => handleConfirm(true)}>确认</button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
+});

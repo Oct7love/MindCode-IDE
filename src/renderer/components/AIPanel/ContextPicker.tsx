@@ -94,7 +94,15 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
     if ('data' in item) { // 添加文件/目录/符号上下文
       let content = '';
       if (item.type === 'file' && item.data.path) {
-        try { content = await window.mindcode?.fs?.readFile?.(item.data.path) || ''; } catch {}
+        try { 
+          const res = await window.mindcode?.fs?.readFile?.(item.data.path);
+          content = res?.success && res.data ? res.data : '';
+        } catch (e) { console.error('readFile error:', e); }
+      } else if (item.type === 'folder' && item.data.path) {
+        try { // 读取目录结构
+          const res = await window.mindcode?.fs?.readDir?.(item.data.path);
+          content = res?.success && res.data ? res.data.map((f: any) => `${f.type === 'folder' ? '📁' : '📄'} ${f.name}`).join('\n') : '';
+        } catch (e) { console.error('readDir error:', e); }
       }
       addContext({ id: `ctx-${Date.now()}`, type: item.type as any, label: item.label, data: { ...item.data, content } });
       onClose();

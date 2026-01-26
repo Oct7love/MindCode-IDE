@@ -1,0 +1,38 @@
+/* QuickActions - 快捷操作按钮组 */
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chat-spacing-xs, 4px);
+  padding: var(--chat-spacing-sm, 8px) var(--chat-spacing-md, 12px);
+  border-bottom: 1px solid var(--chat-border, #3c3c3c);
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--chat-border, #3c3c3c);
+  border-radius: var(--chat-radius-xl, 12px);
+  background: var(--chat-bg-secondary, #252526);
+  color: var(--chat-text-secondary, #a0a0a0);
+  font-size: var(--chat-font-size-xs, 11px);
+  font-family: var(--chat-font-family);
+  cursor: pointer;
+  transition: all var(--chat-transition-fast, 100ms);
+}
+
+.quick-action-btn:hover:not(:disabled) {
+  background: var(--chat-bg-hover, #333);
+  color: var(--chat-text-primary, #e0e0e0);
+  border-color: var(--chat-accent, #0078d4);
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-action-icon { font-size: 12px; }
+.quick-action-label { font-weight: 500; }

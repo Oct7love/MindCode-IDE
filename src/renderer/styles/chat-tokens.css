@@ -1,0 +1,145 @@
+/* AI Chat Design Tokens - MindCode */
+
+:root {
+  /* === 尺寸 === */
+  --chat-panel-width: 420px;
+  --chat-panel-min-width: 320px;
+  --chat-panel-max-width: 600px;
+  
+  /* === 字体 === */
+  --chat-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --chat-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
+  --chat-font-size-xs: 11px;
+  --chat-font-size-sm: 12px;
+  --chat-font-size-base: 13px;
+  --chat-font-size-lg: 14px;
+  --chat-font-size-code: 12px;
+  --chat-line-height: 1.6;
+  --chat-line-height-code: 1.5;
+  
+  /* === 间距 === */
+  --chat-spacing-xs: 4px;
+  --chat-spacing-sm: 8px;
+  --chat-spacing-md: 12px;
+  --chat-spacing-lg: 16px;
+  --chat-spacing-xl: 24px;
+  --chat-message-gap: 16px;
+  --chat-block-gap: 12px;
+  
+  /* === 圆角 === */
+  --chat-radius-sm: 4px;
+  --chat-radius-md: 6px;
+  --chat-radius-lg: 8px;
+  --chat-radius-xl: 12px;
+  
+  /* === 阴影 === */
+  --chat-shadow-sm: 0 1px 2px rgba(0,0,0,0.1);
+  --chat-shadow-md: 0 2px 8px rgba(0,0,0,0.15);
+  --chat-shadow-lg: 0 4px 16px rgba(0,0,0,0.2);
+  --chat-shadow-dropdown: 0 12px 48px rgba(0,0,0,0.5);
+  
+  /* === 过渡 === */
+  --chat-transition-fast: 100ms ease;
+  --chat-transition-base: 150ms ease;
+  --chat-transition-slow: 250ms ease;
+}
+
+/* === Dark Theme (默认) === */
+:root, [data-theme="dark"] {
+  --chat-bg: #1e1e1e;
+  --chat-bg-secondary: #252526;
+  --chat-bg-tertiary: #2d2d30;
+  --chat-bg-hover: #333333;
+  --chat-bg-active: #3c3c3c;
+  
+  --chat-text-primary: #e0e0e0;
+  --chat-text-secondary: #a0a0a0;
+  --chat-text-tertiary: #6e6e6e;
+  --chat-text-inverse: #1e1e1e;
+  
+  --chat-border: #3c3c3c;
+  --chat-border-light: #2d2d30;
+  --chat-border-focus: #0078d4;
+  
+  --chat-user-bg: #2d4a3e;
+  --chat-user-border: #3d5a4e;
+  --chat-assistant-bg: transparent;
+  --chat-assistant-border: transparent;
+  
+  --chat-code-bg: #1a1a1a;
+  --chat-code-header: #252526;
+  --chat-code-border: #333333;
+  --chat-code-text: #d4d4d4;
+  
+  --chat-callout-info-bg: rgba(0, 120, 212, 0.15);
+  --chat-callout-info-border: #0078d4;
+  --chat-callout-info-text: #6cb6ff;
+  --chat-callout-warn-bg: rgba(255, 204, 0, 0.1);
+  --chat-callout-warn-border: #ffcc00;
+  --chat-callout-warn-text: #ffcc66;
+  --chat-callout-error-bg: rgba(255, 77, 79, 0.1);
+  --chat-callout-error-border: #ff4d4f;
+  --chat-callout-error-text: #ff6b6b;
+  --chat-callout-success-bg: rgba(82, 196, 26, 0.1);
+  --chat-callout-success-border: #52c41a;
+  --chat-callout-success-text: #6bff9f;
+  
+  --chat-accent: #0078d4;
+  --chat-accent-hover: #1a8ae6;
+  --chat-accent-active: #006abc;
+  
+  --chat-danger: #f14c4c;
+  --chat-danger-hover: #f36c6c;
+  --chat-success: #52c41a;
+  --chat-warning: #faad14;
+}
+
+/* === Light Theme === */
+[data-theme="light"] {
+  --chat-bg: #ffffff;
+  --chat-bg-secondary: #f5f5f5;
+  --chat-bg-tertiary: #ebebeb;
+  --chat-bg-hover: #e8e8e8;
+  --chat-bg-active: #d4d4d4;
+  
+  --chat-text-primary: #1e1e1e;
+  --chat-text-secondary: #5a5a5a;
+  --chat-text-tertiary: #8a8a8a;
+  --chat-text-inverse: #ffffff;
+  
+  --chat-border: #d4d4d4;
+  --chat-border-light: #e8e8e8;
+  --chat-border-focus: #0078d4;
+  
+  --chat-user-bg: #e8f4ec;
+  --chat-user-border: #c8e4d0;
+  --chat-assistant-bg: transparent;
+  --chat-assistant-border: transparent;
+  
+  --chat-code-bg: #f5f5f5;
+  --chat-code-header: #ebebeb;
+  --chat-code-border: #d4d4d4;
+  --chat-code-text: #1e1e1e;
+  
+  --chat-callout-info-bg: #e8f4fc;
+  --chat-callout-info-border: #0078d4;
+  --chat-callout-info-text: #0066cc;
+  --chat-callout-warn-bg: #fffbe6;
+  --chat-callout-warn-border: #faad14;
+  --chat-callout-warn-text: #ad6800;
+  --chat-callout-error-bg: #fff2f0;
+  --chat-callout-error-border: #ff4d4f;
+  --chat-callout-error-text: #cf1322;
+  --chat-callout-success-bg: #f6ffed;
+  --chat-callout-success-border: #52c41a;
+  --chat-callout-success-text: #389e0d;
+  
+  --chat-accent: #0078d4;
+  --chat-accent-hover: #006abc;
+  --chat-accent-active: #005a9e;
+  
+  --chat-danger: #d32f2f;
+  --chat-danger-hover: #b71c1c;
+  --chat-success: #52c41a;
+  --chat-warning: #faad14;
+}

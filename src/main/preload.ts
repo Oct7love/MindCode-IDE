@@ -12,48 +12,32 @@ contextBridge.exposeInMainWorld('mindcode', {
       ipcRenderer.invoke('ai-chat', { model, messages }),
 
     // 流式聊天
-    chatStream: (model: string, messages: any[], callbacks: {
-      onToken: (token: string) => void;
-      onComplete: (fullText: string) => void;
-      onError: (error: string) => void;
-    }) => {
+    chatStream: (model: string, messages: any[], callbacks: { onToken: (token: string) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => {
       const requestId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-      // 监听流式响应
-      const tokenHandler = (_: any, data: { requestId: string; token: string }) => {
-        if (data.requestId === requestId) {
-          callbacks.onToken(data.token);
-        }
-      };
-
-      const completeHandler = (_: any, data: { requestId: string; fullText: string }) => {
-        if (data.requestId === requestId) {
-          callbacks.onComplete(data.fullText);
-          cleanup();
-        }
-      };
-
-      const errorHandler = (_: any, data: { requestId: string; error: string }) => {
-        if (data.requestId === requestId) {
-          callbacks.onError(data.error);
-          cleanup();
-        }
-      };
-
-      const cleanup = () => {
-        ipcRenderer.removeListener('ai-stream-token', tokenHandler);
-        ipcRenderer.removeListener('ai-stream-complete', completeHandler);
-        ipcRenderer.removeListener('ai-stream-error', errorHandler);
-      };
-
+      const tokenHandler = (_: any, data: { requestId: string; token: string }) => { if (data.requestId === requestId) callbacks.onToken(data.token); };
+      const completeHandler = (_: any, data: { requestId: string; fullText: string }) => { if (data.requestId === requestId) { callbacks.onComplete(data.fullText); cleanup(); } };
+      const errorHandler = (_: any, data: { requestId: string; error: string }) => { if (data.requestId === requestId) { callbacks.onError(data.error); cleanup(); } };
+      const cleanup = () => { ipcRenderer.removeListener('ai-stream-token', tokenHandler); ipcRenderer.removeListener('ai-stream-complete', completeHandler); ipcRenderer.removeListener('ai-stream-error', errorHandler); };
       ipcRenderer.on('ai-stream-token', tokenHandler);
       ipcRenderer.on('ai-stream-complete', completeHandler);
       ipcRenderer.on('ai-stream-error', errorHandler);
-
-      // 发送请求
       ipcRenderer.send('ai-chat-stream', { model, messages, requestId });
+      return cleanup;
+    },
 
-      // 返回取消函数
+    // 流式聊天（支持工具调用）
+    chatStreamWithTools: (model: string, messages: any[], tools: any[], callbacks: { onToken: (token: string) => void; onToolCall: (calls: any[]) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => {
+      const requestId = `stream-tools-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const tokenHandler = (_: any, data: { requestId: string; token: string }) => { if (data.requestId === requestId) callbacks.onToken(data.token); };
+      const toolCallHandler = (_: any, data: { requestId: string; toolCalls: any[] }) => { if (data.requestId === requestId) callbacks.onToolCall(data.toolCalls); };
+      const completeHandler = (_: any, data: { requestId: string; fullText: string }) => { if (data.requestId === requestId) { callbacks.onComplete(data.fullText); cleanup(); } };
+      const errorHandler = (_: any, data: { requestId: string; error: string }) => { if (data.requestId === requestId) { callbacks.onError(data.error); cleanup(); } };
+      const cleanup = () => { ipcRenderer.removeListener('ai-stream-token', tokenHandler); ipcRenderer.removeListener('ai-stream-tool-call', toolCallHandler); ipcRenderer.removeListener('ai-stream-complete', completeHandler); ipcRenderer.removeListener('ai-stream-error', errorHandler); };
+      ipcRenderer.on('ai-stream-token', tokenHandler);
+      ipcRenderer.on('ai-stream-tool-call', toolCallHandler);
+      ipcRenderer.on('ai-stream-complete', completeHandler);
+      ipcRenderer.on('ai-stream-error', errorHandler);
+      ipcRenderer.send('ai-chat-stream-with-tools', { model, messages, tools, requestId });
       return cleanup;
     }
   },
@@ -148,11 +132,8 @@ declare global {
       getVersion: () => Promise<string>;
       ai: {
         chat: (model: string, messages: any[]) => Promise<{ success: boolean; data?: string; error?: string }>;
-        chatStream: (model: string, messages: any[], callbacks: {
-          onToken: (token: string) => void;
-          onComplete: (fullText: string) => void;
-          onError: (error: string) => void;
-        }) => () => void;
+        chatStream: (model: string, messages: any[], callbacks: { onToken: (token: string) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => () => void;
+        chatStreamWithTools: (model: string, messages: any[], tools: any[], callbacks: { onToken: (token: string) => void; onToolCall: (calls: any[]) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => () => void;
       };
       fs: {
         openFolder: () => Promise<string | null>;
