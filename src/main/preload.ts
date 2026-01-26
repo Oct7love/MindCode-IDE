@@ -7,36 +7,35 @@ contextBridge.exposeInMainWorld('mindcode', {
 
   // AI 服务
   ai: {
-    // 非流式聊天
-    chat: (model: string, messages: any[]) =>
-      ipcRenderer.invoke('ai-chat', { model, messages }),
-
-    // 流式聊天
-    chatStream: (model: string, messages: any[], callbacks: { onToken: (token: string) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => {
+    chat: (model: string, messages: any[]) => ipcRenderer.invoke('ai-chat', { model, messages }), // 非流式聊天
+    getStats: () => ipcRenderer.invoke('ai-stats'), // 获取 LLM 状态 (队列/熔断)
+    chatStream: (model: string, messages: any[], callbacks: { onToken: (token: string) => void; onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => void; onError: (error: string, errorType?: string) => void; onFallback?: (from: string, to: string) => void; }) => { // 流式聊天
       const requestId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const tokenHandler = (_: any, data: { requestId: string; token: string }) => { if (data.requestId === requestId) callbacks.onToken(data.token); };
-      const completeHandler = (_: any, data: { requestId: string; fullText: string }) => { if (data.requestId === requestId) { callbacks.onComplete(data.fullText); cleanup(); } };
-      const errorHandler = (_: any, data: { requestId: string; error: string }) => { if (data.requestId === requestId) { callbacks.onError(data.error); cleanup(); } };
-      const cleanup = () => { ipcRenderer.removeListener('ai-stream-token', tokenHandler); ipcRenderer.removeListener('ai-stream-complete', completeHandler); ipcRenderer.removeListener('ai-stream-error', errorHandler); };
+      const completeHandler = (_: any, data: { requestId: string; fullText: string; model?: string; usedFallback?: boolean }) => { if (data.requestId === requestId) { callbacks.onComplete(data.fullText, { model: data.model || model, usedFallback: data.usedFallback || false }); cleanup(); } };
+      const errorHandler = (_: any, data: { requestId: string; error: string; errorType?: string }) => { if (data.requestId === requestId) { callbacks.onError(data.error, data.errorType); cleanup(); } };
+      const fallbackHandler = (_: any, data: { requestId: string; from: string; to: string }) => { if (data.requestId === requestId && callbacks.onFallback) callbacks.onFallback(data.from, data.to); };
+      const cleanup = () => { ipcRenderer.removeListener('ai-stream-token', tokenHandler); ipcRenderer.removeListener('ai-stream-complete', completeHandler); ipcRenderer.removeListener('ai-stream-error', errorHandler); ipcRenderer.removeListener('ai-stream-fallback', fallbackHandler); };
       ipcRenderer.on('ai-stream-token', tokenHandler);
       ipcRenderer.on('ai-stream-complete', completeHandler);
       ipcRenderer.on('ai-stream-error', errorHandler);
+      ipcRenderer.on('ai-stream-fallback', fallbackHandler);
       ipcRenderer.send('ai-chat-stream', { model, messages, requestId });
       return cleanup;
     },
-
-    // 流式聊天（支持工具调用）
-    chatStreamWithTools: (model: string, messages: any[], tools: any[], callbacks: { onToken: (token: string) => void; onToolCall: (calls: any[]) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => {
+    chatStreamWithTools: (model: string, messages: any[], tools: any[], callbacks: { onToken: (token: string) => void; onToolCall: (calls: any[]) => void; onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => void; onError: (error: string, errorType?: string) => void; onFallback?: (from: string, to: string) => void; }) => { // 流式聊天 + 工具
       const requestId = `stream-tools-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const tokenHandler = (_: any, data: { requestId: string; token: string }) => { if (data.requestId === requestId) callbacks.onToken(data.token); };
       const toolCallHandler = (_: any, data: { requestId: string; toolCalls: any[] }) => { if (data.requestId === requestId) callbacks.onToolCall(data.toolCalls); };
-      const completeHandler = (_: any, data: { requestId: string; fullText: string }) => { if (data.requestId === requestId) { callbacks.onComplete(data.fullText); cleanup(); } };
-      const errorHandler = (_: any, data: { requestId: string; error: string }) => { if (data.requestId === requestId) { callbacks.onError(data.error); cleanup(); } };
-      const cleanup = () => { ipcRenderer.removeListener('ai-stream-token', tokenHandler); ipcRenderer.removeListener('ai-stream-tool-call', toolCallHandler); ipcRenderer.removeListener('ai-stream-complete', completeHandler); ipcRenderer.removeListener('ai-stream-error', errorHandler); };
+      const completeHandler = (_: any, data: { requestId: string; fullText: string; model?: string; usedFallback?: boolean }) => { if (data.requestId === requestId) { callbacks.onComplete(data.fullText, { model: data.model || model, usedFallback: data.usedFallback || false }); cleanup(); } };
+      const errorHandler = (_: any, data: { requestId: string; error: string; errorType?: string }) => { if (data.requestId === requestId) { callbacks.onError(data.error, data.errorType); cleanup(); } };
+      const fallbackHandler = (_: any, data: { requestId: string; from: string; to: string }) => { if (data.requestId === requestId && callbacks.onFallback) callbacks.onFallback(data.from, data.to); };
+      const cleanup = () => { ipcRenderer.removeListener('ai-stream-token', tokenHandler); ipcRenderer.removeListener('ai-stream-tool-call', toolCallHandler); ipcRenderer.removeListener('ai-stream-complete', completeHandler); ipcRenderer.removeListener('ai-stream-error', errorHandler); ipcRenderer.removeListener('ai-stream-fallback', fallbackHandler); };
       ipcRenderer.on('ai-stream-token', tokenHandler);
       ipcRenderer.on('ai-stream-tool-call', toolCallHandler);
       ipcRenderer.on('ai-stream-complete', completeHandler);
       ipcRenderer.on('ai-stream-error', errorHandler);
+      ipcRenderer.on('ai-stream-fallback', fallbackHandler);
       ipcRenderer.send('ai-chat-stream-with-tools', { model, messages, tools, requestId });
       return cleanup;
     }
@@ -131,9 +130,10 @@ declare global {
     mindcode: {
       getVersion: () => Promise<string>;
       ai: {
-        chat: (model: string, messages: any[]) => Promise<{ success: boolean; data?: string; error?: string }>;
-        chatStream: (model: string, messages: any[], callbacks: { onToken: (token: string) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => () => void;
-        chatStreamWithTools: (model: string, messages: any[], tools: any[], callbacks: { onToken: (token: string) => void; onToolCall: (calls: any[]) => void; onComplete: (fullText: string) => void; onError: (error: string) => void; }) => () => void;
+        chat: (model: string, messages: any[]) => Promise<{ success: boolean; data?: string; error?: string; errorType?: string; model?: string; usedFallback?: boolean }>;
+        getStats: () => Promise<{ queue: Record<string, { running: number; queued: number }>; breakers: Record<string, { open: boolean; failCount: number }> }>;
+        chatStream: (model: string, messages: any[], callbacks: { onToken: (token: string) => void; onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => void; onError: (error: string, errorType?: string) => void; onFallback?: (from: string, to: string) => void; }) => () => void;
+        chatStreamWithTools: (model: string, messages: any[], tools: any[], callbacks: { onToken: (token: string) => void; onToolCall: (calls: any[]) => void; onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => void; onError: (error: string, errorType?: string) => void; onFallback?: (from: string, to: string) => void; }) => () => void;
       };
       fs: {
         openFolder: () => Promise<string | null>;

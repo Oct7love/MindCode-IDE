@@ -7,6 +7,7 @@ import { DeepSeekProvider } from '../core/ai/providers/deepseek';
 import { GeminiProvider } from '../core/ai/providers/gemini';
 import { GLMProvider } from '../core/ai/providers/glm';
 import { defaultAIConfig } from '../core/ai/config';
+import { LLMClient, classifyError, getUserFriendlyError } from '../core/ai/llm-client';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -41,6 +42,10 @@ const providers = {
   }),
   glm: new GLMProvider({ apiKey: defaultAIConfig.glm.apiKey, baseUrl: defaultAIConfig.glm.baseUrl, model: defaultAIConfig.glm.model })
 };
+
+// 初始化 LLM 客户端 (带限流/重试/熔断/降级)
+const llmClient = new LLMClient(new Map(Object.entries(providers)));
+llmClient.on('fallback', (from, to) => console.log(`[LLM] 模型降级: ${from} -> ${to}`));
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -348,52 +353,46 @@ app.on('activate', () => {
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 
-// 根据模型名选择 Provider
+// 根据模型名选择 Provider (保留兼容)
 function getProviderForModel(model: string) {
   if (model.startsWith('claude-')) return providers.claude;
   if (model.startsWith('gemini-')) return providers.gemini;
   if (model.startsWith('deepseek-')) return providers.deepseek;
   if (model.startsWith('glm-')) return providers.glm;
   if (model.startsWith('gpt-')) return providers.openai;
-  return providers.claude; // 默认 claude
+  return providers.claude;
 }
 
-// AI 聊天（非流式）
+// AI 聊天（非流式）- 使用 LLM 客户端
 ipcMain.handle('ai-chat', async (_event, { model, messages }) => {
-  try {
-    const provider = getProviderForModel(model);
-    const response = await provider.setModel(model).chat(messages);
-    return { success: true, data: response };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  const result = await llmClient.chat({ model, messages });
+  if (result.success) return { success: true, data: result.data, model: result.model, usedFallback: result.usedFallback };
+  return { success: false, error: getUserFriendlyError(result.error!), errorType: result.error?.type };
 });
 
-// AI 聊天（流式）
+// AI 聊天（流式）- 使用 LLM 客户端
 ipcMain.on('ai-chat-stream', async (event, { model, messages, requestId }) => {
-  try {
-    const provider = getProviderForModel(model);
-    await provider.setModel(model).chatStream(messages, {
-      onToken: (token) => { event.sender.send('ai-stream-token', { requestId, token }); },
-      onComplete: (fullText) => { event.sender.send('ai-stream-complete', { requestId, fullText }); },
-      onError: (error) => { event.sender.send('ai-stream-error', { requestId, error: error.message }); }
-    });
-  } catch (error: any) { event.sender.send('ai-stream-error', { requestId, error: error.message }); }
+  await llmClient.chatStream({ model, messages }, {
+    onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
+    onComplete: (fullText, meta) => event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }),
+    onError: (error) => event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }),
+    onFallback: (from, to) => event.sender.send('ai-stream-fallback', { requestId, from, to })
+  });
 });
 
-// AI 聊天（流式 + 工具调用）
+// AI 聊天（流式 + 工具调用）- 使用 LLM 客户端
 ipcMain.on('ai-chat-stream-with-tools', async (event, { model, messages, tools, requestId }) => {
-  try {
-    const provider = getProviderForModel(model) as any;
-    if (!provider.chatWithTools) { event.sender.send('ai-stream-error', { requestId, error: '该模型不支持工具调用' }); return; }
-    await provider.setModel(model).chatWithTools(messages, tools, {
-      onToken: (token: string) => { event.sender.send('ai-stream-token', { requestId, token }); },
-      onToolCall: (calls: any[]) => { event.sender.send('ai-stream-tool-call', { requestId, toolCalls: calls }); },
-      onComplete: (fullText: string) => { event.sender.send('ai-stream-complete', { requestId, fullText }); },
-      onError: (error: Error) => { event.sender.send('ai-stream-error', { requestId, error: error.message }); }
-    });
-  } catch (error: any) { event.sender.send('ai-stream-error', { requestId, error: error.message }); }
+  await llmClient.chatStream({ model, messages, tools }, {
+    onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
+    onToolCall: (calls) => event.sender.send('ai-stream-tool-call', { requestId, toolCalls: calls }),
+    onComplete: (fullText, meta) => event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }),
+    onError: (error) => event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }),
+    onFallback: (from, to) => event.sender.send('ai-stream-fallback', { requestId, from, to })
+  });
 });
+
+// LLM 状态查询
+ipcMain.handle('ai-stats', () => llmClient.getStats());
 
 // ==================== 文件系统操作 ====================
 

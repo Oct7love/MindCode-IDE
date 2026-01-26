@@ -118,6 +118,7 @@ export const UnifiedChatView: React.FC = memo(() => {
     const useTools = mode === 'agent' && tools.length > 0 && TOOL_CAPABLE_MODELS.includes(model);
     const requiresConfirm = ['workspace_writeFile', 'terminal_execute'];
 
+    let usedFallbackModel: string | null = null; // 记录是否发生了降级
     if (useTools) {
       addMessage({ role: 'assistant', content: '', mode });
       let iterations = 0, maxIterations = 15;
@@ -130,18 +131,14 @@ export const UnifiedChatView: React.FC = memo(() => {
             window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
               onToken: (token) => { responseText += token; appendStreamingText(token); },
               onToolCall: (calls) => { toolCalls = calls; },
-              onComplete: () => resolve(),
-              onError: (err) => reject(new Error(err))
+              onComplete: (_fullText, meta) => { if (meta?.usedFallback) usedFallbackModel = meta.model; resolve(); },
+              onError: (err) => reject(new Error(err)),
+              onFallback: (from, to) => { appendStreamingText(`\n\n> ⚠️ ${from} 服务繁忙，已自动切换到 ${to}\n\n`); usedFallbackModel = to; }
             });
           });
-        } catch (e: any) {
-          const msg = e.message || '';
-          const isCapacityError = msg.includes('CAPACITY') || msg.includes('503') || msg.includes('overloaded');
-          updateLastMessage(isCapacityError ? `服务器繁忙，请切换模型或稍后重试` : `错误: ${msg}`);
-          break;
-        }
+        } catch (e: any) { updateLastMessage(e.message || '请求失败'); break; }
         if (abortRef.current) break;
-        if (toolCalls.length === 0) { updateLastMessage(responseText); break; }
+        if (toolCalls.length === 0) { updateLastMessage(responseText + (usedFallbackModel ? `\n\n*已自动切换到 ${usedFallbackModel}*` : '')); break; }
         const calls: ToolCallStatus[] = toolCalls.map(tc => ({ id: tc.id, name: tc.name, args: tc.arguments, status: 'pending' as const }));
         updateLastMessage(responseText, { toolCalls: calls });
         setStreamingText('');
@@ -162,19 +159,15 @@ export const UnifiedChatView: React.FC = memo(() => {
       addMessage({ role: 'assistant', content: '', mode });
       const cleanup = window.mindcode?.ai?.chatStream?.(model, apiMessages, {
         onToken: (token: string) => appendStreamingText(token),
-        onComplete: (fullText: string) => {
+        onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => {
           const plan = mode === 'plan' ? parsePlan(fullText) : null;
-          updateLastMessage(fullText, plan ? { plan } : undefined);
+          const suffix = meta?.usedFallback ? `\n\n*已自动切换到 ${meta.model}*` : '';
+          updateLastMessage(fullText + suffix, plan ? { plan } : undefined);
           if (plan) setPlan(plan);
-          setStreamingText('');
-          setLoading(false);
-          stopStreamRef.current = null;
+          setStreamingText(''); setLoading(false); stopStreamRef.current = null;
         },
-        onError: (error: string) => {
-          const isCapacityError = error.includes('CAPACITY') || error.includes('503') || error.includes('overloaded');
-          const errorMsg = isCapacityError ? `服务器繁忙，请切换模型或稍后重试\n\n原始错误: ${error.slice(0, 200)}...` : `错误: ${error}`;
-          updateLastMessage(errorMsg); setStreamingText(''); setLoading(false); stopStreamRef.current = null;
-        }
+        onError: (error: string) => { updateLastMessage(error); setStreamingText(''); setLoading(false); stopStreamRef.current = null; },
+        onFallback: (from: string, to: string) => { appendStreamingText(`\n\n> ⚠️ ${from} 服务繁忙，已自动切换到 ${to}\n\n`); }
       });
       stopStreamRef.current = cleanup || null;
       return;
