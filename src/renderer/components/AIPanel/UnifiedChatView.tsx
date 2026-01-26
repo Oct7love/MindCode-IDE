@@ -131,7 +131,12 @@ export const UnifiedChatView: React.FC = memo(() => {
               onError: (err) => reject(new Error(err))
             });
           });
-        } catch (e: any) { updateLastMessage(`错误: ${e.message}`); break; }
+        } catch (e: any) {
+          const msg = e.message || '';
+          const isCapacityError = msg.includes('CAPACITY') || msg.includes('503') || msg.includes('overloaded');
+          updateLastMessage(isCapacityError ? `服务器繁忙，请切换模型或稍后重试` : `错误: ${msg}`);
+          break;
+        }
         if (abortRef.current) break;
         if (toolCalls.length === 0) { updateLastMessage(responseText); break; }
         const calls: ToolCallStatus[] = toolCalls.map(tc => ({ id: tc.id, name: tc.name, args: tc.arguments, status: 'pending' as const }));
@@ -162,7 +167,11 @@ export const UnifiedChatView: React.FC = memo(() => {
           setLoading(false);
           stopStreamRef.current = null;
         },
-        onError: (error: string) => { updateLastMessage(`错误: ${error}`); setStreamingText(''); setLoading(false); stopStreamRef.current = null; }
+        onError: (error: string) => {
+          const isCapacityError = error.includes('CAPACITY') || error.includes('503') || error.includes('overloaded');
+          const errorMsg = isCapacityError ? `服务器繁忙，请切换模型或稍后重试\n\n原始错误: ${error.slice(0, 200)}...` : `错误: ${error}`;
+          updateLastMessage(errorMsg); setStreamingText(''); setLoading(false); stopStreamRef.current = null;
+        }
       });
       stopStreamRef.current = cleanup || null;
       return;
