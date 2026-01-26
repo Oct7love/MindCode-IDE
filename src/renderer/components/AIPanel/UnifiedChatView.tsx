@@ -5,6 +5,8 @@ import { ContextPicker } from './ContextPicker';
 import { ContextChip } from './ContextChip';
 import { ModelPicker, MODELS, TOOL_CAPABLE_MODELS } from './ModelPicker';
 import { MarkdownRenderer } from '../MarkdownRenderer';
+import '../../styles/chat-tokens.css';
+import '../../styles/markdown.css';
 import './UnifiedChatView.css';
 
 const MODE_OPTIONS: { mode: AIMode; icon: string; label: string; shortcut?: string }[] = [
@@ -76,15 +78,16 @@ export const UnifiedChatView: React.FC = memo(() => {
 
   const getSystemPrompt = useCallback(() => {
     const activeFile = getActiveFile();
-    const base = `你是 MindCode AI（${currentModel.name}），集成在 MindCode IDE 中。工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。`;
+    const modelInfo = MODELS.find(m => m.id === model) || MODELS[0]; // 直接查找避免闭包
+    const base = `你是 MindCode AI（${modelInfo.name}），集成在 MindCode IDE 中。工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。重要：当用户问你是什么模型时，必须回答 ${modelInfo.name}。`;
     switch (mode) {
-      case 'chat': return `${base}\n【Ask 模式】普通对话，回答问题，解释代码。使用 Markdown 格式回复。`;
+      case 'chat': return `${base}\n【Ask 模式】普通对话，回答问题，解释代码。必须使用 Markdown 格式回复，代码用 \`\`\` 包裹并标注语言。`;
       case 'plan': return `${base}\n【Plan 模式】帮助用户制定开发计划。输出:\n1. 分析需求\n2. JSON 计划（代码块）:\n\`\`\`json\n{"title":"标题","goal":"目标","assumptions":[],"milestones":[{"id":"m1","label":"里程碑","estimated":"1天"}],"tasks":[{"id":"t1","label":"任务"}],"risks":[]}\n\`\`\``;
       case 'agent': return `${base}\n【Agent 模式】自主使用工具完成编程任务。\n可用工具: workspace_listDir, workspace_readFile, workspace_writeFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff\n执行原则: 先了解代码，修改前先读取，最小改动，完成后说明。`;
       case 'debug': return `${base}\n【Debug 模式】分析错误，提供调试方案。输出:\n1. 问题理解\n2. 可能原因（概率排序）\n3. 验证步骤\n4. 修复建议`;
       default: return base;
     }
-  }, [mode, currentModel, workspaceRoot, getActiveFile]);
+  }, [mode, model, workspaceRoot, getActiveFile]);
 
   const getTools = useCallback(() => mode === 'agent' ? [
     { name: 'workspace.listDir', description: '列出目录', parameters: { type: 'object' as const, properties: { path: { type: 'string' } }, required: ['path'] } },
