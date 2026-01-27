@@ -14,6 +14,7 @@ import { Terminal } from './components/Terminal';
 import { GitPanel } from './components/GitPanel';
 import { AIPanel } from './components/AIPanel';
 import { applyTheme, loadTheme, saveTheme } from './utils/themes';
+import { useFileStore } from './stores';
 
 // ==================== VSCode 风格 Codicon 图标 ====================
 const Icons = {
@@ -534,6 +535,9 @@ const App: React.FC = () => {
   const [fileTree, setFileTree] = useState<TreeNode[]>(mockTree);
   const [workspaceName, setWorkspaceName] = useState('MindCode');
 
+  // 同步到 Store（供 AI 面板使用）
+  const { setWorkspace: setStoreWorkspace, setFileTree: setStoreFileTree } = useFileStore();
+
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -630,12 +634,15 @@ const App: React.FC = () => {
       setWorkspaceName(folderPath.split(/[/\\]/).pop() || 'Workspace');
       const tree = await loadDirectory(folderPath, true);
       setFileTree(tree);
+      // 同步到 Store（供 AI 面板使用）
+      setStoreWorkspace(folderPath, folderPath.split(/[/\\]/).pop() || 'Workspace');
+      setStoreFileTree(tree);
       // 清空已打开的文件
       setOpenFiles([]);
       setActiveFileId(null);
       setSelected('');
     }
-  }, [loadDirectory]);
+  }, [loadDirectory, setStoreWorkspace, setStoreFileTree]);
 
   // 刷新文件树
   const refreshFileTree = useCallback(async () => {
@@ -1353,6 +1360,9 @@ const App: React.FC = () => {
             setWorkspaceName(data.split(/[/\\]/).pop() || 'Workspace');
             const tree = await loadDirectoryRef.current(data, true);
             setFileTree(tree);
+            // 同步到 Store（供 AI 面板使用）
+            setStoreWorkspace(data, data.split(/[/\\]/).pop() || 'Workspace');
+            setStoreFileTree(tree);
             setOpenFiles([]);
             setActiveFileId(null);
             setSelected('');
@@ -1752,7 +1762,7 @@ const App: React.FC = () => {
 
         {/* AI Panel - 新设计系统 */}
         {showAI && (
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', height: '100%', display: 'flex' }}>
             {/* 拖动条 */}
             <div
               className="ai-panel-resizer"
@@ -1773,6 +1783,7 @@ const App: React.FC = () => {
               onModelChange={setModel}
               onClose={() => setShowAI(false)}
               width={aiPanelWidth}
+              isResizing={isResizing}
             />
           </div>
         )}

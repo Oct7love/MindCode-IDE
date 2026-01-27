@@ -1,0 +1,187 @@
+/* ============================================
+ * TypingIndicator - AI Thinking/Typing Animation
+ * ============================================ */
+
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Size Variants */
+.typing-sm .typing-dot {
+  width: 4px;
+  height: 4px;
+}
+
+.typing-md .typing-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.typing-lg .typing-dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* === Dots Variant === */
+.typing-dots {
+  gap: 4px;
+}
+
+.typing-dot {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  border-radius: 50%;
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px) scale(1);
+    opacity: 1;
+  }
+}
+
+/* === Pulse Variant === */
+.typing-pulse {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.typing-pulse-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-radius: 50%;
+  animation: typingPulseRing 1.5s ease-out infinite;
+}
+
+.typing-pulse-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  border-radius: 50%;
+  animation: typingPulseDot 1.5s ease-in-out infinite;
+}
+
+@keyframes typingPulseRing {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes typingPulseDot {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.8);
+  }
+}
+
+.typing-sm.typing-pulse {
+  width: 16px;
+  height: 16px;
+}
+
+.typing-sm .typing-pulse-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+}
+
+.typing-lg.typing-pulse {
+  width: 32px;
+  height: 32px;
+}
+
+.typing-lg .typing-pulse-dot {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+}
+
+/* === Cursor Variant === */
+.typing-cursor {
+  display: inline;
+}
+
+.typing-cursor-block {
+  color: #8b5cf6;
+  animation: typingCursorBlink 1s step-end infinite;
+}
+
+.typing-sm .typing-cursor-block {
+  font-size: 12px;
+}
+
+.typing-md .typing-cursor-block {
+  font-size: 14px;
+}
+
+.typing-lg .typing-cursor-block {
+  font-size: 16px;
+}
+
+@keyframes typingCursorBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Label */
+.typing-label {
+  font-size: 12px;
+  color: #71717a;
+  margin-left: 8px;
+}
+
+.typing-sm .typing-label {
+  font-size: 11px;
+}
+
+.typing-lg .typing-label {
+  font-size: 13px;
+}
+
+/* Light theme */
+[data-theme="light"] .typing-dot {
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+}
+
+[data-theme="light"] .typing-pulse-ring {
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+[data-theme="light"] .typing-pulse-dot {
+  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+}
+
+[data-theme="light"] .typing-cursor-block {
+  color: #7c3aed;
+}

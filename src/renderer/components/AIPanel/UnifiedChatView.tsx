@@ -5,6 +5,9 @@ import { ContextPicker } from './ContextPicker';
 import { ContextChip } from './ContextChip';
 import { ModelPicker, MODELS, TOOL_CAPABLE_MODELS } from './ModelPicker';
 import { MarkdownRenderer } from '../MarkdownRenderer';
+import { ToolBlock, ToolStatus } from './ToolBlock';
+import { TypingIndicator } from './TypingIndicator';
+import { CopyFeedback, useCopyFeedback } from './CopyFeedback';
 import '../../styles/chat-tokens.css';
 import '../../styles/markdown.css';
 import './UnifiedChatView.css';
@@ -16,7 +19,11 @@ const MODE_OPTIONS: { mode: AIMode; icon: string; label: string; shortcut?: stri
   { mode: 'chat', icon: '◇', label: 'Ask' },
 ];
 
-export const UnifiedChatView: React.FC = memo(() => {
+interface UnifiedChatViewProps {
+  isResizing?: boolean;
+}
+
+export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizing }) => {
   const { mode, setMode, model, setModel, getCurrentConversation, addMessage, isLoading, setLoading, streamingText, setStreamingText, appendStreamingText, contexts, removeContext, updateLastMessage, updateLastMessageToolCall, setPlan, currentPlan } = useAIStore();
   const { workspaceRoot, getActiveFile } = useFileStore();
   const [input, setInput] = useState('');
@@ -78,27 +85,32 @@ export const UnifiedChatView: React.FC = memo(() => {
 
   const getSystemPrompt = useCallback(() => {
     const activeFile = getActiveFile();
-    const modelInfo = MODELS.find(m => m.id === model) || MODELS[0]; // 直接查找避免闭包
-    const base = `你是 MindCode AI（${modelInfo.name}），集成在 MindCode IDE 中。工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。重要：当用户问你是什么模型时，必须回答 ${modelInfo.name}。`;
+    const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
+    const toolsInfo = `
+【工具能力】
+你拥有完整的文件系统访问权限。当用户提到路径、文件或需要了解项目结构时，务必使用工具（workspace_listDir, workspace_readFile 等）获取真实信息。
+不要猜测文件内容。修改文件前必须先读取。执行命令前必须解释意图。
+`;
+    const base = `你是 MindCode AI（${modelInfo.name}），集成在 MindCode IDE 中。工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。重要：当用户问你是什么模型时，必须回答 ${modelInfo.name}。\n${toolsInfo}`;
     switch (mode) {
-      case 'chat': return `${base}\n【Ask 模式】普通对话，回答问题，解释代码。必须使用 Markdown 格式回复，代码用 \`\`\` 包裹并标注语言。`;
-      case 'plan': return `${base}\n【Plan 模式】帮助用户制定开发计划。输出:\n1. 分析需求\n2. JSON 计划（代码块）:\n\`\`\`json\n{"title":"标题","goal":"目标","assumptions":[],"milestones":[{"id":"m1","label":"里程碑","estimated":"1天"}],"tasks":[{"id":"t1","label":"任务"}],"risks":[]}\n\`\`\``;
-      case 'agent': return `${base}\n【Agent 模式】自主使用工具完成编程任务。\n可用工具: workspace_listDir, workspace_readFile, workspace_writeFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff\n执行原则: 先了解代码，修改前先读取，最小改动，完成后说明。`;
-      case 'debug': return `${base}\n【Debug 模式】分析错误，提供调试方案。输出:\n1. 问题理解\n2. 可能原因（概率排序）\n3. 验证步骤\n4. 修复建议`;
+      case 'chat': return `${base}\n【Ask 模式】回答问题，解释代码。当问题涉及具体文件时，主动使用工具读取。`;
+      case 'plan': return `${base}\n【Plan 模式】制定开发计划。先使用工具探索项目结构，再输出 JSON 计划。`;
+      case 'agent': return `${base}\n【Agent 模式】自主完成任务。执行原则: 1.探索(listDir/search) 2.读取(readFile) 3.思考 4.修改(writeFile)。`;
+      case 'debug': return `${base}\n【Debug 模式】分析错误。主动读取报错文件和日志。`;
       default: return base;
     }
   }, [mode, model, workspaceRoot, getActiveFile]);
 
-  const getTools = useCallback(() => mode === 'agent' ? [
-    { name: 'workspace.listDir', description: '列出目录', parameters: { type: 'object' as const, properties: { path: { type: 'string' } }, required: ['path'] } },
-    { name: 'workspace.readFile', description: '读取文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
-    { name: 'workspace.writeFile', description: '写入文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
-    { name: 'workspace.search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
-    { name: 'editor.getActiveFile', description: '获取当前文件', parameters: { type: 'object' as const, properties: {} } },
-    { name: 'terminal.execute', description: '执行命令', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
-    { name: 'git.status', description: 'Git状态', parameters: { type: 'object' as const, properties: {} } },
-    { name: 'git.diff', description: 'Git差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
-  ] : [], [mode]);
+  const getTools = useCallback(() => [ // 所有模式都支持工具调用
+    { name: 'workspace_listDir', description: '列出目录', parameters: { type: 'object' as const, properties: { path: { type: 'string' } }, required: ['path'] } },
+    { name: 'workspace_readFile', description: '读取文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
+    { name: 'workspace_writeFile', description: '写入文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
+    { name: 'workspace_search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
+    { name: 'editor_getActiveFile', description: '获取当前文件', parameters: { type: 'object' as const, properties: {} } },
+    { name: 'terminal_execute', description: '执行终端命令（用户确认后执行）', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
+    { name: 'git_status', description: 'Git状态', parameters: { type: 'object' as const, properties: {} } },
+    { name: 'git_diff', description: 'Git差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
+  ], []);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -115,11 +127,20 @@ export const UnifiedChatView: React.FC = memo(() => {
     const chatHistory = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: finalContent }];
     const tools = getTools();
-    const useTools = mode === 'agent' && tools.length > 0 && TOOL_CAPABLE_MODELS.includes(model);
+    
+    // Agent 模式下强制使用工具，其他模式检查模型能力
+    const isAgentMode = mode === 'agent';
+    const useTools = tools.length > 0 && (isAgentMode || TOOL_CAPABLE_MODELS.includes(model));
     const requiresConfirm = ['workspace_writeFile', 'terminal_execute'];
 
     let usedFallbackModel: string | null = null; // 记录是否发生了降级
     if (useTools) {
+      // 检查 Provider 是否真的支持工具（运行时检查），如果不支持则回退到普通流
+      if (!window.mindcode?.ai?.chatStreamWithTools) {
+        updateLastMessage('错误: 当前环境不支持工具调用 API');
+        setLoading(false);
+        return;
+      }
       addMessage({ role: 'assistant', content: '', mode });
       let iterations = 0, maxIterations = 15;
       while (iterations < maxIterations && !abortRef.current) {
@@ -183,8 +204,15 @@ export const UnifiedChatView: React.FC = memo(() => {
   const handleModeSelect = useCallback((m: AIMode) => { setMode(m); setShowModeMenu(false); }, [setMode]);
 
   const displayMessages = messages.map((msg, idx) => ({ ...msg, content: (idx === messages.length - 1 && msg.role === 'assistant' && isLoading && streamingText) ? streamingText : msg.content, isStreaming: idx === messages.length - 1 && msg.role === 'assistant' && isLoading && !!streamingText }));
-  const statusIcon: Record<string, string> = { pending: '○', running: '⟳', success: '✓', failed: '✗' };
-  const statusColor: Record<string, string> = { pending: 'var(--text-muted)', running: 'var(--accent-primary)', success: 'var(--semantic-success)', failed: 'var(--semantic-error)' };
+
+  // 复制功能
+  const { copy, FeedbackComponent } = useCopyFeedback();
+  const handleCopyMessage = useCallback((content: string) => {
+    copy(content, '消息已复制');
+  }, [copy]);
+  const handleCopyTool = useCallback((content: string) => {
+    copy(content, '工具数据已复制');
+  }, [copy]);
 
   return (
     <div className="unified-chat-view">
@@ -203,12 +231,16 @@ export const UnifiedChatView: React.FC = memo(() => {
               {msg.toolCalls && msg.toolCalls.length > 0 && (
                 <div className="unified-tools">
                   {msg.toolCalls.map(tc => (
-                    <div key={tc.id} className={`unified-tool unified-tool-${tc.status}`}>
-                      <span className="unified-tool-icon" style={{ color: statusColor[tc.status] }}>{statusIcon[tc.status]}</span>
-                      <span className="unified-tool-name">{tc.name}</span>
-                      <span className="unified-tool-args">{JSON.stringify(tc.args).slice(0, 50)}...</span>
-                      {tc.error && <span className="unified-tool-error">{tc.error}</span>}
-                    </div>
+                    <ToolBlock
+                      key={tc.id}
+                      id={tc.id}
+                      name={tc.name}
+                      args={tc.args}
+                      status={tc.status as ToolStatus}
+                      result={tc.result}
+                      error={tc.error}
+                      onCopy={handleCopyTool}
+                    />
                   ))}
                 </div>
               )}
@@ -221,7 +253,12 @@ export const UnifiedChatView: React.FC = memo(() => {
             </div>
           </div>
         ))}
-        {isLoading && !streamingText && <div className="unified-loading"><span /><span /><span /></div>}
+        {isLoading && !streamingText && (
+          <div className="unified-loading-wrapper">
+            <div className="unified-msg-avatar">✦</div>
+            <TypingIndicator variant="dots" size="md" />
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -251,7 +288,7 @@ export const UnifiedChatView: React.FC = memo(() => {
                 </div>
               )}
             </div>
-            <ModelPicker model={model} onModelChange={setModel} whitelist={mode === 'agent' ? TOOL_CAPABLE_MODELS : undefined} disabled={isLoading} compact />
+            <ModelPicker model={model} onModelChange={setModel} whitelist={mode === 'agent' ? TOOL_CAPABLE_MODELS : undefined} disabled={isLoading} compact isResizing={isResizing} />
             <button className="unified-ctx-btn" onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }} title="添加上下文" type="button">
               <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M13.5 6.5h-4v-4h-3v4h-4v3h4v4h3v-4h4z"/></svg>
             </button>
@@ -277,6 +314,7 @@ export const UnifiedChatView: React.FC = memo(() => {
           </div>
         </div>
       )}
+      {FeedbackComponent}
     </div>
   );
 });

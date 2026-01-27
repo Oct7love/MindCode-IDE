@@ -1,0 +1,105 @@
+/* ============================================
+ * CopyFeedback - Copy Success Toast
+ * ============================================ */
+
+.copy-feedback {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(22, 163, 74, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(34, 197, 94, 0.2);
+  z-index: 9999;
+  animation: copyFeedbackIn 0.2s ease-out;
+  backdrop-filter: blur(8px);
+}
+
+.copy-feedback.leaving {
+  animation: copyFeedbackOut 0.2s ease-in forwards;
+}
+
+/* Position Variants */
+.copy-feedback-top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.copy-feedback-bottom {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.copy-feedback-cursor {
+  pointer-events: none;
+}
+
+/* Icon */
+.copy-feedback-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Message */
+.copy-feedback-message {
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+}
+
+/* Animations */
+@keyframes copyFeedbackIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes copyFeedbackOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.95);
+  }
+}
+
+.copy-feedback-top.leaving {
+  animation: copyFeedbackOutTop 0.2s ease-in forwards;
+}
+
+@keyframes copyFeedbackOutTop {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.95);
+  }
+}
+
+/* Light theme */
+[data-theme="light"] .copy-feedback {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.98) 0%, rgba(22, 163, 74, 0.98) 100%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(34, 197, 94, 0.3);
+}

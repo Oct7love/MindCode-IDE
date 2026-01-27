@@ -1,0 +1,247 @@
+/* ============================================
+ * CodeBlock - Cursor-Inspired Code Block
+ * ============================================ */
+
+.code-block {
+  margin: 16px 0;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Top gradient line */
+.code-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.5) 20%,
+    rgba(59, 130, 246, 0.5) 80%,
+    transparent 100%
+  );
+  z-index: 2;
+}
+
+/* Header */
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.code-block-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.code-block-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.code-block-lang {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  font-weight: 500;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-block-filename {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  font-weight: 500;
+  color: #a1a1aa;
+}
+
+.code-block-filename svg {
+  color: #8b5cf6;
+}
+
+.code-block-lines {
+  font-size: 11px;
+  color: #52525b;
+}
+
+/* Header Buttons */
+.code-block-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #71717a;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.code-block-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #a1a1aa;
+}
+
+.code-block-btn:active {
+  transform: scale(0.95);
+}
+
+.code-block-copy.copied {
+  color: #34d399;
+}
+
+.code-block-copy.copied:hover {
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+}
+
+/* Code Content */
+.code-block-content {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.code-block-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.code-block-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-block-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.code-block-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.code-block-content.collapsed {
+  max-height: none !important;
+}
+
+.code-block-content pre {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Line Numbers */
+.code-block-gutter {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  padding-left: 12px;
+  padding-right: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  user-select: none;
+  position: sticky;
+  left: 0;
+}
+
+.code-block-line-number {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  color: #3f3f46;
+  text-align: right;
+  min-width: 2ch;
+}
+
+/* Code */
+.code-block-content code {
+  display: block;
+  flex: 1;
+  padding: 12px 16px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e4e4e7;
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* Collapsed Indicator */
+.code-block-collapsed-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(139, 92, 246, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  color: #8b5cf6;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.code-block-collapsed-indicator:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+/* Syntax Highlighting (basic) */
+.code-block-content code .keyword { color: #c084fc; }
+.code-block-content code .string { color: #86efac; }
+.code-block-content code .number { color: #fcd34d; }
+.code-block-content code .comment { color: #52525b; font-style: italic; }
+.code-block-content code .function { color: #60a5fa; }
+.code-block-content code .operator { color: #f472b6; }
+.code-block-content code .class-name { color: #fcd34d; }
+.code-block-content code .property { color: #7dd3fc; }
+
+/* Light theme overrides */
+[data-theme="light"] .code-block {
+  background: #f8f8fa;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .code-block::before {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.3) 20%,
+    rgba(59, 130, 246, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+[data-theme="light"] .code-block-header {
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .code-block-gutter {
+  background: rgba(0, 0, 0, 0.02);
+  border-right-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .code-block-line-number {
+  color: #a1a1aa;
+}
+
+[data-theme="light"] .code-block-content code {
+  color: #27272a;
+}
