@@ -1,6 +1,6 @@
 // AI 服务相关类型定义
 
-export type AIProviderType = 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm';
+export type AIProviderType = 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm' | 'codesuc';
 
 export interface AIProviderConfig {
   apiKey: string;
@@ -39,6 +39,7 @@ export interface AIProvider {
   name: AIProviderType;
   displayName: string;
   models: ModelInfo[];
+  supportsTools?: boolean; // 是否支持 Anthropic/OpenAI tools API
   chat(messages: ChatMessage[]): Promise<string>;
   chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void>;
   countTokens(text: string): number;

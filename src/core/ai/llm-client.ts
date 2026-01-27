@@ -3,21 +3,26 @@ import { EventEmitter } from 'events';
 
 // === 配置 ===
 export const LLM_CONFIG = {
-  MAX_CONCURRENCY_PER_MODEL: 2, // 每模型最大并发
-  MAX_QUEUE_LENGTH: 10, // 最大排队长度
-  RETRY_MAX: 3, // 最大重试次数
-  RETRY_BASE_MS: 1000, // 重试基础延迟
-  RETRY_MAX_MS: 30000, // 最大重试延迟
-  TIMEOUT_CONNECT_MS: 10000, // 连接超时
-  TIMEOUT_READ_MS: 120000, // 读取超时 (thinking 模型需要长超时)
-  CIRCUIT_BREAKER_THRESHOLD: 5, // 熔断阈值 (连续失败次数)
-  CIRCUIT_BREAKER_RESET_MS: 60000, // 熔断恢复时间
+  MAX_CONCURRENCY_PER_MODEL: 3, // 每模型最大并发
+  MAX_QUEUE_LENGTH: 15, // 最大排队长度
+  RETRY_MAX: 2, // 最大重试次数 (减少以加快失败反馈)
+  RETRY_BASE_MS: 500, // 重试基础延迟 (减少等待)
+  RETRY_MAX_MS: 10000, // 最大重试延迟
+  TIMEOUT_CONNECT_MS: 15000, // 连接超时 (增加)
+  TIMEOUT_READ_MS: 180000, // 读取超时 (3分钟，thinking 模型需要更长)
+  CIRCUIT_BREAKER_THRESHOLD: 3, // 熔断阈值 (降低以更快切换)
+  CIRCUIT_BREAKER_RESET_MS: 30000, // 熔断恢复时间 (30秒后重试)
   FALLBACK_MODELS: { // 降级链
     'claude-opus-4-5-thinking': ['claude-sonnet-4-5-thinking', 'claude-sonnet-4-5', 'deepseek-chat', 'glm-4.7-flashx'],
     'claude-sonnet-4-5-thinking': ['claude-sonnet-4-5', 'deepseek-chat', 'glm-4.7-flashx'],
     'gemini-3-pro-high': ['gemini-3-flash', 'gemini-2.5-flash', 'deepseek-chat'],
     'deepseek-reasoner': ['deepseek-chat', 'glm-4.7-flashx'],
     'glm-4.7': ['glm-4.7-flashx', 'deepseek-chat'],
+    // 特价渠道降级链（内部降级，不跨渠道）
+    'codesuc-opus': ['codesuc-sonnet', 'codesuc-haiku'],
+    'codesuc-sonnet': ['codesuc-haiku'],
+    'special-claude-opus-4-5': ['codesuc-sonnet', 'codesuc-haiku'], // 兼容旧 ID
+    'special-claude-sonnet-4-5': ['codesuc-haiku'],
   } as Record<string, string[]>,
 };
 
@@ -128,12 +133,15 @@ export class LLMClient extends EventEmitter {
   constructor(providers: Map<string, any>) { super(); this.providers = providers; }
 
   private getProviderForModel(model: string): any {
-    if (model.startsWith('claude-')) return this.providers.get('claude');
-    if (model.startsWith('gemini-')) return this.providers.get('gemini');
-    if (model.startsWith('deepseek-')) return this.providers.get('deepseek');
-    if (model.startsWith('glm-')) return this.providers.get('glm');
-    if (model.startsWith('gpt-')) return this.providers.get('openai');
-    return this.providers.get('claude');
+    let providerName = 'claude'; // 默认
+    if (model.startsWith('codesuc-') || model.startsWith('special-claude-')) providerName = 'codesuc'; // 特价渠道（兼容旧 ID）
+    else if (model.startsWith('claude-')) providerName = 'claude';
+    else if (model.startsWith('gemini-')) providerName = 'gemini';
+    else if (model.startsWith('deepseek-')) providerName = 'deepseek';
+    else if (model.startsWith('glm-')) providerName = 'glm';
+    else if (model.startsWith('gpt-')) providerName = 'openai';
+    console.log(`[LLM] getProviderForModel: model=${model} -> provider=${providerName}`);
+    return this.providers.get(providerName);
   }
 
   async chat(request: LLMRequest): Promise<LLMResponse> {
@@ -148,7 +156,7 @@ export class LLMClient extends EventEmitter {
       }
       try {
         const provider = this.getProviderForModel(currentModel);
-        const data = await this.queue.enqueue(currentModel, () => withRetry(() => provider.setModel(currentModel).chat(request.messages), currentModel, this.breaker));
+        const data = await this.queue.enqueue<string>(currentModel, () => withRetry(() => provider.setModel(currentModel).chat(request.messages), currentModel, this.breaker));
         return { success: true, data, model: currentModel, usedFallback: currentModel !== request.model };
       } catch (error) {
         const classified = classifyError(error);
@@ -206,11 +214,11 @@ export class LLMClient extends EventEmitter {
 // === 用户友好错误消息 ===
 export function getUserFriendlyError(error: LLMError): string {
   switch (error.type) {
-    case 'rate_limit': return '触发请求限流，系统正在自动重试...';
-    case 'capacity': return '当前模型服务器繁忙，建议切换到稳定模型（如 DeepSeek V3）';
-    case 'timeout': return '请求超时，可能是上游排队较长，建议切换模型或稍后重试';
-    case 'network': return '网络连接失败，请检查网络';
-    case 'auth': return 'API 密钥无效，请检查配置';
-    default: return error.message || '请求失败，请稍后重试';
+    case 'rate_limit': return '⏳ 请求限流中，系统正在重试...（可切换 DeepSeek V3 获得更快响应）';
+    case 'capacity': return '⚠️ 当前模型繁忙！建议：1) 切换到 DeepSeek V3 2) 稍后重试 3) 检查 API 配额';
+    case 'timeout': return '⏱️ 请求超时（Thinking 模型响应较慢）。建议：1) 等待 30 秒后重试 2) 切换到更快的模型';
+    case 'network': return '🌐 网络连接失败，请检查：1) 网络连接 2) 代理设置 3) API 地址';
+    case 'auth': return '🔑 API 密钥无效，请在设置中检查 API Key 配置';
+    default: return error.message || '❌ 请求失败，请稍后重试';
   }
 }

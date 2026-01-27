@@ -1,42 +1,26 @@
 /* MindCode - 统一主题系统 */
-@import './design-tokens.css';
 
-/* Legacy variable mapping - for backwards compatibility */
+/* Legacy variable mapping - adapter for old components */
 :root {
-  --bg-base: var(--color-bg-base);
-  --bg-surface: var(--color-bg-surface);
-  --bg-overlay: var(--color-bg-elevated);
-  --bg-highlight: var(--color-bg-hover);
-  --bg-active: var(--color-bg-selected);
-  --bg-primary: var(--color-bg-base);
-  --bg-secondary: var(--color-bg-surface);
-  --bg-tertiary: var(--color-bg-elevated);
-  --text-normal: var(--color-text-primary);
-  --text-muted: var(--color-text-muted);
-  --text-faint: var(--color-text-disabled);
-  --text-primary: var(--color-text-primary);
-  --text-secondary: var(--color-text-secondary);
-  --accent-primary: var(--color-accent-blue);
-  --accent-secondary: var(--color-accent-secondary);
-  --accent: var(--color-accent-blue);
-  --border-subtle: var(--color-border-subtle);
-  --border-active: var(--color-accent-blue);
-  --border: var(--color-border-default);
-  --icon-normal: var(--color-text-muted);
-  --icon-active: var(--color-text-primary);
+  --bg-base: var(--bg-app);
+  --bg-surface: var(--bg-sidebar);
+  --bg-overlay: var(--bg-surface);
+  --bg-highlight: var(--bg-hover);
+  --bg-active: var(--bg-selected);
+  --bg-primary: var(--bg-app);
+  --bg-secondary: var(--bg-sidebar);
+  
+  --text-normal: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --text-faint: var(--text-disabled);
+  
+  --accent: var(--accent-primary);
+  
+  --border: var(--border-default);
+  
   --success: var(--color-success);
-  --warning: var(--color-warning);
+  --warning: var(--color-warn);
   --error: var(--color-error);
-  --font-ui: var(--font-family-ui);
-  --font-mono: var(--font-family-code);
-}
-
-/* 主题切换过渡效果 - 200ms 平滑过渡 */
-.theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning *::before,
-.theme-transitioning *::after {
-  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease !important;
 }
 
 * {
@@ -51,17 +35,26 @@ html, body, #root {
 }
 
 body {
-  font-family: var(--font-family-ui);
-  font-size: 13px;
-  background: var(--color-bg-base);
-  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  background: var(--bg-app);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* 滚动条 - 使用主题变量 */
-::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-scrollbar, rgba(255, 255, 255, 0.08)); border: 4px solid transparent; border-radius: 6px; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.15)); border: 4px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb { 
+  background: rgba(128, 128, 128, 0.2); 
+  border: 2px solid transparent; 
+  border-radius: 5px; 
+  background-clip: padding-box; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: rgba(128, 128, 128, 0.4); 
+  border: 2px solid transparent; 
+  background-clip: padding-box; 
+}
 ::-webkit-scrollbar-corner { background: transparent; }

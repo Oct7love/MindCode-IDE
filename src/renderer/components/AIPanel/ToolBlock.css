@@ -1,25 +1,26 @@
 /* ============================================
  * ToolBlock - Tool Call Status Display
+ * 使用 Design Tokens，支持 dark/light/hc 主题
  * ============================================ */
 
 .tool-block {
-  margin: 12px 0;
+  margin: var(--space-3, 12px) 0;
   background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-xl, 10px);
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: all var(--duration-fast, 150ms) var(--ease-out);
 }
 
-/* Status indicator border */
-.tool-block-pending { border-left: 3px solid #71717a; }
-.tool-block-running { border-left: 3px solid #8b5cf6; }
-.tool-block-success { border-left: 3px solid #34d399; }
-.tool-block-failed { border-left: 3px solid #f87171; }
+/* 状态指示边框 */
+.tool-block-pending { border-left: 3px solid var(--color-text-muted, #71717a); }
+.tool-block-running { border-left: 3px solid var(--color-accent-ai, #8b5cf6); }
+.tool-block-success { border-left: 3px solid var(--color-success, #22c55e); }
+.tool-block-failed { border-left: 3px solid var(--color-error, #ef4444); }
 
 .tool-block:hover {
   background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.1));
 }
 
 /* Header */
@@ -27,7 +28,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: var(--space-2-5, 10px) var(--space-3-5, 14px);
   cursor: pointer;
   user-select: none;
 }
@@ -35,7 +36,7 @@
 .tool-block-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2-5, 10px);
   min-width: 0;
   flex: 1;
 }
@@ -43,11 +44,11 @@
 .tool-block-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2, 8px);
   flex-shrink: 0;
 }
 
-/* Status Icon */
+/* 状态图标 */
 .tool-block-status {
   font-size: 14px;
   width: 18px;
@@ -55,38 +56,38 @@
   flex-shrink: 0;
 }
 
-.tool-block-status-pending { color: #71717a; }
+.tool-block-status-pending { color: var(--color-text-muted, #71717a); }
 .tool-block-status-running {
-  color: #8b5cf6;
+  color: var(--color-accent-ai, #8b5cf6);
   animation: toolSpin 1s linear infinite;
 }
-.tool-block-status-success { color: #34d399; }
-.tool-block-status-failed { color: #f87171; }
+.tool-block-status-success { color: var(--color-success, #22c55e); }
+.tool-block-status-failed { color: var(--color-error, #ef4444); }
 
 @keyframes toolSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* Tool Info */
+/* 工具信息 */
 .tool-block-icon {
   font-size: 14px;
   flex-shrink: 0;
 }
 
 .tool-block-name {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
-  font-weight: 600;
-  color: #e4e4e7;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #e4e4e7);
   white-space: nowrap;
   text-transform: capitalize;
 }
 
 .tool-block-args-preview {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  color: #71717a;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-tertiary, #71717a);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -95,9 +96,9 @@
 
 /* Header Actions */
 .tool-block-duration {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--font-family-code);
   font-size: 10px;
-  color: #52525b;
+  color: var(--color-text-muted, #52525b);
 }
 
 .tool-block-btn {
@@ -108,28 +109,33 @@
   height: 24px;
   background: transparent;
   border: none;
-  border-radius: 4px;
-  color: #71717a;
-  font-size: 12px;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-text-tertiary, #71717a);
+  font-size: var(--font-size-sm, 12px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
 }
 
 .tool-block-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #a1a1aa;
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.tool-block-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
 }
 
 .tool-block-btn.copied {
-  color: #34d399;
+  color: var(--color-success, #22c55e);
 }
 
 .tool-block-expand {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #52525b;
-  transition: transform 0.2s ease;
+  color: var(--color-text-muted, #52525b);
+  transition: transform var(--duration-fast, 150ms) var(--ease-out);
 }
 
 .tool-block-expand.expanded {
@@ -138,9 +144,9 @@
 
 /* Expanded Content */
 .tool-block-content {
-  padding: 0 14px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  animation: toolFadeIn 0.2s ease;
+  padding: 0 var(--space-3-5, 14px) var(--space-3-5, 14px);
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  animation: toolFadeIn 0.2s var(--ease-out);
 }
 
 @keyframes toolFadeIn {
@@ -155,35 +161,35 @@
 }
 
 .tool-block-section {
-  margin-top: 12px;
+  margin-top: var(--space-3, 12px);
 }
 
 .tool-block-section-title {
   font-size: 10px;
-  font-weight: 600;
-  color: #71717a;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-tertiary, #71717a);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1-5, 6px);
 }
 
 .tool-block-section-success {
-  color: #34d399;
+  color: var(--color-success, #22c55e);
 }
 
 .tool-block-section-error {
-  color: #f87171;
+  color: var(--color-error, #ef4444);
 }
 
 .tool-block-json {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
   line-height: 1.5;
-  color: #a1a1aa;
+  color: var(--color-text-secondary, #a1a1aa);
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
-  padding: 10px 12px;
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  border-radius: var(--radius-md, 6px);
+  padding: var(--space-2-5, 10px) var(--space-3, 12px);
   margin: 0;
   overflow-x: auto;
   max-height: 200px;
@@ -192,33 +198,20 @@
 }
 
 .tool-block-error {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
   line-height: 1.5;
-  color: #fca5a5;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  border-radius: 6px;
-  padding: 10px 12px;
+  color: var(--color-error, #ef4444);
+  background: var(--color-error-bg, rgba(239, 68, 68, 0.08));
+  border: 1px solid var(--color-error-border, rgba(239, 68, 68, 0.2));
+  border-radius: var(--radius-md, 6px);
+  padding: var(--space-2-5, 10px) var(--space-3, 12px);
   margin: 0;
   white-space: pre-wrap;
 }
 
-/* Light theme */
-[data-theme="light"] .tool-block {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="light"] .tool-block:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-[data-theme="light"] .tool-block-name {
-  color: #27272a;
-}
-
-[data-theme="light"] .tool-block-json {
-  background: rgba(0, 0, 0, 0.03);
-  color: #52525b;
-}
+/*
+ * 主题覆盖现在通过 Design Tokens 自动处理
+ * [data-theme-type="light"] 和 [data-theme-type="hc"]
+ * 已在 design-tokens.css 中定义相关变量
+ */

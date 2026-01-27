@@ -3,9 +3,7 @@
  * 灵感来源：Cursor、Vercel、Linear
  */
 
-/* 引入 Geist 字体 (Cursor 同款) */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* 移除 Google Fonts，使用系统字体以提升加载速度和稳定性 */
 
 :root {
   /* ============================================
@@ -101,13 +99,54 @@
   --color-diff-modify-border: #3b82f6;
 
   /* ============================================
-   * 字体系统 - Geist (Cursor 同款)
+   * AI 对话专用 Token
    * ============================================ */
 
-  --font-family-ui: "Geist", "Inter", -apple-system, BlinkMacSystemFont, 
-                    "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --font-family-code: "Geist Mono", "JetBrains Mono", "Fira Code", 
-                      "SF Mono", Consolas, monospace;
+  /* AI 消息卡片 */
+  --msg-ai-bg: rgba(255, 255, 255, 0.02);
+  --msg-ai-border: rgba(255, 255, 255, 0.06);
+  --msg-ai-border-hover: rgba(255, 255, 255, 0.10);
+  --msg-ai-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --msg-ai-radius: 14px;
+
+  /* 用户消息 */
+  --msg-user-bg: rgba(255, 255, 255, 0.04);
+  --msg-user-border: rgba(255, 255, 255, 0.06);
+  --msg-user-radius: 14px 14px 4px 14px;
+
+  /* Composer 输入框 */
+  --composer-bg: var(--color-bg-elevated);
+  --composer-border: var(--color-border-default);
+  --composer-border-focus: var(--color-accent-primary);
+  --composer-glow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  --composer-radius: 14px;
+
+  /* CodeBlock */
+  --codeblock-bg: rgba(0, 0, 0, 0.4);
+  --codeblock-header-bg: rgba(0, 0, 0, 0.25);
+  --codeblock-border: rgba(255, 255, 255, 0.06);
+  --codeblock-gutter-bg: rgba(0, 0, 0, 0.2);
+  --codeblock-radius: 12px;
+
+  /* DiffBlock */
+  --diff-added-bg: rgba(34, 197, 94, 0.1);
+  --diff-added-gutter-bg: rgba(34, 197, 94, 0.15);
+  --diff-added-text: #86efac;
+  --diff-removed-bg: rgba(248, 113, 113, 0.1);
+  --diff-removed-gutter-bg: rgba(248, 113, 113, 0.15);
+  --diff-removed-text: #fca5a5;
+
+  /* ============================================
+   * 字体系统 - 使用系统原生字体
+   * ============================================ */
+
+  /* UI 字体 - 系统原生字体栈，确保跨平台最佳显示效果 */
+  --font-family-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+                    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  /* 代码字体 - 优先使用系统等宽字体 */
+  --font-family-code: "Cascadia Code", "Fira Code", "JetBrains Mono",
+                      "SF Mono", "Consolas", "Liberation Mono", monospace;
   --font-family-mono: var(--font-family-code);
 
   /* 字号 - 更现代的比例 */
@@ -317,3 +356,165 @@
     --color-text-tertiary: #a1a1aa;
   }
 }
+
+/* ============================================
+ * Light Theme - 浅色主题覆盖
+ * ============================================ */
+[data-theme-type="light"] {
+  /* 背景层级 - 浅色 */
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #f8f8f8;
+  --color-bg-elevated: #ffffff;
+  --color-bg-overlay: rgba(0, 0, 0, 0.4);
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-active: rgba(0, 0, 0, 0.08);
+  --color-bg-selected: rgba(59, 130, 246, 0.1);
+  --color-bg-input: #ffffff;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f5f5f5;
+
+  /* 边框与分割 - 浅色 */
+  --color-border: rgba(0, 0, 0, 0.12);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-default: rgba(0, 0, 0, 0.12);
+  --color-border-strong: rgba(0, 0, 0, 0.2);
+  --color-border-focus: #0078d4;
+
+  /* 文本层级 - 浅色 */
+  --color-text-primary: #1e1e1e;
+  --color-text-secondary: #5a5a5a;
+  --color-text-tertiary: #8a8a8a;
+  --color-text-muted: #a0a0a0;
+  --color-text-disabled: #c0c0c0;
+  --color-text-inverse: #ffffff;
+  --color-text-link: #0066cc;
+
+  /* 强调色调整 */
+  --color-accent-primary: #0078d4;
+  --color-accent-secondary: #0066cc;
+  --color-accent-tertiary: #60a5fa;
+  --color-accent-blue: #0078d4;
+
+  /* AI 强调色 */
+  --color-accent-ai: #7c3aed;
+  --color-accent-ai-secondary: #0891b2;
+  --color-accent-ai-glow: rgba(124, 58, 237, 0.2);
+
+  /* 渐变 - 浅色版本 */
+  --gradient-ai-subtle: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(0, 120, 212, 0.08) 50%, rgba(8, 145, 178, 0.08) 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0) 100%);
+
+  /* 语义色 - 浅色版 */
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-success-border: rgba(34, 197, 94, 0.3);
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-border: rgba(245, 158, 11, 0.3);
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-error-border: rgba(239, 68, 68, 0.3);
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+  --color-info-border: rgba(59, 130, 246, 0.3);
+
+  /* Diff 颜色 - 浅色版 */
+  --color-diff-add-bg: rgba(34, 197, 94, 0.1);
+  --color-diff-add-highlight: rgba(34, 197, 94, 0.2);
+  --color-diff-remove-bg: rgba(239, 68, 68, 0.1);
+  --color-diff-remove-highlight: rgba(239, 68, 68, 0.2);
+  --color-diff-modify-bg: rgba(59, 130, 246, 0.1);
+  --color-diff-modify-highlight: rgba(59, 130, 246, 0.2);
+
+  /* 阴影系统 - 浅色（更柔和） */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  /* AI 光晕效果 - 浅色 */
+  --shadow-glow-ai: 0 0 15px rgba(124, 58, 237, 0.2);
+  --shadow-glow-ai-intense: 0 0 20px rgba(124, 58, 237, 0.3);
+
+  /* AI 消息卡片 - 浅色 */
+  --msg-ai-bg: rgba(0, 0, 0, 0.02);
+  --msg-ai-border: rgba(0, 0, 0, 0.08);
+  --msg-ai-border-hover: rgba(0, 0, 0, 0.14);
+  --msg-ai-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  /* 用户消息 - 浅色 */
+  --msg-user-bg: rgba(0, 120, 212, 0.06);
+  --msg-user-border: rgba(0, 120, 212, 0.12);
+
+  /* Composer - 浅色 */
+  --composer-bg: #ffffff;
+  --composer-border: rgba(0, 0, 0, 0.12);
+  --composer-border-focus: #0078d4;
+  --composer-glow: 0 0 0 3px rgba(0, 120, 212, 0.12);
+
+  /* CodeBlock - 浅色 */
+  --codeblock-bg: #f5f5f5;
+  --codeblock-header-bg: #ebebeb;
+  --codeblock-border: rgba(0, 0, 0, 0.08);
+  --codeblock-gutter-bg: rgba(0, 0, 0, 0.03);
+
+  /* DiffBlock - 浅色 */
+  --diff-added-bg: rgba(34, 197, 94, 0.15);
+  --diff-added-gutter-bg: rgba(34, 197, 94, 0.2);
+  --diff-added-text: #166534;
+  --diff-removed-bg: rgba(239, 68, 68, 0.15);
+  --diff-removed-gutter-bg: rgba(239, 68, 68, 0.2);
+  --diff-removed-text: #991b1b;
+}
+
+/* ============================================
+ * High Contrast 主题
+ * ============================================ */
+[data-theme-type="hc"] {
+  --color-bg-base: #000000;
+  --color-bg-surface: #000000;
+  --color-bg-elevated: #1a1a1a;
+  --color-bg-hover: rgba(255, 255, 255, 0.1);
+  --color-bg-active: rgba(255, 255, 255, 0.15);
+
+  --color-border: #ffffff;
+  --color-border-subtle: rgba(255, 255, 255, 0.5);
+  --color-border-default: #ffffff;
+  --color-border-strong: #ffffff;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-tertiary: #e0e0e0;
+  --color-text-muted: #c0c0c0;
+
+  /* AI 消息卡片 - 高对比 */
+  --msg-ai-bg: #1a1a1a;
+  --msg-ai-border: #ffffff;
+  --msg-ai-border-hover: #ffffff;
+  --msg-ai-shadow: none;
+
+  /* 用户消息 - 高对比 */
+  --msg-user-bg: #003300;
+  --msg-user-border: #00ff00;
+
+  /* Composer - 高对比 */
+  --composer-bg: #000000;
+  --composer-border: #ffffff;
+  --composer-border-focus: #ffff00;
+  --composer-glow: 0 0 0 3px rgba(255, 255, 0, 0.4);
+
+  /* CodeBlock - 高对比 */
+  --codeblock-bg: #1a1a1a;
+  --codeblock-header-bg: #333333;
+  --codeblock-border: #ffffff;
+  --codeblock-gutter-bg: #0d0d0d;
+
+  /* DiffBlock - 高对比 */
+  --diff-added-bg: #003300;
+  --diff-added-gutter-bg: #004400;
+  --diff-added-text: #00ff00;
+  --diff-removed-bg: #330000;
+  --diff-removed-gutter-bg: #440000;
+  --diff-removed-text: #ff6666;
+}
+

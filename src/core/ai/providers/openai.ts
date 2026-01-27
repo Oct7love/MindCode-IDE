@@ -37,11 +37,12 @@ export class OpenAIProvider extends BaseAIProvider {
     const toolCalls: ToolCallInfo[] = [];
     try {
       const openaiTools = tools.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } }));
-      const openaiMsgs = messages.filter(m => m.role !== 'tool').map(m => {
-        if (m.toolCalls?.length) return { role: 'assistant' as const, content: m.content || null, tool_calls: m.toolCalls.map(tc => ({ id: tc.id, type: 'function' as const, function: { name: tc.name, arguments: JSON.stringify(tc.arguments) } })) };
-        return { role: m.role as 'system' | 'user' | 'assistant', content: m.content };
-      });
-      messages.filter(m => m.role === 'tool').forEach(m => openaiMsgs.push({ role: 'tool' as any, tool_call_id: m.toolCallId, content: m.content } as any));
+      const openaiMsgs: any[] = [];
+      for (const m of messages) { // 保持消息顺序
+        if (m.role === 'tool') { openaiMsgs.push({ role: 'tool', tool_call_id: m.toolCallId, content: m.content }); }
+        else if (m.toolCalls?.length) { openaiMsgs.push({ role: 'assistant', content: m.content || null, tool_calls: m.toolCalls.map(tc => ({ id: tc.id, type: 'function' as const, function: { name: tc.name, arguments: JSON.stringify(tc.arguments) } })) }); }
+        else { openaiMsgs.push({ role: m.role, content: m.content }); }
+      }
       const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: openaiMsgs, tools: openaiTools });
       const toolCallMap = new Map<number, { id: string; name: string; args: string }>();
       for await (const chunk of stream) {

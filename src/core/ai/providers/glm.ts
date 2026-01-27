@@ -41,13 +41,13 @@ export class GLMProvider extends BaseAIProvider { // 智谱 GLM - 使用 Anthrop
     const toolCalls: ToolCallInfo[] = [];
     try {
       const systemMsg = messages.find(m => m.role === 'system')?.content;
-      const chatMsgs = messages.filter(m => m.role !== 'system' && m.role !== 'tool').map(m => {
-        if (m.toolCalls?.length) return { role: 'assistant' as const, content: m.toolCalls.map(tc => ({ type: 'tool_use' as const, id: tc.id, name: tc.name, input: tc.arguments })) };
-        return { role: m.role as 'user' | 'assistant', content: m.content };
-      });
-      // 处理 tool 结果消息
-      const toolResults = messages.filter(m => m.role === 'tool').map(m => ({ type: 'tool_result' as const, tool_use_id: m.toolCallId!, content: m.content }));
-      if (toolResults.length > 0) chatMsgs.push({ role: 'user', content: toolResults as any });
+      const chatMsgs: any[] = [];
+      for (const m of messages) { // 保持消息顺序
+        if (m.role === 'system') continue;
+        if (m.role === 'tool') { chatMsgs.push({ role: 'user', content: [{ type: 'tool_result', tool_use_id: m.toolCallId, content: m.content }] }); }
+        else if (m.toolCalls?.length) { chatMsgs.push({ role: 'assistant', content: m.toolCalls.map(tc => ({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.arguments })) }); }
+        else { chatMsgs.push({ role: m.role, content: m.content }); }
+      }
       const glmTools = tools.map(t => ({ name: t.name, description: t.description, input_schema: t.parameters }));
       const stream = this.client.messages.stream({ model: this.getModel(), max_tokens: this.getMaxTokens(), system: systemMsg, messages: chatMsgs, tools: glmTools });
       let currentToolUse: { id: string; name: string; input: string } | null = null;

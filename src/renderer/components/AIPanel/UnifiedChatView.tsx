@@ -1,13 +1,23 @@
-import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
-import { useAIStore, AIMode, Plan, ToolCallStatus } from '../../stores';
-import { useFileStore } from '../../stores';
+/**
+ * UnifiedChatView - AI 对话主视图（精简版）
+ * 职责: 组件编排，UI 渲染
+ * 逻辑已提取至 hooks/useChatEngine, useComposerState, useScrollAnchor
+ */
+import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useAIStore, AIMode, ToolCallStatus } from '../../stores';
+import { useChatEngine, useComposerState, useScrollAnchor } from './hooks';
+import { ChatHeader } from './ChatHeader';
+import { ConfirmDialog } from './ConfirmDialog';
+import { QueueIndicator } from './QueueIndicator';
+import { EmptyState } from './EmptyState';
 import { ContextPicker } from './ContextPicker';
 import { ContextChip } from './ContextChip';
 import { ModelPicker, MODELS, TOOL_CAPABLE_MODELS } from './ModelPicker';
 import { MarkdownRenderer } from '../MarkdownRenderer';
 import { ToolBlock, ToolStatus } from './ToolBlock';
 import { TypingIndicator } from './TypingIndicator';
-import { CopyFeedback, useCopyFeedback } from './CopyFeedback';
+import { useCopyFeedback } from './CopyFeedback';
+import { ConversationList } from './ConversationList';
 import '../../styles/chat-tokens.css';
 import '../../styles/markdown.css';
 import './UnifiedChatView.css';
@@ -24,205 +34,67 @@ interface UnifiedChatViewProps {
 }
 
 export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizing }) => {
-  const { mode, setMode, model, setModel, getCurrentConversation, addMessage, isLoading, setLoading, streamingText, setStreamingText, appendStreamingText, contexts, removeContext, updateLastMessage, updateLastMessageToolCall, setPlan, currentPlan } = useAIStore();
-  const { workspaceRoot, getActiveFile } = useFileStore();
-  const [input, setInput] = useState('');
-  const [showPicker, setShowPicker] = useState(false);
+  const { mode, setMode, model, setModel, getCurrentConversation, contexts, removeContext, createConversation } = useAIStore();
   const [showModeMenu, setShowModeMenu] = useState(false);
+  const [showConvList, setShowConvList] = useState(false);
   const [pickerPos, setPickerPos] = useState<{ x: number; y: number } | undefined>();
   const [pendingConfirm, setPendingConfirm] = useState<{ call: ToolCallStatus; resolve: (ok: boolean) => void } | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeMenuRef = useRef<HTMLDivElement>(null);
-  const stopStreamRef = useRef<(() => void) | null>(null);
-  const abortRef = useRef(false);
 
   const conversation = getCurrentConversation();
   const messages = conversation?.messages || [];
-  const currentModel = MODELS.find(m => m.id === model) || MODELS[0];
   const currentModeOption = MODE_OPTIONS.find(m => m.mode === mode) || MODE_OPTIONS[0];
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, streamingText]);
-  useEffect(() => { if (textareaRef.current) { textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 150) + 'px'; } }, [input]);
-  useEffect(() => { // 点击外部关闭菜单
-    if (!showModeMenu) return;
-    const handleClick = (e: MouseEvent) => { if (modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) setShowModeMenu(false); };
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModeMenu(false); };
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleEsc);
-    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleEsc); };
-  }, [showModeMenu]);
+  // 核心引擎
+  const { handleSend: engineSend, handleStop, isLoading, streamingText, messageQueue, clearMessageQueue } = useChatEngine({
+    onPendingConfirm: setPendingConfirm
+  });
 
-  const resolvePath = useCallback((p: string) => p?.match(/^[a-zA-Z]:[/\\]/) || p?.startsWith('/') ? p : workspaceRoot ? `${workspaceRoot}/${p}`.replace(/\\/g, '/') : p, [workspaceRoot]);
+  // 输入框状态
+  const { input, setInput, textareaRef, showPicker, closePicker, setShowPicker, handleKeyDown, handleInputChange, handleSend } = useComposerState({
+    onSend: engineSend,
+    onStop: handleStop,
+    onPickerOpen: setPickerPos,
+    isLoading
+  });
 
-  const executeTool = useCallback(async (name: string, args: any): Promise<{ success: boolean; data?: any; error?: string }> => {
-    try {
-      switch (name) {
-        case 'workspace_listDir': return await window.mindcode?.fs?.readDir?.(resolvePath(args.path)) || { success: false, error: 'API 不可用' };
-        case 'workspace_readFile': { const res = await window.mindcode?.fs?.readFile?.(resolvePath(args.path)); if (!res?.success) return res || { success: false, error: '读取失败' }; let content = res.data || ''; if (args.startLine || args.endLine) { const lines = content.split('\n'); content = lines.slice((args.startLine || 1) - 1, args.endLine || lines.length).join('\n'); } return { success: true, data: { content, lines: res.data?.split('\n').length } }; }
-        case 'workspace_writeFile': return await window.mindcode?.fs?.writeFile?.(resolvePath(args.path), args.content) || { success: false, error: '写入失败' };
-        case 'workspace_search': return await window.mindcode?.fs?.searchInFiles?.({ workspacePath: workspaceRoot || '', query: args.query, maxResults: args.maxResults || 50 }) || { success: false, error: '搜索失败' };
-        case 'editor_getActiveFile': { const f = getActiveFile(); return { success: true, data: f ? { path: f.path, content: f.content } : null }; }
-        case 'terminal_execute': return await window.mindcode?.terminal?.execute?.(args.command, args.cwd ? resolvePath(args.cwd) : workspaceRoot || undefined) || { success: false, error: '执行失败' };
-        case 'git_status': return await window.mindcode?.git?.status?.(workspaceRoot || '') || { success: false, error: 'Git 不可用' };
-        case 'git_diff': return await window.mindcode?.git?.diff?.(workspaceRoot || '', args.path, args.staged) || { success: false, error: 'Git 不可用' };
-        default: return { success: false, error: `未知工具: ${name}` };
-      }
-    } catch (e: any) { return { success: false, error: e.message }; }
-  }, [workspaceRoot, getActiveFile, resolvePath]);
-
-  const confirmTool = useCallback((call: ToolCallStatus): Promise<boolean> => new Promise(resolve => setPendingConfirm({ call, resolve })), []);
-
-  const parsePlan = useCallback((text: string): Plan | null => {
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*"title"[\s\S]*"tasks"[\s\S]*\}/);
-    if (!jsonMatch) return null;
-    try {
-      const json = jsonMatch[1] || jsonMatch[0];
-      const parsed = JSON.parse(json);
-      return { id: Date.now().toString(), title: parsed.title || '开发计划', goal: parsed.goal || '', status: 'draft', version: 1, assumptions: parsed.assumptions || [], risks: parsed.risks || [], milestones: (parsed.milestones || []).map((m: any, i: number) => ({ id: m.id || `m${i}`, label: m.label || m, estimated: m.estimated || '', completed: false })), tasks: (parsed.tasks || []).map((t: any, i: number) => ({ id: t.id || `t${i}`, label: t.label || t, completed: false })) };
-    } catch { return null; }
-  }, []);
-
-  const getSystemPrompt = useCallback(() => {
-    const activeFile = getActiveFile();
-    const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
-    const toolsInfo = `
-【工具能力】
-你拥有完整的文件系统访问权限。当用户提到路径、文件或需要了解项目结构时，务必使用工具（workspace_listDir, workspace_readFile 等）获取真实信息。
-不要猜测文件内容。修改文件前必须先读取。执行命令前必须解释意图。
-`;
-    const base = `你是 MindCode AI（${modelInfo.name}），集成在 MindCode IDE 中。工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。重要：当用户问你是什么模型时，必须回答 ${modelInfo.name}。\n${toolsInfo}`;
-    switch (mode) {
-      case 'chat': return `${base}\n【Ask 模式】回答问题，解释代码。当问题涉及具体文件时，主动使用工具读取。`;
-      case 'plan': return `${base}\n【Plan 模式】制定开发计划。先使用工具探索项目结构，再输出 JSON 计划。`;
-      case 'agent': return `${base}\n【Agent 模式】自主完成任务。执行原则: 1.探索(listDir/search) 2.读取(readFile) 3.思考 4.修改(writeFile)。`;
-      case 'debug': return `${base}\n【Debug 模式】分析错误。主动读取报错文件和日志。`;
-      default: return base;
-    }
-  }, [mode, model, workspaceRoot, getActiveFile]);
-
-  const getTools = useCallback(() => [ // 所有模式都支持工具调用
-    { name: 'workspace_listDir', description: '列出目录', parameters: { type: 'object' as const, properties: { path: { type: 'string' } }, required: ['path'] } },
-    { name: 'workspace_readFile', description: '读取文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
-    { name: 'workspace_writeFile', description: '写入文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
-    { name: 'workspace_search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
-    { name: 'editor_getActiveFile', description: '获取当前文件', parameters: { type: 'object' as const, properties: {} } },
-    { name: 'terminal_execute', description: '执行终端命令（用户确认后执行）', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
-    { name: 'git_status', description: 'Git状态', parameters: { type: 'object' as const, properties: {} } },
-    { name: 'git_diff', description: 'Git差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
-  ], []);
-
-  const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
-    const userContent = input.trim();
-    let finalContent = userContent;
-    if (contexts.length > 0) { finalContent = contexts.map(c => `[${c.type}: ${c.label}]\n${c.data.content || c.data.path}`).join('\n\n') + `\n\n用户: ${userContent}`; }
-    addMessage({ role: 'user', content: userContent, mode });
-    setInput('');
-    setLoading(true);
-    setStreamingText('');
-    abortRef.current = false;
-
-    const systemPrompt = getSystemPrompt();
-    const chatHistory = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-    let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: finalContent }];
-    const tools = getTools();
-    
-    // Agent 模式下强制使用工具，其他模式检查模型能力
-    const isAgentMode = mode === 'agent';
-    const useTools = tools.length > 0 && (isAgentMode || TOOL_CAPABLE_MODELS.includes(model));
-    const requiresConfirm = ['workspace_writeFile', 'terminal_execute'];
-
-    let usedFallbackModel: string | null = null; // 记录是否发生了降级
-    if (useTools) {
-      // 检查 Provider 是否真的支持工具（运行时检查），如果不支持则回退到普通流
-      if (!window.mindcode?.ai?.chatStreamWithTools) {
-        updateLastMessage('错误: 当前环境不支持工具调用 API');
-        setLoading(false);
-        return;
-      }
-      addMessage({ role: 'assistant', content: '', mode });
-      let iterations = 0, maxIterations = 15;
-      while (iterations < maxIterations && !abortRef.current) {
-        iterations++;
-        let responseText = '', toolCalls: any[] = [];
-        try {
-          await new Promise<void>((resolve, reject) => {
-            if (!window.mindcode?.ai?.chatStreamWithTools) { reject(new Error('API 不可用')); return; }
-            window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
-              onToken: (token) => { responseText += token; appendStreamingText(token); },
-              onToolCall: (calls) => { toolCalls = calls; },
-              onComplete: (_fullText, meta) => { if (meta?.usedFallback) usedFallbackModel = meta.model; resolve(); },
-              onError: (err) => reject(new Error(err)),
-              onFallback: (from, to) => { appendStreamingText(`\n\n> ⚠️ ${from} 服务繁忙，已自动切换到 ${to}\n\n`); usedFallbackModel = to; }
-            });
-          });
-        } catch (e: any) { updateLastMessage(e.message || '请求失败'); break; }
-        if (abortRef.current) break;
-        if (toolCalls.length === 0) { updateLastMessage(responseText + (usedFallbackModel ? `\n\n*已自动切换到 ${usedFallbackModel}*` : '')); break; }
-        const calls: ToolCallStatus[] = toolCalls.map(tc => ({ id: tc.id, name: tc.name, args: tc.arguments, status: 'pending' as const }));
-        updateLastMessage(responseText, { toolCalls: calls });
-        setStreamingText('');
-        apiMessages.push({ role: 'assistant', content: responseText, toolCalls });
-        for (const call of calls) {
-          if (abortRef.current) break;
-          if (requiresConfirm.includes(call.name)) {
-            const confirmed = await confirmTool(call);
-            if (!confirmed) { updateLastMessageToolCall(call.id, { status: 'failed', error: '用户取消' }); apiMessages.push({ role: 'tool', toolCallId: call.id, content: JSON.stringify({ error: '用户取消' }) }); continue; }
-          }
-          updateLastMessageToolCall(call.id, { status: 'running' });
-          const result = await executeTool(call.name, call.args);
-          updateLastMessageToolCall(call.id, { status: result.success ? 'success' : 'failed', result: result.data, error: result.error });
-          apiMessages.push({ role: 'tool', toolCallId: call.id, content: JSON.stringify(result.success ? result.data : { error: result.error }) });
-        }
-      }
-    } else {
-      addMessage({ role: 'assistant', content: '', mode });
-      const cleanup = window.mindcode?.ai?.chatStream?.(model, apiMessages, {
-        onToken: (token: string) => appendStreamingText(token),
-        onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => {
-          const plan = mode === 'plan' ? parsePlan(fullText) : null;
-          const suffix = meta?.usedFallback ? `\n\n*已自动切换到 ${meta.model}*` : '';
-          updateLastMessage(fullText + suffix, plan ? { plan } : undefined);
-          if (plan) setPlan(plan);
-          setStreamingText(''); setLoading(false); stopStreamRef.current = null;
-        },
-        onError: (error: string) => { updateLastMessage(error); setStreamingText(''); setLoading(false); stopStreamRef.current = null; },
-        onFallback: (from: string, to: string) => { appendStreamingText(`\n\n> ⚠️ ${from} 服务繁忙，已自动切换到 ${to}\n\n`); }
-      });
-      stopStreamRef.current = cleanup || null;
-      return;
-    }
-    setStreamingText('');
-    setLoading(false);
-  }, [input, model, mode, isLoading, contexts, messages, getSystemPrompt, getTools, addMessage, setLoading, setStreamingText, appendStreamingText, updateLastMessage, updateLastMessageToolCall, executeTool, confirmTool, parsePlan, setPlan]);
-
-  const handleStop = useCallback(() => { stopStreamRef.current?.(); abortRef.current = true; if (streamingText) updateLastMessage(streamingText + '\n\n[已停止]'); setStreamingText(''); setLoading(false); }, [streamingText, updateLastMessage, setStreamingText, setLoading]);
-  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } if (e.key === 'Escape' && isLoading) handleStop(); if (e.key === '@' && !showPicker) { const rect = textareaRef.current?.getBoundingClientRect(); if (rect) setPickerPos({ x: rect.left, y: rect.top - 330 }); setTimeout(() => setShowPicker(true), 50); } };
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { setInput(e.target.value); if (e.target.value.endsWith('@') && !showPicker) { const rect = textareaRef.current?.getBoundingClientRect(); if (rect) setPickerPos({ x: rect.left, y: rect.top - 330 }); setShowPicker(true); } };
-  const handleConfirm = useCallback((ok: boolean) => { pendingConfirm?.resolve(ok); setPendingConfirm(null); }, [pendingConfirm]);
-  const handleModeSelect = useCallback((m: AIMode) => { setMode(m); setShowModeMenu(false); }, [setMode]);
-
-  const displayMessages = messages.map((msg, idx) => ({ ...msg, content: (idx === messages.length - 1 && msg.role === 'assistant' && isLoading && streamingText) ? streamingText : msg.content, isStreaming: idx === messages.length - 1 && msg.role === 'assistant' && isLoading && !!streamingText }));
+  // 滚动锚定
+  const { messagesEndRef } = useScrollAnchor({ dependencies: [messages, streamingText] });
 
   // 复制功能
   const { copy, FeedbackComponent } = useCopyFeedback();
-  const handleCopyMessage = useCallback((content: string) => {
-    copy(content, '消息已复制');
-  }, [copy]);
-  const handleCopyTool = useCallback((content: string) => {
-    copy(content, '工具数据已复制');
-  }, [copy]);
+  const handleCopyTool = useCallback((content: string) => copy(content, '工具数据已复制'), [copy]);
+
+  // 点击外部关闭模式菜单
+  useEffect(() => {
+    if (!showModeMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) setShowModeMenu(false);
+    };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModeMenu(false); };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [showModeMenu]);
+
+  const handleModeSelect = useCallback((m: AIMode) => { setMode(m); setShowModeMenu(false); }, [setMode]);
+  const handleConfirm = useCallback((ok: boolean) => { pendingConfirm?.resolve(ok); setPendingConfirm(null); }, [pendingConfirm]);
+
+  const displayMessages = messages.map((msg, idx) => ({
+    ...msg,
+    content: (idx === messages.length - 1 && msg.role === 'assistant' && isLoading && streamingText) ? streamingText : msg.content,
+    isStreaming: idx === messages.length - 1 && msg.role === 'assistant' && isLoading && !!streamingText
+  }));
 
   return (
     <div className="unified-chat-view">
+      <ChatHeader onNewChat={createConversation} onShowHistory={() => setShowConvList(true)} />
+
       <div className="unified-messages" role="log">
-        {displayMessages.length <= 1 && (
-          <div className="unified-empty">
-            <div className="unified-empty-icon">{currentModeOption.icon}</div>
-            <div className="unified-empty-title">{currentModeOption.label}</div>
-          </div>
-        )}
+        {displayMessages.length <= 1 && <EmptyState mode={mode} icon={currentModeOption.icon} label={currentModeOption.label} />}
         {displayMessages.slice(1).map(msg => (
           <div key={msg.id} className={`unified-msg unified-msg-${msg.role}`}>
             <div className="unified-msg-avatar">{msg.role === 'user' ? '◯' : '✦'}</div>
@@ -231,23 +103,17 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
               {msg.toolCalls && msg.toolCalls.length > 0 && (
                 <div className="unified-tools">
                   {msg.toolCalls.map(tc => (
-                    <ToolBlock
-                      key={tc.id}
-                      id={tc.id}
-                      name={tc.name}
-                      args={tc.args}
-                      status={tc.status as ToolStatus}
-                      result={tc.result}
-                      error={tc.error}
-                      onCopy={handleCopyTool}
-                    />
+                    <ToolBlock key={tc.id} id={tc.id} name={tc.name} args={tc.args} status={tc.status as ToolStatus} result={tc.result} error={tc.error} onCopy={handleCopyTool} />
                   ))}
                 </div>
               )}
               {msg.plan && (
                 <div className="unified-plan-card">
                   <div className="unified-plan-title">{msg.plan.title}</div>
-                  <div className="unified-plan-tasks">{msg.plan.tasks.slice(0, 3).map(t => <div key={t.id} className="unified-plan-task">○ {t.label}</div>)}{msg.plan.tasks.length > 3 && <div className="unified-plan-more">+{msg.plan.tasks.length - 3} 更多</div>}</div>
+                  <div className="unified-plan-tasks">
+                    {msg.plan.tasks.slice(0, 3).map(t => <div key={t.id} className="unified-plan-task">○ {t.label}</div>)}
+                    {msg.plan.tasks.length > 3 && <div className="unified-plan-more">+{msg.plan.tasks.length - 3} 更多</div>}
+                  </div>
                 </div>
               )}
             </div>
@@ -263,9 +129,14 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
       </div>
 
       <div className="unified-composer">
-        {contexts.length > 0 && <div className="unified-contexts">{contexts.map(ctx => <ContextChip key={ctx.id} item={ctx} onRemove={() => removeContext(ctx.id)} />)}</div>}
+        <QueueIndicator count={messageQueue.length} onClear={clearMessageQueue} />
+        {contexts.length > 0 && (
+          <div className="unified-contexts">
+            {contexts.map(ctx => <ContextChip key={ctx.id} item={ctx} onRemove={() => removeContext(ctx.id)} />)}
+          </div>
+        )}
         <div className="unified-input-row">
-          <textarea ref={textareaRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="输入消息..." disabled={isLoading} rows={1} />
+          <textarea ref={textareaRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder={isLoading ? "消息将排队执行..." : "输入消息..."} rows={1} />
         </div>
         <div className="unified-footer">
           <div className="unified-footer-left">
@@ -295,26 +166,20 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
           </div>
           <div className="unified-footer-right">
             {isLoading ? (
-              <button className="unified-stop" onClick={handleStop}>Stop <span className="unified-shortcut">Ctrl+Shift+⌫</span></button>
+              <button className="unified-stop" onClick={handleStop}>Stop <span className="unified-shortcut">Esc</span></button>
             ) : (
-              <button className="unified-review" onClick={handleSend} disabled={!input.trim()}>Review</button>
+              <button className="unified-review" onClick={handleSend} disabled={!input.trim()}>Send</button>
             )}
           </div>
         </div>
       </div>
 
-      <ContextPicker isOpen={showPicker} onClose={() => { setShowPicker(false); setInput(input.replace(/@$/, '')); }} position={pickerPos} inputRef={textareaRef} />
-      {pendingConfirm && (
-        <div className="unified-confirm-overlay">
-          <div className="unified-confirm-dialog">
-            <div className="unified-confirm-title">⚠️ 确认执行</div>
-            <div className="unified-confirm-tool">{pendingConfirm.call.name}</div>
-            <pre className="unified-confirm-args">{JSON.stringify(pendingConfirm.call.args, null, 2)}</pre>
-            <div className="unified-confirm-actions"><button onClick={() => handleConfirm(false)}>取消</button><button className="primary" onClick={() => handleConfirm(true)}>确认</button></div>
-          </div>
-        </div>
-      )}
+      <ContextPicker isOpen={showPicker} onClose={closePicker} position={pickerPos} inputRef={textareaRef} />
+      {pendingConfirm && <ConfirmDialog call={pendingConfirm.call} onConfirm={() => handleConfirm(true)} onCancel={() => handleConfirm(false)} />}
       {FeedbackComponent}
+      <ConversationList isOpen={showConvList} onClose={() => setShowConvList(false)} />
     </div>
   );
 });
+
+UnifiedChatView.displayName = 'UnifiedChatView';

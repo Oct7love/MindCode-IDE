@@ -1,0 +1,79 @@
+/* MessageList.css - 消息列表容器样式 */
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  gap: var(--chat-message-gap, 16px);
+  background: var(--color-bg-surface, #0f0f12);
+  scroll-behavior: smooth;
+}
+
+/* 细滚动条 */
+.message-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.message-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-list::-webkit-scrollbar-thumb {
+  background: var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: 3px;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong, rgba(255, 255, 255, 0.1));
+}
+
+.message-list-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chat-message-gap, 16px);
+}
+
+.message-list-anchor {
+  height: 1px;
+  flex-shrink: 0;
+}
+
+/* 加载状态 */
+.message-loading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3, 12px);
+  padding: var(--space-2, 8px) 0;
+}
+
+/* 共享头像样式 */
+.message-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-lg, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  transition: transform var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.message-avatar-ai {
+  background: var(--gradient-ai, linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%));
+  color: white;
+  box-shadow: 0 2px 8px var(--color-accent-ai-glow, rgba(139, 92, 246, 0.3));
+}
+
+.message-avatar-user {
+  background: var(--color-bg-elevated, #151519);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.avatar-icon {
+  line-height: 1;
+}

@@ -25,19 +25,20 @@ export const AgentView: React.FC = memo(() => {
   const resolvePath = useCallback((p: string) => p?.match(/^[a-zA-Z]:[/\\]/) || p?.startsWith('/') ? p : workspaceRoot ? `${workspaceRoot}/${p}`.replace(/\\/g, '/') : p, [workspaceRoot]);
 
   const executeTool = useCallback(async (name: string, args: any): Promise<{ success: boolean; data?: any; error?: string }> => {
+    console.log(`[Agent] executeTool: ${name}`, args); // 调试日志
     try {
       switch (name) {
-        case 'workspace.listDir': return await window.mindcode?.fs?.readDir?.(resolvePath(args.path)) || { success: false, error: 'API 不可用' };
-        case 'workspace.readFile': { const res = await window.mindcode?.fs?.readFile?.(resolvePath(args.path)); if (!res?.success) return res || { success: false, error: '读取失败' }; let content = res.data || ''; if (args.startLine || args.endLine) { const lines = content.split('\n'); content = lines.slice((args.startLine || 1) - 1, args.endLine || lines.length).join('\n'); } return { success: true, data: { content, lines: res.data?.split('\n').length } }; }
-        case 'workspace.writeFile': return await window.mindcode?.fs?.writeFile?.(resolvePath(args.path), args.content) || { success: false, error: '写入失败' };
-        case 'workspace.search': return await window.mindcode?.fs?.searchInFiles?.({ workspacePath: workspaceRoot || '', query: args.query, maxResults: args.maxResults || 50 }) || { success: false, error: '搜索失败' };
-        case 'editor.getActiveFile': { const f = getActiveFile(); return { success: true, data: f ? { path: f.path, content: f.content } : null }; }
-        case 'terminal.execute': return await window.mindcode?.terminal?.execute?.(args.command, args.cwd ? resolvePath(args.cwd) : workspaceRoot || undefined) || { success: false, error: '执行失败' };
-        case 'git.status': return await window.mindcode?.git?.status?.(workspaceRoot || '') || { success: false, error: 'Git 不可用' };
-        case 'git.diff': return await window.mindcode?.git?.diff?.(workspaceRoot || '', args.path, args.staged) || { success: false, error: 'Git 不可用' };
+        case 'workspace_listDir': return await window.mindcode?.fs?.readDir?.(resolvePath(args.path)) || { success: false, error: 'API 不可用' };
+        case 'workspace_readFile': { const res = await window.mindcode?.fs?.readFile?.(resolvePath(args.path)); if (!res?.success) return res || { success: false, error: '读取失败' }; let content = res.data || ''; if (args.startLine || args.endLine) { const lines = content.split('\n'); content = lines.slice((args.startLine || 1) - 1, args.endLine || lines.length).join('\n'); } return { success: true, data: { content, lines: res.data?.split('\n').length } }; }
+        case 'workspace_writeFile': return await window.mindcode?.fs?.writeFile?.(resolvePath(args.path), args.content) || { success: false, error: '写入失败' };
+        case 'workspace_search': return await window.mindcode?.fs?.searchInFiles?.({ workspacePath: workspaceRoot || '', query: args.query, maxResults: args.maxResults || 50 }) || { success: false, error: '搜索失败' };
+        case 'editor_getActiveFile': { const f = getActiveFile(); return { success: true, data: f ? { path: f.path, content: f.content } : null }; }
+        case 'terminal_execute': return await window.mindcode?.terminal?.execute?.(args.command, args.cwd ? resolvePath(args.cwd) : workspaceRoot || undefined) || { success: false, error: '执行失败' };
+        case 'git_status': return await window.mindcode?.git?.status?.(workspaceRoot || '') || { success: false, error: 'Git 不可用' };
+        case 'git_diff': return await window.mindcode?.git?.diff?.(workspaceRoot || '', args.path, args.staged) || { success: false, error: 'Git 不可用' };
         default: return { success: false, error: `未知工具: ${name}` };
       }
-    } catch (e: any) { return { success: false, error: e.message }; }
+    } catch (e: any) { console.error(`[Agent] Tool error: ${name}`, e); return { success: false, error: e.message }; }
   }, [workspaceRoot, getActiveFile, resolvePath]);
 
   const confirmTool = useCallback((call: ToolCall): Promise<boolean> => new Promise(resolve => setPendingConfirm({ call, resolve })), []);
@@ -55,7 +56,7 @@ export const AgentView: React.FC = memo(() => {
     const systemPrompt = `你是 MindCode Agent，一个智能编程助手，可以通过工具自主完成编程任务。
 【工作区】${workspaceRoot || '未打开'}
 【当前文件】${activeFile?.path || '无'}
-【可用工具】workspace.listDir, workspace.readFile, workspace.writeFile, workspace.search, editor.getActiveFile, terminal.execute, git.status, git.diff
+【可用工具】workspace_listDir, workspace_readFile, workspace_writeFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff
 【行为准则】
 1. 理解用户需求，必要时询问澄清
 2. 需要查看代码时主动使用工具
@@ -65,19 +66,19 @@ export const AgentView: React.FC = memo(() => {
 6. 遇到问题时说明原因并提供建议`;
 
     const tools = [
-      { name: 'workspace.listDir', description: '列出目录内容', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '目录路径' } }, required: ['path'] } },
-      { name: 'workspace.readFile', description: '读取文件内容', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
-      { name: 'workspace.writeFile', description: '写入/创建文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
-      { name: 'workspace.search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
-      { name: 'editor.getActiveFile', description: '获取当前编辑文件', parameters: { type: 'object' as const, properties: {} } },
-      { name: 'terminal.execute', description: '执行终端命令', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
-      { name: 'git.status', description: '获取 Git 状态', parameters: { type: 'object' as const, properties: {} } },
-      { name: 'git.diff', description: '获取文件差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
+      { name: 'workspace_listDir', description: '列出目录内容', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '目录路径' } }, required: ['path'] } },
+      { name: 'workspace_readFile', description: '读取文件内容', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
+      { name: 'workspace_writeFile', description: '写入/创建文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
+      { name: 'workspace_search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
+      { name: 'editor_getActiveFile', description: '获取当前编辑文件', parameters: { type: 'object' as const, properties: {} } },
+      { name: 'terminal_execute', description: '执行终端命令', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
+      { name: 'git_status', description: '获取 Git 状态', parameters: { type: 'object' as const, properties: {} } },
+      { name: 'git_diff', description: '获取文件差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
     ];
 
     const chatHistory = messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: userMsg.content }];
-    const requiresConfirm = ['workspace.writeFile', 'terminal.execute'];
+    const requiresConfirm = ['workspace_writeFile', 'terminal_execute'];
     let iterations = 0, maxIterations = 15;
 
     while (iterations < maxIterations && !abortRef.current) {

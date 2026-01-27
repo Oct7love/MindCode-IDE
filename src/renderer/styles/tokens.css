@@ -1,0 +1,70 @@
+:root {
+  /* === 基础层级 (Surface) === */
+  --bg-app: #1e1e1e;       /* 编辑器深色背景 */
+  --bg-sidebar: #252526;   /* 侧边栏/面板背景 */
+  --bg-surface: #2d2d2d;   /* 浮层/卡片/输入框背景 */
+  --bg-hover: #2a2d2e;     /* 悬停态 */
+  --bg-active: #37373d;    /* 激活态 */
+  --bg-selected: #04395e;  /* 列表选中项背景 */
+
+  /* === 文本 (Text) === */
+  --text-primary: #cccccc;   /* 主要文字 */
+  --text-secondary: #969696; /* 次要文字/注释 */
+  --text-disabled: #5a5a5a;  /* 禁用态 */
+  --text-inverse: #ffffff;   /* 反色/高亮 */
+
+  /* === 品牌色 (Brand/Accent) - 类似 Cursor/VS Code 的现代蓝 === */
+  --accent-primary: #3794ff; 
+  --accent-hover: #1f80eb;
+  --accent-subtle: rgba(55, 148, 255, 0.1);
+  --accent-text: #ffffff;
+
+  /* === 语义色 (Semantic) === */
+  --color-error: #f48771;
+  --color-error-bg: rgba(244, 135, 113, 0.1);
+  --color-warn: #cca700;
+  --color-warn-bg: rgba(204, 167, 0, 0.1);
+  --color-success: #89d185;
+  --color-success-bg: rgba(137, 209, 133, 0.1);
+  --color-info: #75beff;
+
+  /* === 边框 (Border) === */
+  --border-subtle: #2b2b2b;
+  --border-default: #3e3e3e; /* 标准边框色 */
+  --border-active: #007fd4;  /* 聚焦/激活边框 */
+  
+  /* === 间距系统 (Spacing) - 4px 网格 === */
+  --space-0_5: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* === 圆角 (Radius) === */
+  --radius-sm: 2px;  /* 按钮、输入框、标签 */
+  --radius-md: 4px;  /* 卡片、对话框 */
+  --radius-lg: 8px;  /* 大弹窗 */
+  --radius-full: 999px;
+
+  /* === 字体 (Typography) === */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+  
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+
+  /* === 阴影 (Shadow) === */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+  
+  /* === 动效 (Motion) === */
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+}

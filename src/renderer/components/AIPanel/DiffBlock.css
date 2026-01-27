@@ -1,13 +1,15 @@
 /* ============================================
  * DiffBlock - Code Change Preview
+ * 使用 Design Tokens，支持 dark/light/hc 主题
  * ============================================ */
 
 .diff-block {
-  margin: 12px 0;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  margin: var(--space-3, 12px) 0;
+  background: var(--codeblock-bg, rgba(0, 0, 0, 0.4));
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-xl, 12px);
   overflow: hidden;
+  position: relative;
 }
 
 /* Top gradient line */
@@ -32,15 +34,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: var(--space-2-5, 10px) var(--space-3-5, 14px);
+  background: var(--codeblock-header-bg, rgba(0, 0, 0, 0.3));
+  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.06));
 }
 
 .diff-block-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2, 8px);
   min-width: 0;
   flex: 1;
 }
@@ -48,27 +50,27 @@
 .diff-block-header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2-5, 10px);
   flex-shrink: 0;
 }
 
 .diff-block-file-icon {
-  color: #f59e0b;
+  color: var(--color-warning, #f59e0b);
   display: flex;
   align-items: center;
 }
 
 .diff-block-filename {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
-  font-weight: 600;
-  color: #e4e4e7;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #e4e4e7);
 }
 
 .diff-block-path {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  color: #52525b;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #52525b);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -77,32 +79,32 @@
 /* Stats */
 .diff-block-stats {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1-5, 6px);
 }
 
 .diff-block-stat {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-semibold, 600);
+  padding: 2px var(--space-1-5, 6px);
+  border-radius: var(--radius-sm, 4px);
 }
 
 .diff-block-stat-added {
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.15);
+  color: var(--color-success, #34d399);
+  background: var(--color-success-bg, rgba(52, 211, 153, 0.15));
 }
 
 .diff-block-stat-removed {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.15);
+  color: var(--color-error, #f87171);
+  background: var(--color-error-bg, rgba(248, 113, 113, 0.15));
 }
 
 /* View Mode Toggle */
 .diff-block-view-toggle {
   display: flex;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
+  border-radius: var(--radius-md, 6px);
   padding: 2px;
 }
 
@@ -114,19 +116,24 @@
   height: 24px;
   background: transparent;
   border: none;
-  border-radius: 4px;
-  color: #52525b;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-text-muted, #52525b);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 150ms) var(--ease-out);
 }
 
 .diff-block-view-btn:hover {
-  color: #a1a1aa;
+  color: var(--color-text-secondary, #a1a1aa);
 }
 
 .diff-block-view-btn.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e4e4e7;
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-primary, #e4e4e7);
+}
+
+.diff-block-view-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
 }
 
 /* Copy Button */
@@ -137,29 +144,34 @@
   width: 28px;
   height: 28px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: #71717a;
-  font-size: 12px;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-muted, #71717a);
+  font-size: var(--font-size-sm, 12px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 150ms) var(--ease-out);
 }
 
 .diff-block-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #a1a1aa;
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.diff-block-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
 }
 
 .diff-block-btn.copied {
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--color-success, #34d399);
+  border-color: var(--color-success-border, rgba(52, 211, 153, 0.3));
 }
 
 /* Content */
 .diff-block-content {
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--color-border-default, rgba(255, 255, 255, 0.1)) transparent;
 }
 
 .diff-block-content::-webkit-scrollbar {
@@ -172,14 +184,18 @@
 }
 
 .diff-block-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border-default, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
+}
+
+.diff-block-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong, rgba(255, 255, 255, 0.2));
 }
 
 /* Unified View */
 .diff-block-unified {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-sm, 12px);
   line-height: 1.6;
 }
 
@@ -191,8 +207,8 @@
 .diff-line-gutter {
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.2);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--codeblock-gutter-bg, rgba(0, 0, 0, 0.2));
+  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
   user-select: none;
   flex-shrink: 0;
   position: sticky;
@@ -201,31 +217,31 @@
 
 .diff-line-number {
   width: 36px;
-  padding: 0 6px;
+  padding: 0 var(--space-1-5, 6px);
   text-align: right;
-  color: #3f3f46;
+  color: var(--color-text-disabled, #3f3f46);
 }
 
 .diff-line-number-old {
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
 }
 
 .diff-line-sign {
   width: 20px;
   text-align: center;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold, 600);
 }
 
 .diff-line-content {
   flex: 1;
-  padding: 0 12px;
+  padding: 0 var(--space-3, 12px);
   white-space: pre;
   overflow-x: auto;
 }
 
 .diff-line-content code {
   font-family: inherit;
-  color: #e4e4e7;
+  color: var(--color-text-primary, #e4e4e7);
 }
 
 /* Line Types */
@@ -238,35 +254,35 @@
 }
 
 .diff-line-added {
-  background: rgba(34, 197, 94, 0.1);
+  background: var(--diff-added-bg, rgba(34, 197, 94, 0.1));
 }
 
 .diff-line-added .diff-line-gutter {
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--diff-added-gutter-bg, rgba(34, 197, 94, 0.15));
 }
 
 .diff-line-added .diff-line-sign {
-  color: #34d399;
+  color: var(--color-success, #34d399);
 }
 
 .diff-line-added .diff-line-content code {
-  color: #86efac;
+  color: var(--diff-added-text, #86efac);
 }
 
 .diff-line-removed {
-  background: rgba(248, 113, 113, 0.1);
+  background: var(--diff-removed-bg, rgba(248, 113, 113, 0.1));
 }
 
 .diff-line-removed .diff-line-gutter {
-  background: rgba(248, 113, 113, 0.15);
+  background: var(--diff-removed-gutter-bg, rgba(248, 113, 113, 0.15));
 }
 
 .diff-line-removed .diff-line-sign {
-  color: #f87171;
+  color: var(--color-error, #f87171);
 }
 
 .diff-line-removed .diff-line-content code {
-  color: #fca5a5;
+  color: var(--diff-removed-text, #fca5a5);
   text-decoration: line-through;
   text-decoration-color: rgba(248, 113, 113, 0.5);
 }
@@ -279,32 +295,32 @@
 .diff-block-side {
   flex: 1;
   min-width: 0;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-sm, 12px);
   line-height: 1.6;
 }
 
 .diff-block-side-old {
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
 }
 
 .diff-block-side-header {
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: var(--space-1-5, 6px) var(--space-3, 12px);
+  background: var(--codeblock-gutter-bg, rgba(0, 0, 0, 0.2));
   font-size: 10px;
-  font-weight: 600;
-  color: #71717a;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-muted, #71717a);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
 }
 
 .diff-block-side-old .diff-block-side-header {
-  color: #f87171;
+  color: var(--color-error, #f87171);
 }
 
 .diff-block-side-new .diff-block-side-header {
-  color: #34d399;
+  color: var(--color-success, #34d399);
 }
 
 .diff-block-side .diff-line {
@@ -313,52 +329,32 @@
 
 .diff-block-side .diff-line-number {
   width: 32px;
-  padding: 0 8px;
+  padding: 0 var(--space-2, 8px);
   background: rgba(0, 0, 0, 0.1);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
   text-align: right;
-  color: #3f3f46;
+  color: var(--color-text-disabled, #3f3f46);
   flex-shrink: 0;
 }
 
 .diff-block-side .diff-line-content {
   flex: 1;
-  padding: 0 8px;
+  padding: 0 var(--space-2, 8px);
   white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Light theme */
-[data-theme="light"] .diff-block {
-  background: #fafafa;
-  border-color: rgba(0, 0, 0, 0.1);
-}
+/*
+ * 主题覆盖现在通过 Design Tokens 自动处理
+ * [data-theme-type="light"] 和 [data-theme-type="hc"]
+ * 需要在 design-tokens.css 中定义 --diff-* 变量
+ */
 
-[data-theme="light"] .diff-block-header {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="light"] .diff-block-filename {
-  color: #27272a;
-}
-
-[data-theme="light"] .diff-line-content code {
-  color: #27272a;
-}
-
-[data-theme="light"] .diff-line-added {
-  background: rgba(34, 197, 94, 0.15);
-}
-
-[data-theme="light"] .diff-line-added .diff-line-content code {
-  color: #166534;
-}
-
-[data-theme="light"] .diff-line-removed {
-  background: rgba(248, 113, 113, 0.15);
-}
-
-[data-theme="light"] .diff-line-removed .diff-line-content code {
-  color: #991b1b;
+/* 减少动画 - 可访问性 */
+@media (prefers-reduced-motion: reduce) {
+  .diff-block-view-btn,
+  .diff-block-btn {
+    transition: none;
+  }
 }

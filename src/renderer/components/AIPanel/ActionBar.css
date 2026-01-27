@@ -1,47 +1,48 @@
 /* ============================================
  * ActionBar - Approval/Execution Control
+ * 使用 Design Tokens，支持 dark/light/hc 主题
  * ============================================ */
 
 .action-bar {
-  margin: 12px 0;
+  margin: var(--space-3, 12px) 0;
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-xl, 12px);
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal, 200ms) var(--ease-out);
 }
 
 /* State-based border styling */
 .action-bar-pending {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--color-warning, #f59e0b);
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 .action-bar-approved {
-  border-left: 3px solid #34d399;
+  border-left: 3px solid var(--color-success, #34d399);
   background: linear-gradient(135deg, rgba(52, 211, 153, 0.05) 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 .action-bar-rejected {
-  border-left: 3px solid #f87171;
+  border-left: 3px solid var(--color-error, #f87171);
   background: linear-gradient(135deg, rgba(248, 113, 113, 0.05) 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 .action-bar-executing {
-  border-left: 3px solid #8b5cf6;
+  border-left: 3px solid var(--color-accent-ai, #8b5cf6);
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 .action-bar-completed {
-  border-left: 3px solid #34d399;
+  border-left: 3px solid var(--color-success, #34d399);
 }
 
 .action-bar-failed {
-  border-left: 3px solid #f87171;
+  border-left: 3px solid var(--color-error, #f87171);
 }
 
 .action-bar:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.12));
 }
 
 /* Header */
@@ -49,7 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: var(--space-3, 12px) var(--space-3-5, 14px);
   cursor: pointer;
   user-select: none;
 }
@@ -57,7 +58,7 @@
 .action-bar-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3, 12px);
   min-width: 0;
   flex: 1;
 }
@@ -65,7 +66,7 @@
 .action-bar-header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2-5, 10px);
   flex-shrink: 0;
 }
 
@@ -87,17 +88,17 @@
 
 .action-bar-title {
   font-size: 13px;
-  font-weight: 600;
-  color: #e4e4e7;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #e4e4e7);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .action-bar-path {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  color: #71717a;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #71717a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -105,48 +106,48 @@
 
 /* State Badge */
 .action-bar-state {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: 6px;
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-medium, 500);
+  padding: var(--space-1, 4px) var(--space-2-5, 10px);
+  border-radius: var(--radius-md, 6px);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1, 4px);
   white-space: nowrap;
 }
 
 .action-bar-state-pending {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--color-warning-bg, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning, #fbbf24);
+  border: 1px solid var(--color-warning-border, rgba(245, 158, 11, 0.3));
 }
 
 .action-bar-state-approved {
-  background: rgba(52, 211, 153, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  background: var(--color-success-bg, rgba(52, 211, 153, 0.15));
+  color: var(--color-success, #34d399);
+  border: 1px solid var(--color-success-border, rgba(52, 211, 153, 0.3));
 }
 
 .action-bar-state-rejected {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  background: var(--color-error-bg, rgba(248, 113, 113, 0.15));
+  color: var(--color-error, #f87171);
+  border: 1px solid var(--color-error-border, rgba(248, 113, 113, 0.3));
 }
 
 .action-bar-state-executing {
   background: rgba(139, 92, 246, 0.15);
-  color: #a78bfa;
+  color: var(--color-accent-ai-light, #a78bfa);
   border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
 .action-bar-state-completed {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
+  background: var(--color-success-bg, rgba(52, 211, 153, 0.1));
+  color: var(--color-success, #34d399);
 }
 
 .action-bar-state-failed {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+  background: var(--color-error-bg, rgba(248, 113, 113, 0.1));
+  color: var(--color-error, #f87171);
 }
 
 .action-bar-spinner {
@@ -163,57 +164,62 @@
 .action-bar-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5, 6px);
 }
 
 .action-bar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 10px;
+  gap: var(--space-1, 4px);
+  padding: var(--space-1-5, 6px) var(--space-2-5, 10px);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #a1a1aa;
-  font-size: 12px;
-  font-weight: 500;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-secondary, #a1a1aa);
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 150ms) var(--ease-out);
 }
 
 .action-bar-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+.action-bar-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
 }
 
 .action-bar-btn-preview {
-  padding: 6px 8px;
+  padding: var(--space-1-5, 6px) var(--space-2, 8px);
 }
 
 .action-bar-btn-preview:hover {
-  color: #60a5fa;
+  color: var(--color-accent-secondary, #60a5fa);
   border-color: rgba(96, 165, 250, 0.3);
 }
 
 .action-bar-btn-reject {
-  padding: 6px 8px;
+  padding: var(--space-1-5, 6px) var(--space-2, 8px);
 }
 
 .action-bar-btn-reject:hover {
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
-  background: rgba(248, 113, 113, 0.1);
+  color: var(--color-error, #f87171);
+  border-color: var(--color-error-border, rgba(248, 113, 113, 0.3));
+  background: var(--color-error-bg, rgba(248, 113, 113, 0.1));
 }
 
 .action-bar-btn-approve {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--color-success, #22c55e) 0%, #16a34a 100%);
   border: none;
   color: white;
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
 }
 
 .action-bar-btn-approve:hover {
-  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  background: linear-gradient(135deg, #4ade80 0%, var(--color-success, #22c55e) 100%);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
   transform: translateY(-1px);
 }
@@ -227,8 +233,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #52525b;
-  transition: transform 0.2s ease;
+  color: var(--color-text-muted, #52525b);
+  transition: transform var(--duration-normal, 200ms) var(--ease-out);
 }
 
 .action-bar-expand.expanded {
@@ -237,17 +243,17 @@
 
 /* Description */
 .action-bar-description {
-  padding: 0 14px 10px 50px;
-  font-size: 12px;
-  color: #71717a;
+  padding: 0 var(--space-3-5, 14px) var(--space-2-5, 10px) 50px;
+  font-size: var(--font-size-sm, 12px);
+  color: var(--color-text-muted, #71717a);
   line-height: 1.5;
 }
 
 /* Content (e.g., DiffBlock) */
 .action-bar-content {
-  padding: 0 14px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  animation: actionBarFadeIn 0.2s ease;
+  padding: 0 var(--space-3-5, 14px) var(--space-3-5, 14px);
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  animation: actionBarFadeIn 0.2s var(--ease-out);
 }
 
 @keyframes actionBarFadeIn {
@@ -263,42 +269,43 @@
 
 /* Keyboard Hint */
 .action-bar-hint {
-  padding: 8px 14px;
+  padding: var(--space-2, 8px) var(--space-3-5, 14px);
   background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 11px;
-  color: #52525b;
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #52525b);
   text-align: center;
 }
 
 .action-bar-hint kbd {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 2px var(--space-1-5, 6px);
   margin: 0 2px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-family-code);
   font-size: 10px;
-  color: #a1a1aa;
+  color: var(--color-text-secondary, #a1a1aa);
 }
 
-/* Light theme */
-[data-theme="light"] .action-bar {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.08);
-}
+/*
+ * 主题覆盖现在通过 Design Tokens 自动处理
+ * [data-theme-type="light"] 和 [data-theme-type="hc"]
+ * 已在 design-tokens.css 中定义相关变量
+ */
 
-[data-theme="light"] .action-bar-title {
-  color: #27272a;
-}
+/* 减少动画 - 可访问性 */
+@media (prefers-reduced-motion: reduce) {
+  .action-bar-spinner {
+    animation: none;
+  }
 
-[data-theme="light"] .action-bar-hint {
-  background: rgba(0, 0, 0, 0.02);
-}
+  .action-bar-btn-approve:hover {
+    transform: none;
+  }
 
-[data-theme="light"] .action-bar-hint kbd {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #52525b;
+  .action-bar-content {
+    animation: none;
+  }
 }

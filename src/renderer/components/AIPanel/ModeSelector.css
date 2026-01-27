@@ -1,0 +1,131 @@
+/* ModeSelector.css - 模式选择器样式 */
+
+.mode-selector {
+  position: relative;
+}
+
+.mode-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5, 6px);
+  padding: var(--space-1, 4px) var(--space-2-5, 10px);
+  background: transparent;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-secondary, #a1a1aa);
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  cursor: pointer;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
+  white-space: nowrap;
+}
+
+.mode-trigger:hover:not(.disabled) {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.1));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.mode-trigger.active {
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.06));
+  border-color: var(--color-accent-primary, #3b82f6);
+}
+
+.mode-trigger.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mode-icon {
+  font-size: 14px;
+}
+
+.mode-label {
+  font-size: var(--font-size-sm, 12px);
+}
+
+.mode-chevron {
+  opacity: 0.6;
+  transition: transform var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.mode-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单 */
+.mode-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 160px;
+  background: var(--color-bg-elevated, #151519);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.5));
+  padding: var(--space-1, 4px);
+  z-index: var(--z-dropdown, 100);
+  animation: modeMenuIn 0.15s var(--ease-out);
+}
+
+@keyframes modeMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 选项 */
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-primary, #fafafa);
+  cursor: pointer;
+  transition: background var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.mode-option:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
+}
+
+.mode-option.active {
+  background: var(--color-accent-primary, #3b82f6);
+  color: white;
+}
+
+.mode-option-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.mode-option-label {
+  flex: 1;
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.mode-option-check {
+  font-size: 12px;
+  color: white;
+}
+
+.mode-option-shortcut {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #52525b);
+  padding: 2px 6px;
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-sm, 4px);
+}
+
+.mode-option.active .mode-option-shortcut {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}

@@ -6,6 +6,7 @@ import { OpenAIProvider } from '../core/ai/providers/openai';
 import { DeepSeekProvider } from '../core/ai/providers/deepseek';
 import { GeminiProvider } from '../core/ai/providers/gemini';
 import { GLMProvider } from '../core/ai/providers/glm';
+import { CodesucProvider } from '../core/ai/providers/codesuc';
 import { defaultAIConfig } from '../core/ai/config';
 import { LLMClient, classifyError, getUserFriendlyError } from '../core/ai/llm-client';
 
@@ -40,12 +41,16 @@ const providers = {
     baseUrl: defaultAIConfig.deepseek.baseUrl,
     model: defaultAIConfig.deepseek.model
   }),
-  glm: new GLMProvider({ apiKey: defaultAIConfig.glm.apiKey, baseUrl: defaultAIConfig.glm.baseUrl, model: defaultAIConfig.glm.model })
+  glm: new GLMProvider({ apiKey: defaultAIConfig.glm.apiKey, baseUrl: defaultAIConfig.glm.baseUrl, model: defaultAIConfig.glm.model }),
+  codesuc: new CodesucProvider({ apiKey: defaultAIConfig.codesuc.apiKey, baseUrl: defaultAIConfig.codesuc.baseUrl, model: defaultAIConfig.codesuc.model }) // 特价渠道
 };
 
 // 初始化 LLM 客户端 (带限流/重试/熔断/降级)
 const llmClient = new LLMClient(new Map(Object.entries(providers)));
 llmClient.on('fallback', (from, to) => console.log(`[LLM] 模型降级: ${from} -> ${to}`));
+
+// 启动时探测 codesuc 渠道能力
+providers.codesuc.probeCapabilities().then(cap => console.log(`[LLM] Codesuc capabilities: tools=${cap.tools}, stream=${cap.stream}`)).catch(() => {});
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -365,30 +370,38 @@ function getProviderForModel(model: string) {
 
 // AI 聊天（非流式）- 使用 LLM 客户端
 ipcMain.handle('ai-chat', async (_event, { model, messages }) => {
+  console.log(`[AI] chat request: model=${model}, messages=${messages.length}`);
   const result = await llmClient.chat({ model, messages });
+  console.log(`[AI] chat result: success=${result.success}, model=${result.model}, fallback=${result.usedFallback}`);
   if (result.success) return { success: true, data: result.data, model: result.model, usedFallback: result.usedFallback };
   return { success: false, error: getUserFriendlyError(result.error!), errorType: result.error?.type };
 });
 
 // AI 聊天（流式）- 使用 LLM 客户端
 ipcMain.on('ai-chat-stream', async (event, { model, messages, requestId }) => {
-  await llmClient.chatStream({ model, messages }, {
-    onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
-    onComplete: (fullText, meta) => event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }),
-    onError: (error) => event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }),
-    onFallback: (from, to) => event.sender.send('ai-stream-fallback', { requestId, from, to })
-  });
+  console.log(`[AI] stream request: id=${requestId}, model=${model}, mode=chat`);
+  try {
+    await llmClient.chatStream({ model, messages }, {
+      onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
+      onComplete: (fullText, meta) => { console.log(`[AI] stream complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
+      onError: (error) => { console.error(`[AI] stream error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
+      onFallback: (from, to) => { console.log(`[AI] fallback: ${from} -> ${to}`); event.sender.send('ai-stream-fallback', { requestId, from, to }); }
+    });
+  } catch (e: any) { console.error(`[AI] stream exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
 });
 
 // AI 聊天（流式 + 工具调用）- 使用 LLM 客户端
 ipcMain.on('ai-chat-stream-with-tools', async (event, { model, messages, tools, requestId }) => {
-  await llmClient.chatStream({ model, messages, tools }, {
-    onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
-    onToolCall: (calls) => event.sender.send('ai-stream-tool-call', { requestId, toolCalls: calls }),
-    onComplete: (fullText, meta) => event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }),
-    onError: (error) => event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }),
-    onFallback: (from, to) => event.sender.send('ai-stream-fallback', { requestId, from, to })
-  });
+  console.log(`[AI] stream+tools request: id=${requestId}, model=${model}, mode=agent, tools=${tools?.length || 0}`);
+  try {
+    await llmClient.chatStream({ model, messages, tools }, {
+      onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
+      onToolCall: (calls) => { console.log(`[AI] tool calls: id=${requestId}`, calls.map((c: any) => c.name)); event.sender.send('ai-stream-tool-call', { requestId, toolCalls: calls }); },
+      onComplete: (fullText, meta) => { console.log(`[AI] stream+tools complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
+      onError: (error) => { console.error(`[AI] stream+tools error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
+      onFallback: (from, to) => { console.log(`[AI] fallback: ${from} -> ${to}`); event.sender.send('ai-stream-fallback', { requestId, from, to }); }
+    });
+  } catch (e: any) { console.error(`[AI] stream+tools exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
 });
 
 // LLM 状态查询

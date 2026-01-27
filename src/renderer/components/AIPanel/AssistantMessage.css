@@ -1,0 +1,135 @@
+/* AssistantMessage.css - AI 消息卡片样式 */
+
+.assistant-message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3, 12px);
+  position: relative;
+}
+
+.assistant-message .message-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+
+/* 消息卡片 - Cursor 风格 */
+.assistant-message .message-card {
+  position: relative;
+  background: var(--msg-ai-bg, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--msg-ai-border, rgba(255, 255, 255, 0.06));
+  border-radius: var(--msg-ai-radius, 14px);
+  padding: var(--space-4, 16px);
+  box-shadow: var(--msg-ai-shadow, 0 1px 3px rgba(0, 0, 0, 0.2));
+  transition: border-color var(--duration-fast, 125ms) var(--ease-out),
+              box-shadow var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.assistant-message:hover .message-card {
+  border-color: var(--msg-ai-border-hover, rgba(255, 255, 255, 0.10));
+}
+
+/* 状态指示 - 左边框 */
+.assistant-message.error .message-card {
+  border-left: 3px solid var(--color-error, #ef4444);
+}
+
+.assistant-message.interrupted .message-card {
+  border-left: 3px solid var(--color-warning, #f59e0b);
+}
+
+.assistant-message.streaming .message-card {
+  border-left: 3px solid var(--color-accent-ai, #8b5cf6);
+}
+
+/* 消息内容 */
+.assistant-message .message-content {
+  font-size: var(--font-size-md, 14px);
+  line-height: var(--line-height-relaxed, 1.625);
+  color: var(--color-text-primary, #fafafa);
+}
+
+/* 流式光标 */
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--color-accent-ai, #8b5cf6);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 1s ease-in-out infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* 工具调用区域 */
+.message-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+/* Plan 卡片 */
+.message-plan {
+  background: var(--gradient-ai-subtle, linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.08) 50%, rgba(6, 182, 212, 0.08) 100%));
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-xl, 10px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  overflow: hidden;
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-2, 8px);
+}
+
+.plan-icon {
+  font-size: 16px;
+}
+
+.plan-title {
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #fafafa);
+}
+
+.plan-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+}
+
+.plan-task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  font-size: var(--font-size-sm, 12px);
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.task-bullet {
+  color: var(--color-accent-ai, #8b5cf6);
+  font-size: 10px;
+}
+
+.task-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-more {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-tertiary, #71717a);
+  padding-top: var(--space-1, 4px);
+  margin-top: var(--space-1, 4px);
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
+}

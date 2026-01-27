@@ -1,9 +1,10 @@
 import { AIProvider, ChatMessage, StreamCallbacks, ModelInfo, AIProviderConfig } from '@shared/types/ai';
 
 export abstract class BaseAIProvider implements AIProvider {
-  abstract name: 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm';
+  abstract name: 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm' | 'codesuc';
   abstract displayName: string;
   abstract models: ModelInfo[];
+  supportsTools: boolean = true; // 默认支持 tools，子类可覆盖
 
   protected config: AIProviderConfig;
   private runtimeModel: string | null = null;

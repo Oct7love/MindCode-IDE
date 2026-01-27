@@ -6,6 +6,25 @@ export { ContextPicker } from './ContextPicker';
 export { MessageItem } from './MessageItem';
 export { ModelPicker, MODELS, TOOL_CAPABLE_MODELS } from './ModelPicker';
 export { QuickActions } from './QuickActions';
+export { ConversationList } from './ConversationList';
+
+// Phase 2 新增组件
+export { ChatHeader } from './ChatHeader';
+export { ConfirmDialog } from './ConfirmDialog';
+export { QueueIndicator } from './QueueIndicator';
+export { EmptyState } from './EmptyState';
+
+// Phase 3 消息组件
+export { MessageList } from './MessageList';
+export { MessageBubble } from './MessageBubble';
+export { AssistantMessage } from './AssistantMessage';
+export { UserMessage } from './UserMessage';
+export { MessageActions } from './MessageActions';
+
+// Phase 4 Composer + 输入组件
+export { ChatComposer } from './ChatComposer';
+export { ModeSelector } from './ModeSelector';
+export { SendButton } from './SendButton';
 
 // 新增组件导出
 export { CodeBlock } from './CodeBlock';
@@ -18,5 +37,8 @@ export type { DiffLineType } from './DiffBlock';
 export { TypingIndicator } from './TypingIndicator';
 export { CopyFeedback, useCopyFeedback, copyToClipboard } from './CopyFeedback';
 
-export type { AIMode, ContextItem, ToolCallStatus } from '../../stores';
+// Hooks 导出
+export { useChatEngine, useComposerState, useScrollAnchor } from './hooks';
+
+export type { AIMode, ContextItem, ToolCallStatus, QueuedMessage } from '../../stores';
 export type { ModelInfo } from './ModelPicker';

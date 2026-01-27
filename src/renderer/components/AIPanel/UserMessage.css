@@ -1,0 +1,43 @@
+/* UserMessage.css - 用户消息样式 */
+
+.user-message {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--space-3, 12px);
+  position: relative;
+}
+
+.user-message .message-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  max-width: 75%;
+}
+
+/* 消息卡片 - 用户风格 */
+.user-message .message-card {
+  background: var(--msg-user-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--msg-user-border, rgba(255, 255, 255, 0.06));
+  border-radius: var(--msg-user-radius, 14px 14px 4px 14px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  transition: border-color var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.user-message:hover .message-card {
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.1));
+}
+
+/* 消息内容 */
+.user-message .message-content {
+  font-size: var(--font-size-md, 14px);
+  line-height: var(--line-height-normal, 1.5);
+  color: var(--color-text-primary, #fafafa);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 头像 */
+.user-message .message-avatar {
+  flex-shrink: 0;
+}

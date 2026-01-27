@@ -1,0 +1,94 @@
+/* MessageActions.css - 消息操作栏样式 */
+
+.message-actions {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  background: var(--color-bg-elevated, #151519);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-lg, 8px);
+  padding: var(--space-1, 4px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.5));
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--duration-fast, 125ms) var(--ease-out),
+              transform var(--duration-fast, 125ms) var(--ease-out);
+  z-index: var(--z-dropdown, 100);
+}
+
+/* 显示动画 - 通过 group-hover 触发 */
+.group:hover .message-actions,
+.message-actions:focus-within {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 位置变体 */
+.message-actions.top-right {
+  top: -8px;
+  right: var(--space-2, 8px);
+}
+
+.message-actions.left {
+  position: relative;
+  top: auto;
+  right: auto;
+}
+
+.message-actions.bottom {
+  bottom: -8px;
+  right: var(--space-2, 8px);
+  top: auto;
+}
+
+/* 紧凑模式 */
+.message-actions.compact {
+  padding: 2px;
+}
+
+.message-actions.compact .action-btn {
+  width: 24px;
+  height: 24px;
+}
+
+/* 操作按钮 */
+.action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-tertiary, #71717a);
+  cursor: pointer;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.action-btn:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.action-btn:active {
+  transform: scale(0.92);
+}
+
+.action-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
+}
+
+/* 重试按钮特殊样式 */
+.action-btn.action-retry:hover {
+  color: var(--color-warning, #f59e0b);
+}
+
+/* SVG 图标 */
+.action-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}

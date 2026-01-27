@@ -4,3 +4,4 @@ export { OpenAIProvider } from './openai';
 export { GeminiProvider } from './gemini';
 export { DeepSeekProvider } from './deepseek';
 export { GLMProvider } from './glm';
+export { CodesucProvider } from './codesuc';

@@ -3,8 +3,44 @@
  * Cursor-Inspired Premium Dark Theme
  */
 
+@import "tailwindcss";
+
 @import './design-tokens.css';
 @import './chat-tokens.css';
+
+/* Tailwind 主题映射 — 桥接现有 CSS 变量 */
+@theme {
+  /* 颜色 */
+  --color-bg-base: var(--color-bg-base);
+  --color-bg-surface: var(--color-bg-surface);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-bg-active: var(--color-bg-active);
+  --color-bg-input: var(--color-bg-input);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-tertiary: var(--color-text-tertiary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+
+  --color-border-default: var(--color-border-default);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-strong: var(--color-border-strong);
+  --color-border-focus: var(--color-border-focus);
+
+  --color-accent: var(--color-accent-primary);
+  --color-accent-ai: var(--color-accent-ai);
+  --color-accent-cyan: var(--color-accent-cyan);
+
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+
+  /* 字体 */
+  --font-sans: var(--font-family-ui);
+  --font-mono: var(--font-family-code);
+}
 
 /* ============================================
  * CSS Reset & Base

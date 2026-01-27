@@ -1,0 +1,105 @@
+/* ChatComposer.css - Cursor 风格输入区样式 */
+
+.chat-composer {
+  display: flex;
+  flex-direction: column;
+  background: var(--composer-bg, var(--color-bg-elevated, #151519));
+  border: 1px solid var(--composer-border, var(--color-border-default, rgba(255, 255, 255, 0.06)));
+  border-radius: var(--composer-radius, 14px);
+  margin: var(--space-3, 12px) var(--space-4, 16px) var(--space-4, 16px);
+  overflow: hidden;
+  transition: border-color var(--duration-normal, 175ms) var(--ease-out),
+              box-shadow var(--duration-normal, 175ms) var(--ease-out);
+}
+
+/* 聚焦状态 - 发光效果 */
+.chat-composer:focus-within {
+  border-color: var(--composer-border-focus, var(--color-accent-primary, #3b82f6));
+  box-shadow: var(--composer-glow, 0 0 0 3px rgba(59, 130, 246, 0.12));
+}
+
+/* 加载状态 */
+.chat-composer.loading {
+  border-color: var(--color-accent-ai, #8b5cf6);
+}
+
+/* 上下文芯片区域 */
+.composer-contexts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-4, 16px) 0;
+}
+
+/* 输入区域 */
+.composer-input-area {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+}
+
+.composer-input-area textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 160px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-md, 14px);
+  line-height: var(--line-height-normal, 1.5);
+  color: var(--color-text-primary, #fafafa);
+}
+
+.composer-input-area textarea::placeholder {
+  color: var(--color-text-muted, #52525b);
+}
+
+/* 底栏 */
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.composer-footer-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.composer-footer-right {
+  display: flex;
+  align-items: center;
+}
+
+/* 上下文添加按钮 */
+.composer-ctx-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-tertiary, #71717a);
+  cursor: pointer;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.composer-ctx-btn:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.composer-ctx-btn:active {
+  transform: scale(0.92);
+}
+
+.composer-ctx-btn svg {
+  width: 14px;
+  height: 14px;
+}

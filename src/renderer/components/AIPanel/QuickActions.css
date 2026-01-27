@@ -1,32 +1,38 @@
 /* QuickActions - 快捷操作按钮组 */
-
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--chat-spacing-xs, 4px);
-  padding: var(--chat-spacing-sm, 8px) var(--chat-spacing-md, 12px);
-  border-bottom: 1px solid var(--chat-border, #3c3c3c);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .quick-action-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 4px 10px;
-  border: 1px solid var(--chat-border, #3c3c3c);
-  border-radius: var(--chat-radius-xl, 12px);
-  background: var(--chat-bg-secondary, #252526);
-  color: var(--chat-text-secondary, #a0a0a0);
-  font-size: var(--chat-font-size-xs, 11px);
-  font-family: var(--chat-font-family);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-family: var(--font-sans);
   cursor: pointer;
-  transition: all var(--chat-transition-fast, 100ms);
+  transition: all 0.2s ease;
 }
 
 .quick-action-btn:hover:not(:disabled) {
-  background: var(--chat-bg-hover, #333);
-  color: var(--chat-text-primary, #e0e0e0);
-  border-color: var(--chat-accent, #0078d4);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+}
+
+.quick-action-btn:active:not(:disabled) {
+  background: var(--bg-active);
+  transform: translateY(0);
 }
 
 .quick-action-btn:disabled {

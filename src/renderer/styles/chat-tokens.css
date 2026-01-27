@@ -45,7 +45,7 @@
 }
 
 /* === Dark Theme (默认) === */
-:root, [data-theme="dark"] {
+:root, [data-theme-type="dark"] {
   --chat-bg: #1e1e1e;
   --chat-bg-secondary: #252526;
   --chat-bg-tertiary: #2d2d30;
@@ -95,32 +95,32 @@
 }
 
 /* === Light Theme === */
-[data-theme="light"] {
+[data-theme-type="light"] {
   --chat-bg: #ffffff;
   --chat-bg-secondary: #f5f5f5;
   --chat-bg-tertiary: #ebebeb;
   --chat-bg-hover: #e8e8e8;
   --chat-bg-active: #d4d4d4;
-  
+
   --chat-text-primary: #1e1e1e;
   --chat-text-secondary: #5a5a5a;
   --chat-text-tertiary: #8a8a8a;
   --chat-text-inverse: #ffffff;
-  
+
   --chat-border: #d4d4d4;
   --chat-border-light: #e8e8e8;
   --chat-border-focus: #0078d4;
-  
+
   --chat-user-bg: #e8f4ec;
   --chat-user-border: #c8e4d0;
   --chat-assistant-bg: transparent;
   --chat-assistant-border: transparent;
-  
+
   --chat-code-bg: #f5f5f5;
   --chat-code-header: #ebebeb;
   --chat-code-border: #d4d4d4;
   --chat-code-text: #1e1e1e;
-  
+
   --chat-callout-info-bg: #e8f4fc;
   --chat-callout-info-border: #0078d4;
   --chat-callout-info-text: #0066cc;
@@ -133,13 +133,52 @@
   --chat-callout-success-bg: #f6ffed;
   --chat-callout-success-border: #52c41a;
   --chat-callout-success-text: #389e0d;
-  
+
   --chat-accent: #0078d4;
   --chat-accent-hover: #006abc;
   --chat-accent-active: #005a9e;
-  
+
   --chat-danger: #d32f2f;
   --chat-danger-hover: #b71c1c;
   --chat-success: #52c41a;
   --chat-warning: #faad14;
+
+  /* 阴影 - 浅色版 */
+  --chat-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --chat-shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --chat-shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+  --chat-shadow-dropdown: 0 12px 48px rgba(0,0,0,0.15);
+}
+
+/* === High Contrast Theme === */
+[data-theme-type="hc"] {
+  --chat-bg: #000000;
+  --chat-bg-secondary: #000000;
+  --chat-bg-tertiary: #1a1a1a;
+  --chat-bg-hover: #333333;
+  --chat-bg-active: #444444;
+
+  --chat-text-primary: #ffffff;
+  --chat-text-secondary: #ffffff;
+  --chat-text-tertiary: #e0e0e0;
+  --chat-text-inverse: #000000;
+
+  --chat-border: #ffffff;
+  --chat-border-light: rgba(255, 255, 255, 0.5);
+  --chat-border-focus: #ffff00;
+
+  --chat-user-bg: #003300;
+  --chat-user-border: #00ff00;
+
+  --chat-code-bg: #1a1a1a;
+  --chat-code-header: #333333;
+  --chat-code-border: #ffffff;
+  --chat-code-text: #ffffff;
+
+  --chat-accent: #ffff00;
+  --chat-accent-hover: #ffff66;
+
+  --chat-danger: #ff6666;
+  --chat-success: #66ff66;
+  --chat-warning: #ffff00;
 }

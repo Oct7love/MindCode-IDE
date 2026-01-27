@@ -1,11 +1,12 @@
 /* ============================================
  * TypingIndicator - AI Thinking/Typing Animation
+ * 使用 Design Tokens，支持 dark/light/hc 主题
  * ============================================ */
 
 .typing-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5, 6px);
 }
 
 /* Size Variants */
@@ -26,11 +27,11 @@
 
 /* === Dots Variant === */
 .typing-dots {
-  gap: 4px;
+  gap: var(--space-1, 4px);
 }
 
 .typing-dot {
-  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  background: var(--gradient-ai, linear-gradient(135deg, var(--color-accent-ai, #8b5cf6) 0%, var(--color-accent-primary, #3b82f6) 100%));
   border-radius: 50%;
   animation: typingBounce 1.4s ease-in-out infinite;
 }
@@ -76,7 +77,7 @@
   width: 8px;
   height: 8px;
   margin: -4px 0 0 -4px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  background: var(--gradient-ai, linear-gradient(135deg, var(--color-accent-ai, #8b5cf6) 0%, var(--color-accent-primary, #3b82f6) 100%));
   border-radius: 50%;
   animation: typingPulseDot 1.5s ease-in-out infinite;
 }
@@ -129,12 +130,12 @@
 }
 
 .typing-cursor-block {
-  color: #8b5cf6;
+  color: var(--color-accent-ai, #8b5cf6);
   animation: typingCursorBlink 1s step-end infinite;
 }
 
 .typing-sm .typing-cursor-block {
-  font-size: 12px;
+  font-size: var(--font-size-sm, 12px);
 }
 
 .typing-md .typing-cursor-block {
@@ -142,7 +143,7 @@
 }
 
 .typing-lg .typing-cursor-block {
-  font-size: 16px;
+  font-size: var(--font-size-base, 16px);
 }
 
 @keyframes typingCursorBlink {
@@ -156,32 +157,39 @@
 
 /* Label */
 .typing-label {
-  font-size: 12px;
-  color: #71717a;
-  margin-left: 8px;
+  font-size: var(--font-size-sm, 12px);
+  color: var(--color-text-muted, #71717a);
+  margin-left: var(--space-2, 8px);
 }
 
 .typing-sm .typing-label {
-  font-size: 11px;
+  font-size: var(--font-size-xs, 11px);
 }
 
 .typing-lg .typing-label {
   font-size: 13px;
 }
 
-/* Light theme */
-[data-theme="light"] .typing-dot {
-  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
-}
+/*
+ * 主题覆盖现在通过 Design Tokens 自动处理
+ * [data-theme-type="light"] 和 [data-theme-type="hc"]
+ * 已在 design-tokens.css 中定义相关变量
+ */
 
-[data-theme="light"] .typing-pulse-ring {
-  border-color: rgba(124, 58, 237, 0.3);
-}
+/* 减少动画 - 可访问性 */
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot,
+  .typing-pulse-ring,
+  .typing-pulse-dot,
+  .typing-cursor-block {
+    animation: none;
+  }
 
-[data-theme="light"] .typing-pulse-dot {
-  background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
-}
+  .typing-dot {
+    opacity: 0.7;
+  }
 
-[data-theme="light"] .typing-cursor-block {
-  color: #7c3aed;
+  .typing-cursor-block {
+    opacity: 1;
+  }
 }

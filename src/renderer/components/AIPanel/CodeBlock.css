@@ -1,17 +1,18 @@
 /* ============================================
  * CodeBlock - Cursor-Inspired Code Block
+ * 使用 Design Tokens，支持 dark/light/hc 主题
  * ============================================ */
 
 .code-block {
-  margin: 16px 0;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+  margin: var(--space-4, 16px) 0;
+  background: var(--codeblock-bg, rgba(0, 0, 0, 0.4));
+  border: 1px solid var(--codeblock-border, rgba(255, 255, 255, 0.06));
+  border-radius: var(--codeblock-radius, 12px);
   overflow: hidden;
   position: relative;
 }
 
-/* Top gradient line */
+/* 顶部渐变线 */
 .code-block::before {
   content: '';
   position: absolute;
@@ -19,13 +20,15 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg,
+  background: var(--gradient-border, linear-gradient(90deg,
     transparent 0%,
     rgba(139, 92, 246, 0.5) 20%,
-    rgba(59, 130, 246, 0.5) 80%,
+    rgba(59, 130, 246, 0.5) 50%,
+    rgba(6, 182, 212, 0.5) 80%,
     transparent 100%
-  );
+  ));
   z-index: 2;
+  opacity: 0.5;
 }
 
 /* Header */
@@ -33,28 +36,40 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  background: var(--codeblock-header-bg, rgba(0, 0, 0, 0.25));
+  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
 }
 
 .code-block-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3, 12px);
 }
 
 .code-block-header-right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1, 4px);
+  opacity: 0;
+  transition: opacity var(--duration-fast, 125ms) var(--ease-out);
 }
 
+.code-block:hover .code-block-header-right {
+  opacity: 1;
+}
+
+/* 语言标签 - 胶囊样式 */
 .code-block-lang {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  font-weight: 500;
-  color: #71717a;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-full, 9999px);
+  font-family: var(--font-family-code);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-tertiary, #71717a);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -62,61 +77,66 @@
 .code-block-filename {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
-  font-weight: 500;
-  color: #a1a1aa;
+  gap: var(--space-1-5, 6px);
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-secondary, #a1a1aa);
 }
 
 .code-block-filename svg {
-  color: #8b5cf6;
+  color: var(--color-accent-ai, #8b5cf6);
 }
 
 .code-block-lines {
-  font-size: 11px;
-  color: #52525b;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-muted, #52525b);
 }
 
 /* Header Buttons */
 .code-block-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--space-1, 4px);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
   background: transparent;
   border: none;
-  border-radius: 6px;
-  color: #71717a;
-  font-size: 11px;
-  font-weight: 500;
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-tertiary, #71717a);
+  font-size: var(--font-size-xs, 11px);
+  font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
 }
 
 .code-block-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #a1a1aa;
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-secondary, #a1a1aa);
 }
 
 .code-block-btn:active {
   transform: scale(0.95);
 }
 
+.code-block-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
+}
+
 .code-block-copy.copied {
-  color: #34d399;
+  color: var(--color-success, #22c55e);
 }
 
 .code-block-copy.copied:hover {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
+  background: var(--color-success-bg, rgba(34, 197, 94, 0.08));
+  color: var(--color-success, #22c55e);
 }
 
 /* Code Content */
 .code-block-content {
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--color-border-default, rgba(255, 255, 255, 0.1)) transparent;
 }
 
 .code-block-content::-webkit-scrollbar {
@@ -129,12 +149,12 @@
 }
 
 .code-block-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border-default, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
 }
 
 .code-block-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-border-strong, rgba(255, 255, 255, 0.2));
 }
 
 .code-block-content.collapsed {
@@ -148,25 +168,23 @@
   background: transparent;
 }
 
-/* Line Numbers */
+/* Line Numbers - Gutter */
 .code-block-gutter {
   display: flex;
   flex-direction: column;
-  padding: 12px 0;
-  padding-left: 12px;
-  padding-right: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  padding: var(--space-3, 12px);
+  background: var(--codeblock-gutter-bg, rgba(0, 0, 0, 0.2));
+  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
   user-select: none;
   position: sticky;
   left: 0;
 }
 
 .code-block-line-number {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
-  line-height: 1.6;
-  color: #3f3f46;
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-sm, 12px);
+  line-height: var(--line-height-code, 1.7);
+  color: var(--color-text-disabled, #3f3f46);
   text-align: right;
   min-width: 2ch;
 }
@@ -175,11 +193,11 @@
 .code-block-content code {
   display: block;
   flex: 1;
-  padding: 12px 16px;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-family: var(--font-family-code);
   font-size: 13px;
-  line-height: 1.6;
-  color: #e4e4e7;
+  line-height: var(--line-height-code, 1.7);
+  color: var(--color-text-primary, #e4e4e7);
   white-space: pre;
   tab-size: 2;
 }
@@ -189,59 +207,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px;
-  background: rgba(139, 92, 246, 0.05);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  color: #8b5cf6;
-  font-size: 12px;
+  gap: var(--space-1-5, 6px);
+  padding: var(--space-2, 8px);
+  background: var(--gradient-ai-subtle, rgba(139, 92, 246, 0.05));
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  color: var(--color-accent-ai, #8b5cf6);
+  font-size: var(--font-size-sm, 12px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
 }
 
 .code-block-collapsed-indicator:hover {
   background: rgba(139, 92, 246, 0.1);
 }
 
-/* Syntax Highlighting (basic) */
-.code-block-content code .keyword { color: #c084fc; }
-.code-block-content code .string { color: #86efac; }
-.code-block-content code .number { color: #fcd34d; }
-.code-block-content code .comment { color: #52525b; font-style: italic; }
-.code-block-content code .function { color: #60a5fa; }
-.code-block-content code .operator { color: #f472b6; }
-.code-block-content code .class-name { color: #fcd34d; }
-.code-block-content code .property { color: #7dd3fc; }
+/* Syntax Highlighting - 使用 tokens */
+.code-block-content code .keyword { color: var(--color-syntax-keyword, #c678dd); }
+.code-block-content code .string { color: var(--color-syntax-string, #98c379); }
+.code-block-content code .number { color: var(--color-syntax-number, #d19a66); }
+.code-block-content code .comment { color: var(--color-syntax-comment, #5c6370); font-style: italic; }
+.code-block-content code .function { color: var(--color-syntax-function, #61afef); }
+.code-block-content code .operator { color: var(--color-syntax-operator, #56b6c2); }
+.code-block-content code .class-name { color: var(--color-syntax-type, #e5c07b); }
+.code-block-content code .property { color: var(--color-syntax-variable, #e5c07b); }
 
-/* Light theme overrides */
-[data-theme="light"] .code-block {
-  background: #f8f8fa;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-[data-theme="light"] .code-block::before {
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(139, 92, 246, 0.3) 20%,
-    rgba(59, 130, 246, 0.3) 80%,
-    transparent 100%
-  );
-}
-
-[data-theme="light"] .code-block-header {
-  background: rgba(0, 0, 0, 0.02);
-  border-bottom-color: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .code-block-gutter {
-  background: rgba(0, 0, 0, 0.02);
-  border-right-color: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .code-block-line-number {
-  color: #a1a1aa;
-}
-
-[data-theme="light"] .code-block-content code {
-  color: #27272a;
-}
+/*
+ * 主题覆盖现在通过 Design Tokens 自动处理
+ * [data-theme-type="light"] 和 [data-theme-type="hc"]
+ * 已在 design-tokens.css 中定义 --codeblock-* 变量
+ */

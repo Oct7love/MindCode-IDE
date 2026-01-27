@@ -1,15 +1,248 @@
-.ai-model-picker { display: inline-flex; flex-shrink: 0; }
-.ai-model-trigger { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-primary); font-size: 12px; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; min-width: 80px; }
-.ai-model-trigger:hover:not(.disabled) { background: var(--bg-tertiary); border-color: var(--border-primary); }
-.ai-model-trigger:focus { outline: none; border-color: var(--accent-primary); }
-.ai-model-trigger.disabled { opacity: 0.5; cursor: not-allowed; }
-.ai-model-icon { font-size: 12px; }
-.ai-model-name { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-.ai-model-dropdown { position: fixed; z-index: 99999; min-width: 260px; max-height: 400px; overflow-y: auto; background: var(--bg-elevated, #252526); border: 1px solid var(--border-primary, #3c3c3c); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); padding: 4px; }
-.ai-model-option { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; background: transparent; border: none; border-radius: 6px; color: var(--text-primary); text-align: left; cursor: pointer; transition: background 0.15s ease; }
-.ai-model-option:hover { background: var(--bg-hover, #333); }
-.ai-model-option.active { background: var(--bg-tertiary, #2d2d30); }
-.ai-model-option-icon { font-size: 18px; flex-shrink: 0; }
-.ai-model-option-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ai-model-option-name { font-size: 13px; font-weight: 500; }
-.ai-model-option-desc { font-size: 11px; color: var(--text-muted); }
+/* ModelPicker - 模型选择器样式 */
+
+.ai-model-picker {
+  display: inline-flex;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* 触发按钮 */
+.ai-model-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: 6px;
+  color: var(--color-text-secondary, #a1a1aa);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.ai-model-trigger:hover:not(.disabled) {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.1));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.ai-model-trigger:focus {
+  outline: none;
+  border-color: var(--color-accent-blue, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.ai-model-trigger.active {
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.06));
+  border-color: var(--color-accent-blue, #3b82f6);
+}
+
+.ai-model-trigger.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-model-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.ai-model-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.ai-model-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.ai-model-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单 */
+.ai-model-dropdown {
+  position: fixed;
+  z-index: 99999;
+  min-width: 280px;
+  max-width: 320px;
+  overflow-y: scroll !important;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: var(--color-bg-elevated, #151519);
+  border: 1px solid var(--color-border-default, rgba(128, 128, 128, 0.2));
+  border-radius: 10px;
+  box-shadow: var(--shadow-xl, 0 12px 40px rgba(0, 0, 0, 0.3));
+  padding: 6px;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+/* 滚动条样式 */
+.ai-model-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-model-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-model-dropdown::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong, rgba(128, 128, 128, 0.3));
+  border-radius: 3px;
+}
+
+.ai-model-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary, rgba(128, 128, 128, 0.5));
+}
+
+.ai-model-dropdown.up {
+  animation: dropdownFadeInUp 0.15s ease-out;
+}
+
+.ai-model-dropdown.down {
+  animation: dropdownFadeInDown 0.15s ease-out;
+}
+
+@keyframes dropdownFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdownFadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 选项 */
+.ai-model-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-primary, #fafafa);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.ai-model-option:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.ai-model-option.active {
+  background: var(--color-accent-blue, #3b82f6);
+  color: white;
+}
+
+.ai-model-option.active:hover {
+  background: var(--color-accent-secondary, #2563eb);
+}
+
+.ai-model-option-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.ai-model-option-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-model-option-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-model-option-desc {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #71717a);
+}
+
+.ai-model-option.active .ai-model-option-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* 分割线 */
+.ai-model-divider {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px 6px;
+  margin-top: 4px;
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
+}
+
+.ai-model-divider span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-gold, #ffd700);
+  letter-spacing: 0.5px;
+}
+
+/* 特价渠道选项 */
+.ai-model-option.special {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.06) 0%, transparent 100%);
+}
+
+.ai-model-option.special:hover {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.12) 0%, var(--color-bg-hover, rgba(255, 255, 255, 0.04)) 100%);
+}
+
+.ai-model-option.special .ai-model-option-name {
+  color: var(--accent-gold, #ffd700);
+}
+
+.ai-model-option.special.active {
+  background: linear-gradient(90deg, #ffd700 0%, #f59e0b 100%);
+}
+
+.ai-model-option.special.active .ai-model-option-name {
+  color: var(--color-text-inverse, #09090b);
+}
+
+.ai-model-option.special.active .ai-model-option-desc {
+  color: rgba(0, 0, 0, 0.6);
+}
