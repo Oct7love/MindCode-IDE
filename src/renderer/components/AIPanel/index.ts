@@ -30,6 +30,7 @@ export { SendButton } from './SendButton';
 export { CodeBlock } from './CodeBlock';
 export { ToolBlock } from './ToolBlock';
 export type { ToolStatus } from './ToolBlock';
+export { WriteFileToolBlock } from './WriteFileToolBlock';
 export { ActionBar } from './ActionBar';
 export type { ActionType, ActionState } from './ActionBar';
 export { DiffBlock } from './DiffBlock';
@@ -37,8 +38,27 @@ export type { DiffLineType } from './DiffBlock';
 export { TypingIndicator } from './TypingIndicator';
 export { CopyFeedback, useCopyFeedback, copyToClipboard } from './CopyFeedback';
 
+// Copy 功能组件导出
+export { CopyButton } from './CopyButton';
+export { CopyMenu } from './CopyMenu';
+export { MessageContextMenu } from './MessageContextMenu';
+export type { ContextMenuPosition } from './MessageContextMenu';
+
+// Copy Service 导出
+export { 
+  copyToClipboard as copyToClipboardService,
+  copyMessage,
+  copyCode,
+  copyAllCodeBlocks,
+  serializeToPlainText,
+  serializeToMarkdown,
+  extractCodeBlocks
+} from './utils/copyService';
+export type { CopyFormat, CopyResult, ParsedContent } from './utils/copyService';
+
 // Hooks 导出
-export { useChatEngine, useComposerState, useScrollAnchor } from './hooks';
+export { useChatEngine, useComposerState, useScrollAnchor, useCopyWithFeedback } from './hooks';
+export type { CopyState, CopyFeedback as CopyFeedbackState, UseCopyWithFeedbackReturn } from './hooks';
 
 export type { AIMode, ContextItem, ToolCallStatus, QueuedMessage } from '../../stores';
 export type { ModelInfo } from './ModelPicker';

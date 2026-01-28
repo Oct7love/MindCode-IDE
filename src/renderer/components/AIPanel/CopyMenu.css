@@ -1,0 +1,191 @@
+/**
+ * CopyMenu.css - 复制菜单样式
+ * 
+ * 设计理念：
+ * - 下拉菜单采用 Cursor/VSCode 风格
+ * - 支持键盘导航高亮
+ * - 微妙的进入动画
+ */
+
+/* ============================================
+ * 容器
+ * ============================================ */
+
+.copy-menu-container {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ============================================
+ * 触发按钮 - Cursor 风格 (极小)
+ * ============================================ */
+
+.copy-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs, 3px);
+  color: var(--color-text-muted, #52525b);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast, 125ms) var(--ease-out),
+    color var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.copy-menu-trigger svg {
+  width: 10px;
+  height: 10px;
+}
+
+.copy-menu-trigger:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-tertiary, #71717a);
+}
+
+.copy-menu-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-accent-primary, #3b82f6);
+}
+
+.copy-menu-trigger.active {
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.copy-menu-trigger:active {
+  transform: scale(0.9);
+}
+
+/* ============================================
+ * 下拉菜单 - Cursor 风格
+ * ============================================ */
+
+.copy-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  padding: 3px;
+  background: var(--color-bg-elevated, #151519);
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: var(--z-dropdown, 100);
+  animation: copyMenuIn 0.12s var(--ease-out);
+}
+
+@keyframes copyMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================
+ * 菜单项 - Cursor 风格 (更紧凑)
+ * ============================================ */
+
+.copy-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5, 6px);
+  width: 100%;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-text-secondary, #a1a1aa);
+  font-family: var(--font-family-ui);
+  font-size: 12px;
+  font-weight: var(--font-weight-normal, 400);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast, 125ms) var(--ease-out),
+    color var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.copy-menu-item:hover:not(.disabled),
+.copy-menu-item.active:not(.disabled) {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.copy-menu-item:active:not(.disabled) {
+  background: var(--color-bg-active, rgba(255, 255, 255, 0.08));
+}
+
+.copy-menu-item.disabled {
+  color: var(--color-text-disabled, #3f3f46);
+  cursor: not-allowed;
+}
+
+/* ============================================
+ * 菜单项子元素 - Cursor 风格 (更小)
+ * ============================================ */
+
+.copy-menu-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: inherit;
+  opacity: 0.6;
+}
+
+.copy-menu-item-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.copy-menu-item:hover:not(.disabled) .copy-menu-item-icon,
+.copy-menu-item.active:not(.disabled) .copy-menu-item-icon {
+  opacity: 1;
+}
+
+.copy-menu-item-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.copy-menu-item-shortcut {
+  margin-left: auto;
+  padding-left: var(--space-2, 8px);
+  font-size: 10px;
+  color: var(--color-text-muted, #52525b);
+  font-family: var(--font-family-code);
+}
+
+/* ============================================
+ * 分隔线
+ * ============================================ */
+
+.copy-menu-divider {
+  height: 1px;
+  margin: 3px 6px;
+  background: var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+}
+
+/* ============================================
+ * 减少动画 (可访问性)
+ * ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-menu-dropdown {
+    animation: none;
+  }
+
+  .copy-menu-trigger {
+    transition: none;
+  }
+}

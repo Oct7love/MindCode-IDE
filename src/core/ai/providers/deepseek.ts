@@ -17,14 +17,28 @@ export class DeepSeekProvider extends BaseAIProvider {
   }
 
   async chat(messages: ChatMessage[]): Promise<string> {
-    const response = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), messages: messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content })) });
+    // DeepSeek Reasoner 模型要求 assistant 消息包含 reasoning_content 字段
+    const openaiMsgs = messages.filter(m => m.role !== 'tool').map(m => {
+      if (m.role === 'assistant') {
+        return { role: 'assistant' as const, content: m.content, reasoning_content: '' };
+      }
+      return { role: m.role as 'system' | 'user', content: m.content };
+    });
+    const response = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), messages: openaiMsgs });
     return response.choices[0]?.message?.content || '';
   }
 
   async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void> {
     let fullText = '';
     try {
-      const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: messages.filter(m => m.role !== 'tool').map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content })) });
+      // DeepSeek Reasoner 模型要求 assistant 消息包含 reasoning_content 字段
+      const openaiMsgs = messages.filter(m => m.role !== 'tool').map(m => {
+        if (m.role === 'assistant') {
+          return { role: 'assistant' as const, content: m.content, reasoning_content: '' };
+        }
+        return { role: m.role as 'system' | 'user', content: m.content };
+      });
+      const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: openaiMsgs });
       for await (const chunk of stream) { const token = chunk.choices[0]?.delta?.content || ''; if (token) { fullText += token; callbacks.onToken(token); } }
       callbacks.onComplete(fullText);
     } catch (error) { callbacks.onError(error as Error); }
@@ -37,9 +51,22 @@ export class DeepSeekProvider extends BaseAIProvider {
       const openaiTools = tools.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } }));
       const openaiMsgs: any[] = [];
       for (const m of messages) { // 保持消息顺序
-        if (m.role === 'tool') { openaiMsgs.push({ role: 'tool', tool_call_id: m.toolCallId, content: m.content }); }
-        else if (m.toolCalls?.length) { openaiMsgs.push({ role: 'assistant', content: m.content || null, tool_calls: m.toolCalls.map(tc => ({ id: tc.id, type: 'function' as const, function: { name: tc.name, arguments: JSON.stringify(tc.arguments) } })) }); }
-        else { openaiMsgs.push({ role: m.role, content: m.content }); }
+        if (m.role === 'tool') {
+          openaiMsgs.push({ role: 'tool', tool_call_id: m.toolCallId, content: m.content });
+        } else if (m.toolCalls?.length) {
+          // DeepSeek 要求 assistant 消息包含 reasoning_content 字段
+          openaiMsgs.push({
+            role: 'assistant',
+            content: m.content || null,
+            reasoning_content: '', // DeepSeek 必需字段
+            tool_calls: m.toolCalls.map(tc => ({ id: tc.id, type: 'function' as const, function: { name: tc.name, arguments: JSON.stringify(tc.arguments) } }))
+          });
+        } else if (m.role === 'assistant') {
+          // 普通 assistant 消息也需要 reasoning_content
+          openaiMsgs.push({ role: 'assistant', content: m.content, reasoning_content: '' });
+        } else {
+          openaiMsgs.push({ role: m.role, content: m.content });
+        }
       }
       const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: openaiMsgs, tools: openaiTools });
       const toolCallMap = new Map<number, { id: string; name: string; args: string }>();

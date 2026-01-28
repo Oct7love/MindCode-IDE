@@ -1,0 +1,129 @@
+/**
+ * MessageContextMenu.css - 右键菜单样式
+ * 
+ * 设计理念：
+ * - VSCode/Cursor 风格的右键菜单
+ * - 固定定位，跟随鼠标位置
+ * - 高对比度，清晰可读
+ */
+
+/* ============================================
+ * 菜单容器
+ * ============================================ */
+
+.message-context-menu {
+  position: fixed;
+  min-width: 220px;
+  padding: var(--space-1, 4px);
+  background: var(--color-bg-elevated, #1a1a1e);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: 
+    var(--shadow-xl, 0 12px 32px rgba(0, 0, 0, 0.5)),
+    0 0 0 1px rgba(0, 0, 0, 0.15);
+  z-index: var(--z-contextmenu, 1000);
+  animation: contextMenuIn 0.12s var(--ease-out);
+  backdrop-filter: blur(16px);
+}
+
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+ * 菜单项
+ * ============================================ */
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5, 10px);
+  width: 100%;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-primary, #e4e4e7);
+  font-family: var(--font-family-ui);
+  font-size: 13px;
+  font-weight: var(--font-weight-normal, 400);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast, 100ms) var(--ease-out);
+}
+
+.context-menu-item:hover:not(.disabled),
+.context-menu-item.active:not(.disabled) {
+  background: var(--color-bg-selected, rgba(59, 130, 246, 0.12));
+}
+
+.context-menu-item:active:not(.disabled) {
+  background: var(--color-bg-active, rgba(59, 130, 246, 0.18));
+}
+
+.context-menu-item.disabled {
+  color: var(--color-text-disabled, #52525b);
+  cursor: not-allowed;
+}
+
+/* ============================================
+ * 菜单项子元素
+ * ============================================ */
+
+.context-menu-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-secondary, #a1a1aa);
+  flex-shrink: 0;
+}
+
+.context-menu-item:hover:not(.disabled) .context-menu-item-icon,
+.context-menu-item.active:not(.disabled) .context-menu-item-icon {
+  color: var(--color-accent-secondary, #60a5fa);
+}
+
+.context-menu-item-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-menu-item-shortcut {
+  margin-left: auto;
+  padding-left: var(--space-4, 16px);
+  font-size: 11px;
+  font-family: var(--font-family-ui);
+  color: var(--color-text-muted, #71717a);
+  opacity: 0.8;
+}
+
+/* ============================================
+ * 分隔线
+ * ============================================ */
+
+.context-menu-divider {
+  height: 1px;
+  margin: var(--space-1, 4px) var(--space-2, 8px);
+  background: var(--color-border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+/* ============================================
+ * 减少动画 (可访问性)
+ * ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .message-context-menu {
+    animation: none;
+  }
+}

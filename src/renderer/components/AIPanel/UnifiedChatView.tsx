@@ -18,6 +18,8 @@ import { ToolBlock, ToolStatus } from './ToolBlock';
 import { TypingIndicator } from './TypingIndicator';
 import { useCopyFeedback } from './CopyFeedback';
 import { ConversationList } from './ConversationList';
+import { AssistantMessage } from './AssistantMessage';
+import { MessageActions } from './MessageActions';
 import '../../styles/chat-tokens.css';
 import '../../styles/markdown.css';
 import './UnifiedChatView.css';
@@ -95,29 +97,33 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
 
       <div className="unified-messages" role="log">
         {displayMessages.length <= 1 && <EmptyState mode={mode} icon={currentModeOption.icon} label={currentModeOption.label} />}
-        {displayMessages.slice(1).map(msg => (
-          <div key={msg.id} className={`unified-msg unified-msg-${msg.role}`}>
-            <div className="unified-msg-avatar">{msg.role === 'user' ? '◯' : '✦'}</div>
-            <div className="unified-msg-body">
-              <div className="unified-msg-content"><MarkdownRenderer content={msg.content} /></div>
-              {msg.toolCalls && msg.toolCalls.length > 0 && (
-                <div className="unified-tools">
-                  {msg.toolCalls.map(tc => (
-                    <ToolBlock key={tc.id} id={tc.id} name={tc.name} args={tc.args} status={tc.status as ToolStatus} result={tc.result} error={tc.error} onCopy={handleCopyTool} />
-                  ))}
+        {displayMessages.slice(1).map((msg, idx) => (
+          msg.role === 'assistant' ? (
+            <AssistantMessage
+              key={msg.id}
+              message={msg}
+              isLast={idx === displayMessages.length - 2}
+              onCopy={(content) => copy(content, '消息已复制')}
+              onCopyTool={handleCopyTool}
+              onCopySuccess={(format) => copy(msg.content, `${format} 已复制`)}
+            />
+          ) : (
+            <div key={msg.id} className="unified-msg unified-msg-user group">
+              <div className="unified-msg-avatar">◯</div>
+              <div className="unified-msg-body">
+                <div className="unified-msg-content">
+                  <MarkdownRenderer content={msg.content} />
                 </div>
-              )}
-              {msg.plan && (
-                <div className="unified-plan-card">
-                  <div className="unified-plan-title">{msg.plan.title}</div>
-                  <div className="unified-plan-tasks">
-                    {msg.plan.tasks.slice(0, 3).map(t => <div key={t.id} className="unified-plan-task">○ {t.label}</div>)}
-                    {msg.plan.tasks.length > 3 && <div className="unified-plan-more">+{msg.plan.tasks.length - 3} 更多</div>}
-                  </div>
-                </div>
-              )}
+                <MessageActions
+                  content={msg.content}
+                  onCopySuccess={(format) => copy(msg.content, `${format} 已复制`)}
+                  position="inline"
+                  compact={true}
+                  showCopyMenu={false}
+                />
+              </div>
             </div>
-          </div>
+          )
         ))}
         {isLoading && !streamingText && (
           <div className="unified-loading-wrapper">

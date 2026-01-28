@@ -14,6 +14,91 @@
   position: relative;
 }
 
+/* === 顶部 Header === */
+.unified-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
+  background: var(--color-bg-surface, #09090b);
+  min-height: 40px;
+  flex-shrink: 0;
+}
+
+.unified-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+}
+
+.unified-header-title {
+  font-size: 13px;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-secondary, #a1a1aa);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unified-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.unified-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  color: var(--color-text-tertiary, #71717a);
+  cursor: pointer;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.unified-header-btn:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.unified-header-btn:active {
+  transform: scale(0.92);
+}
+
+/* === 空状态 === */
+.unified-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12, 48px) var(--space-4, 16px);
+  text-align: center;
+}
+
+.unified-empty-icon {
+  font-size: 32px;
+  margin-bottom: var(--space-3, 12px);
+  opacity: 0.6;
+}
+
+.unified-empty-title {
+  font-size: 15px;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-secondary, #a1a1aa);
+  margin-bottom: var(--space-1, 4px);
+}
+
+.unified-empty-subtitle {
+  font-size: 13px;
+  color: var(--color-text-tertiary, #71717a);
+}
+
 /* === 消息列表区域背景效果 === */
 .unified-messages {
   flex: 1;
@@ -229,6 +314,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2, 8px);
+  position: relative; /* 用于 MessageActions 定位 */
 }
 
 .unified-msg-user .unified-msg-body {
@@ -525,4 +611,116 @@
   font-size: 10px;
   opacity: 0.7;
   font-family: var(--font-family-code);
+}
+
+/* === 确认对话框 === */
+.unified-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: confirmFadeIn 0.15s ease-out;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.unified-confirm-dialog {
+  background: var(--color-bg-elevated, #1a1a1f);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-xl, 12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  width: 90%;
+  max-width: 480px;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: confirmSlideIn 0.2s ease-out;
+}
+
+@keyframes confirmSlideIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.unified-confirm-title {
+  padding: var(--space-4, 16px);
+  font-size: 15px;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #fafafa);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.unified-confirm-tool {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-accent-ai, #8b5cf6);
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.02));
+}
+
+.unified-confirm-args {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-family: var(--font-family-code);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #a1a1aa);
+  background: var(--color-bg-surface, #09090b);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+}
+
+.unified-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-top: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  background: var(--color-bg-elevated, #1a1a1f);
+}
+
+.unified-confirm-actions button {
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium, 500);
+  border-radius: var(--radius-lg, 8px);
+  cursor: pointer;
+  transition: all var(--duration-fast, 125ms) var(--ease-out);
+}
+
+.unified-confirm-actions button:first-child {
+  background: transparent;
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.unified-confirm-actions button:first-child:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.12));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.unified-confirm-actions button.primary {
+  background: var(--color-accent-primary, #3b82f6);
+  border: none;
+  color: white;
+}
+
+.unified-confirm-actions button.primary:hover {
+  background: var(--color-accent-secondary, #60a5fa);
+  transform: translateY(-1px);
 }

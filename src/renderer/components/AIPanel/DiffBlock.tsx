@@ -18,6 +18,14 @@ interface DiffBlockProps {
   language?: string;
   maxHeight?: number;
   onCopy?: (content: string) => void;
+  // Phase 1 新增
+  onApply?: () => void | Promise<void>;
+  onReject?: () => void;
+  onOpenInEditor?: () => void;
+  showActions?: boolean;
+  isApplied?: boolean;
+  isApplying?: boolean;
+  isRejected?: boolean;
 }
 
 // 简单的 diff 算法生成变更行
@@ -108,7 +116,14 @@ export const DiffBlock: React.FC<DiffBlockProps> = memo(({
   diffLines: providedDiffLines,
   language = 'plaintext',
   maxHeight = 400,
-  onCopy
+  onCopy,
+  onApply,
+  onReject,
+  onOpenInEditor,
+  showActions = true,
+  isApplied = false,
+  isApplying = false,
+  isRejected = false
 }) => {
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'unified' | 'split'>('unified');
@@ -142,8 +157,11 @@ export const DiffBlock: React.FC<DiffBlockProps> = memo(({
     return parts[parts.length - 1];
   };
 
+  // 状态类名
+  const statusClass = isApplied ? 'diff-block-applied' : isRejected ? 'diff-block-rejected' : '';
+
   return (
-    <div className="diff-block">
+    <div className={`diff-block ${statusClass}`}>
       {/* Header */}
       <div className="diff-block-header">
         <div className="diff-block-header-left">
@@ -251,6 +269,78 @@ export const DiffBlock: React.FC<DiffBlockProps> = memo(({
           </div>
         )}
       </div>
+
+      {/* Actions Bar */}
+      {showActions && (onApply || onReject || onOpenInEditor) && (
+        <div className="diff-block-actions">
+          {isApplied ? (
+            <span className="diff-block-status diff-block-status-applied">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+              </svg>
+              已应用
+            </span>
+          ) : isRejected ? (
+            <span className="diff-block-status diff-block-status-rejected">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
+              </svg>
+              已拒绝
+            </span>
+          ) : (
+            <>
+              {onApply && (
+                <button
+                  className="diff-block-action-btn diff-block-action-apply"
+                  onClick={onApply}
+                  disabled={isApplying}
+                  title="应用变更"
+                >
+                  {isApplying ? (
+                    <>
+                      <span className="diff-block-spinner" />
+                      应用中...
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                        <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+                      </svg>
+                      Apply
+                    </>
+                  )}
+                </button>
+              )}
+              {onReject && (
+                <button
+                  className="diff-block-action-btn diff-block-action-reject"
+                  onClick={onReject}
+                  disabled={isApplying}
+                  title="拒绝变更"
+                >
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                    <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
+                  </svg>
+                  Reject
+                </button>
+              )}
+              {onOpenInEditor && (
+                <button
+                  className="diff-block-action-btn diff-block-action-editor"
+                  onClick={onOpenInEditor}
+                  disabled={isApplying}
+                  title="在编辑器中打开"
+                >
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                    <path d="M4.708 5.578L2.061 8.224l2.647 2.646-.708.708-3-3V7.87l3-3 .708.708zm7-.708L11 5.578l2.647 2.646L11 10.87l.708.708 3-3v-.708l-3-3zM4.908 13l.894.448 5-10L9.908 3l-5 10z"/>
+                  </svg>
+                  Open in Editor
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 });

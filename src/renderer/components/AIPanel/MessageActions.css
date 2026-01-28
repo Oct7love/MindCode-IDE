@@ -1,84 +1,81 @@
-/* MessageActions.css - 消息操作栏样式 */
+/* MessageActions.css - 消息操作栏样式 (Cursor 风格) */
 
 .message-actions {
-  position: absolute;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1, 4px);
-  background: var(--color-bg-elevated, #151519);
-  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
-  border-radius: var(--radius-lg, 8px);
-  padding: var(--space-1, 4px);
-  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.5));
+  gap: 1px;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity var(--duration-fast, 125ms) var(--ease-out),
-              transform var(--duration-fast, 125ms) var(--ease-out);
-  z-index: var(--z-dropdown, 100);
+  transition: opacity var(--duration-fast, 125ms) var(--ease-out);
 }
 
 /* 显示动画 - 通过 group-hover 触发 */
 .group:hover .message-actions,
 .message-actions:focus-within {
   opacity: 1;
-  transform: translateY(0);
 }
 
-/* 位置变体 */
-.message-actions.top-right {
-  top: -8px;
-  right: var(--space-2, 8px);
-}
+/* === 位置变体 === */
 
-.message-actions.left {
+/* 内联底部 (Cursor 风格 - 默认) */
+.message-actions.inline {
   position: relative;
-  top: auto;
-  right: auto;
+  margin-top: 4px;
 }
 
-.message-actions.bottom {
-  bottom: -8px;
-  right: var(--space-2, 8px);
-  top: auto;
+/* 绝对定位右上角 */
+.message-actions.top-right {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  background: var(--color-bg-elevated, #151519);
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 /* 紧凑模式 */
 .message-actions.compact {
-  padding: 2px;
+  gap: 0;
 }
 
 .message-actions.compact .action-btn {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
 }
 
-/* 操作按钮 */
+.message-actions.compact .action-btn svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* === 操作按钮 - Cursor 极简风格 === */
 .action-btn {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: var(--radius-md, 6px);
-  color: var(--color-text-tertiary, #71717a);
+  border-radius: var(--radius-xs, 3px);
+  color: var(--color-text-muted, #52525b);
   cursor: pointer;
   transition: all var(--duration-fast, 125ms) var(--ease-out);
 }
 
 .action-btn:hover {
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
-  color: var(--color-text-primary, #fafafa);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-tertiary, #71717a);
 }
 
 .action-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 
 .action-btn:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus, 0 0 0 2px rgba(59, 130, 246, 0.3));
+  box-shadow: 0 0 0 1px var(--color-accent-primary, #3b82f6);
 }
 
 /* 重试按钮特殊样式 */
@@ -86,9 +83,9 @@
   color: var(--color-warning, #f59e0b);
 }
 
-/* SVG 图标 */
+/* SVG 图标 - 更小 */
 .action-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 11px;
+  height: 11px;
   flex-shrink: 0;
 }

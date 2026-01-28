@@ -215,3 +215,91 @@
  * [data-theme-type="light"] 和 [data-theme-type="hc"]
  * 已在 design-tokens.css 中定义相关变量
  */
+
+/* Code Content Preview - 带语法高亮 */
+.tool-block-section-code {
+  color: var(--color-accent-ai, #8b5cf6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.tool-block-lang-badge {
+  font-size: 9px;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-tertiary, #71717a);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 4px);
+  text-transform: lowercase;
+}
+
+.tool-block-code-preview {
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-xs, 11px);
+  line-height: 1.6;
+  color: var(--color-text-primary, #e4e4e7);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-md, 6px);
+  padding: var(--space-3, 12px);
+  margin: 0;
+  overflow-x: auto;
+  max-height: 300px;
+  tab-size: 2;
+}
+
+.tool-block-code-preview code {
+  display: block;
+}
+
+/* 语法高亮样式 - 与 MarkdownRenderer 保持一致 */
+.tool-block-code-preview .code-line {
+  display: flex;
+  min-height: 1.6em;
+}
+
+.tool-block-code-preview .line-number {
+  display: inline-block;
+  min-width: 2.5em;
+  padding-right: 1em;
+  text-align: right;
+  color: var(--color-text-muted, #52525b);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.tool-block-code-preview .line-content {
+  flex: 1;
+  white-space: pre;
+}
+
+.tool-block-code-preview .syntax-keyword {
+  color: #c586c0;
+  font-weight: 500;
+}
+
+.tool-block-code-preview .syntax-string {
+  color: #ce9178;
+}
+
+.tool-block-code-preview .syntax-number {
+  color: #b5cea8;
+}
+
+.tool-block-code-preview .syntax-comment {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.tool-block-code-preview .syntax-function {
+  color: #dcdcaa;
+}
+
+.tool-block-code-preview .syntax-variable {
+  color: #9cdcfe;
+}
+
+.tool-block-code-preview .syntax-operator {
+  color: #d4d4d4;
+}

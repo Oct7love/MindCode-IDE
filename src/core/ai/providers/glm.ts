@@ -28,12 +28,18 @@ export class GLMProvider extends BaseAIProvider { // 智谱 GLM - 使用 Anthrop
     try {
       const systemMsg = messages.find(m => m.role === 'system')?.content;
       const chatMsgs = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+      console.log('[GLM Provider] 调用 chatStream, 模型:', this.getModel());
+      console.log('[GLM Provider] 系统提示词:', systemMsg?.slice(0, 200) + '...');
       const stream = this.client.messages.stream({ model: this.getModel(), max_tokens: this.getMaxTokens(), system: systemMsg, messages: chatMsgs });
       for await (const event of stream) {
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') { fullText += event.delta.text; callbacks.onToken(event.delta.text); }
       }
+      console.log('[GLM Provider] 响应完成, 长度:', fullText.length);
       callbacks.onComplete(fullText);
-    } catch (error) { callbacks.onError(error as Error); }
+    } catch (error) {
+      console.error('[GLM Provider] 错误:', error);
+      callbacks.onError(error as Error);
+    }
   }
 
   async chatWithTools(messages: ChatMessage[], tools: ToolSchema[], callbacks: ToolCallbacks): Promise<void> { // 支持工具调用
@@ -41,6 +47,8 @@ export class GLMProvider extends BaseAIProvider { // 智谱 GLM - 使用 Anthrop
     const toolCalls: ToolCallInfo[] = [];
     try {
       const systemMsg = messages.find(m => m.role === 'system')?.content;
+      console.log('[GLM Provider] 调用 chatWithTools, 模型:', this.getModel(), ', 工具数:', tools.length);
+      console.log('[GLM Provider] 系统提示词:', systemMsg?.slice(0, 200) + '...');
       const chatMsgs: any[] = [];
       for (const m of messages) { // 保持消息顺序
         if (m.role === 'system') continue;

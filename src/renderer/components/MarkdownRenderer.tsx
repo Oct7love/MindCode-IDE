@@ -8,7 +8,27 @@ import React, { useState, useMemo, memo } from 'react';
 // === 代码块组件 ===
 interface CodeBlockProps { language: string; code: string; filename?: string; maxLines?: number; onCopy?: () => void; onApply?: () => void; }
 
-const highlightCode = (code: string, language: string): React.ReactNode[] => { // 语法高亮
+// 文件扩展名到语言的映射
+export const EXT_TO_LANG: Record<string, string> = {
+  c: 'c', h: 'c', cpp: 'cpp', cxx: 'cpp', cc: 'cpp', hpp: 'cpp', hxx: 'cpp',
+  py: 'python', pyw: 'python', pyx: 'python',
+  js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
+  ts: 'typescript', tsx: 'typescript', mts: 'typescript', cts: 'typescript',
+  java: 'java', kt: 'java', kts: 'java',
+  go: 'go', rs: 'rust', rb: 'python', // ruby 用 python 高亮近似
+  css: 'css', scss: 'css', less: 'css', sass: 'css',
+  sql: 'sql', sh: 'bash', bash: 'bash', zsh: 'bash', fish: 'bash',
+  json: 'javascript', yaml: 'bash', yml: 'bash', md: 'text', txt: 'text',
+  html: 'javascript', htm: 'javascript', xml: 'javascript', vue: 'javascript', svelte: 'javascript',
+};
+
+// 从文件路径推断语言
+export const getLanguageFromPath = (path: string): string => {
+  const ext = path.split('.').pop()?.toLowerCase() || '';
+  return EXT_TO_LANG[ext] || 'text';
+};
+
+export const highlightCode = (code: string, language: string): React.ReactNode[] => { // 语法高亮
   const keywords: Record<string, string[]> = {
     python: ['def', 'class', 'import', 'from', 'if', 'elif', 'else', 'while', 'for', 'in', 'return', 'try', 'except', 'finally', 'with', 'as', 'True', 'False', 'None', 'and', 'or', 'not', 'is', 'lambda', 'yield', 'break', 'continue', 'pass', 'raise', 'global', 'nonlocal', 'assert', 'del', 'async', 'await'],
     javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'this', 'class', 'extends', 'import', 'export', 'default', 'from', 'async', 'await', 'true', 'false', 'null', 'undefined', 'typeof', 'instanceof', 'of'],
@@ -16,6 +36,7 @@ const highlightCode = (code: string, language: string): React.ReactNode[] => { /
     java: ['public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'int', 'long', 'double', 'float', 'boolean', 'char', 'byte', 'short', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'try', 'catch', 'finally', 'throw', 'throws', 'new', 'this', 'super', 'true', 'false', 'null', 'import', 'package'],
     go: ['package', 'import', 'func', 'var', 'const', 'type', 'struct', 'interface', 'map', 'chan', 'if', 'else', 'for', 'range', 'switch', 'case', 'default', 'break', 'continue', 'return', 'go', 'defer', 'select', 'true', 'false', 'nil'],
     rust: ['fn', 'let', 'mut', 'const', 'static', 'struct', 'enum', 'impl', 'trait', 'pub', 'mod', 'use', 'if', 'else', 'match', 'loop', 'while', 'for', 'in', 'return', 'break', 'continue', 'true', 'false', 'self', 'Self', 'super', 'crate', 'async', 'await', 'move', 'ref', 'where'],
+    c: ['int', 'long', 'double', 'float', 'char', 'void', 'short', 'unsigned', 'signed', 'const', 'static', 'extern', 'register', 'volatile', 'struct', 'union', 'enum', 'typedef', 'sizeof', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'default', 'break', 'continue', 'return', 'goto', 'NULL', 'include', 'define', 'ifdef', 'ifndef', 'endif', 'pragma'],
     cpp: ['int', 'long', 'double', 'float', 'char', 'bool', 'void', 'auto', 'const', 'static', 'class', 'struct', 'enum', 'union', 'template', 'typename', 'public', 'private', 'protected', 'virtual', 'override', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'try', 'catch', 'throw', 'new', 'delete', 'this', 'true', 'false', 'nullptr', 'include', 'define', 'namespace', 'using'],
     css: ['color', 'background', 'margin', 'padding', 'border', 'font', 'display', 'position', 'width', 'height', 'top', 'left', 'right', 'bottom', 'flex', 'grid', 'transition', 'transform', 'animation', 'opacity', 'z-index', 'overflow', 'cursor', 'visibility'],
     sql: ['SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER', 'TABLE', 'INDEX', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'AND', 'OR', 'NOT', 'NULL', 'IS', 'IN', 'LIKE', 'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET', 'AS', 'DISTINCT'],

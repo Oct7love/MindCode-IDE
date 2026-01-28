@@ -98,7 +98,7 @@ export class CodesucProvider extends BaseAIProvider { // 特价渠道 - Electron
   async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void> {
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMsgs = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
-    const system = systemMsg ? [{ type: 'text', text: systemMsg.content }] : undefined; // 数组格式
+    const system = systemMsg ? [{ type: 'text', text: systemMsg.content }] : undefined;
     const body = { model: this.getApiModel(), max_tokens: this.getMaxTokens(), stream: true, system, messages: chatMsgs };
     let fullText = '';
     try {
@@ -110,20 +110,37 @@ export class CodesucProvider extends BaseAIProvider { // 特价渠道 - Electron
         return;
       }
       let buffer = '';
+      let chunkCount = 0;
       response.on('data', (chunk: Buffer) => {
-        buffer += chunk.toString();
-        const lines = buffer.split('\n'); buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (!data || data === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') { fullText += parsed.delta.text; callbacks.onToken(parsed.delta.text); }
-          } catch {}
+        const chunkStr = chunk.toString();
+        chunkCount++;
+        buffer += chunkStr;
+        // 按双换行分割 SSE 事件，更可靠
+        const events = buffer.split(/\n\n/);
+        buffer = events.pop() || ''; // 保留最后不完整的部分
+        for (const event of events) {
+          const lines = event.split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue; // 兼容 'data:' 和 'data: '
+            const data = line.slice(line.startsWith('data: ') ? 6 : 5).trim();
+            if (!data || data === '[DONE]') continue;
+            try {
+              const p = JSON.parse(data);
+              if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta') {
+                fullText += p.delta.text;
+                callbacks.onToken(p.delta.text);
+              } else if (p.delta?.text) {
+                fullText += p.delta.text;
+                callbacks.onToken(p.delta.text);
+              }
+            } catch {}
+          }
         }
       });
-      response.on('end', () => callbacks.onComplete(fullText));
+      response.on('end', () => {
+        console.log(`[Codesuc] chatStream end: ${chunkCount} chunks, ${fullText.length} chars`);
+        callbacks.onComplete(fullText);
+      });
       response.on('error', (e: Error) => callbacks.onError(e));
     } catch (error: any) { console.error(`[Codesuc] chatStream error:`, error?.message); callbacks.onError(error); }
   }
@@ -150,6 +167,56 @@ export class CodesucProvider extends BaseAIProvider { // 特价渠道 - Electron
       let buffer = '';
       let chunkCount = 0;
       let errorDetected = false;
+      let toolCallDepth = 0; // 追踪是否在 <tool_call> 块内
+      let pendingText = ''; // 累积待发送的文本，用于检测标签边界
+
+      // 过滤 tool_call 标签，只发送非工具调用部分给 onToken
+      const filterAndEmitToken = (text: string) => {
+        pendingText += text;
+        let safeText = '';
+
+        while (pendingText.length > 0) {
+          if (toolCallDepth > 0) {
+            // 在工具调用块内，查找结束标签
+            const endIdx = pendingText.indexOf('</tool_call>');
+            if (endIdx !== -1) {
+              pendingText = pendingText.slice(endIdx + 13); // 跳过 </tool_call>
+              toolCallDepth--;
+            } else {
+              // 结束标签可能跨 chunk，保留待检测
+              if (pendingText.length > 20) {
+                pendingText = pendingText.slice(-20);
+              }
+              break;
+            }
+          } else {
+            // 查找开始标签
+            const startIdx = pendingText.indexOf('<tool_call>');
+            if (startIdx !== -1) {
+              // 发送标签之前的安全文本
+              safeText += pendingText.slice(0, startIdx);
+              pendingText = pendingText.slice(startIdx + 11); // 跳过 <tool_call>
+              toolCallDepth++;
+            } else {
+              // 检查是否有不完整的开始标签（可能跨 chunk）
+              const partialMatch = pendingText.match(/<(?:t(?:o(?:o(?:l(?:_(?:c(?:a(?:l(?:l)?)?)?)?)?)?)?)?)?$/);
+              if (partialMatch) {
+                safeText += pendingText.slice(0, partialMatch.index);
+                pendingText = partialMatch[0];
+              } else {
+                safeText += pendingText;
+                pendingText = '';
+              }
+              break;
+            }
+          }
+        }
+
+        if (safeText) {
+          callbacks.onToken(safeText);
+        }
+      };
+
       response.on('data', (chunk: Buffer) => {
         const chunkStr = chunk.toString();
         chunkCount++;
@@ -170,25 +237,30 @@ export class CodesucProvider extends BaseAIProvider { // 特价渠道 - Electron
         if (errorDetected) return;
 
         buffer += chunkStr;
-        const lines = buffer.split('\n'); buffer = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue; // 兼容 'data:' 和 'data: '
-          const data = line.slice(line.startsWith('data: ') ? 6 : 5).trim();
-          if (!data || data === '[DONE]') continue;
-          try {
-            const p = JSON.parse(data);
-            // 兼容多种响应格式
-            if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta') {
-              fullText += p.delta.text;
-              callbacks.onToken(p.delta.text);
-            } else if (p.delta?.text) { // 简化格式
-              fullText += p.delta.text;
-              callbacks.onToken(p.delta.text);
-            } else if (p.choices?.[0]?.delta?.content) { // OpenAI 兼容格式
-              fullText += p.choices[0].delta.content;
-              callbacks.onToken(p.choices[0].delta.content);
-            }
-          } catch (e) { console.log(`[Codesuc] Parse error:`, data.slice(0, 100)); }
+        // 按双换行分割 SSE 事件，更可靠
+        const events = buffer.split(/\n\n/);
+        buffer = events.pop() || ''; // 保留最后不完整的部分
+        for (const event of events) {
+          const lines = event.split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue; // 兼容 'data:' 和 'data: '
+            const data = line.slice(line.startsWith('data: ') ? 6 : 5).trim();
+            if (!data || data === '[DONE]') continue;
+            try {
+              const p = JSON.parse(data);
+              // 兼容多种响应格式
+              if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta') {
+                fullText += p.delta.text;
+                filterAndEmitToken(p.delta.text);
+              } else if (p.delta?.text) { // 简化格式
+                fullText += p.delta.text;
+                filterAndEmitToken(p.delta.text);
+              } else if (p.choices?.[0]?.delta?.content) { // OpenAI 兼容格式
+                fullText += p.choices[0].delta.content;
+                filterAndEmitToken(p.choices[0].delta.content);
+              }
+            } catch (e) { console.log(`[Codesuc] Parse error:`, data.slice(0, 100)); }
+          }
         }
       });
       response.on('end', () => {

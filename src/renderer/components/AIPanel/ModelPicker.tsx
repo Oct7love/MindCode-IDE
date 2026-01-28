@@ -18,9 +18,9 @@ export const MODELS: ModelInfo[] = [
   { id: 'glm-4.7', name: 'GLM-4.7', icon: '🔮', desc: '高智能旗舰', provider: 'glm', toolCapable: true },
   { id: 'glm-4.7-flashx', name: 'GLM-4.7 FlashX', icon: '⚡', desc: '轻量高速', provider: 'glm', toolCapable: true },
   // ===== 特价渠道 =====
-  { id: 'codesuc-opus', name: 'Claude Opus 4.5 [特价]', icon: '💎', desc: '特价渠道', provider: 'codesuc', toolCapable: false },
-  { id: 'codesuc-sonnet', name: 'Claude Sonnet 4.5 [特价]', icon: '💰', desc: '特价渠道', provider: 'codesuc', toolCapable: false },
-  { id: 'codesuc-haiku', name: 'Claude Haiku 4.5 [特价]', icon: '🏷️', desc: '特价渠道', provider: 'codesuc', toolCapable: false },
+  { id: 'codesuc-opus', name: 'Claude Opus 4.5 [特价]', icon: '💎', desc: '特价渠道', provider: 'codesuc', toolCapable: true },
+  { id: 'codesuc-sonnet', name: 'Claude Sonnet 4.5 [特价]', icon: '💰', desc: '特价渠道', provider: 'codesuc', toolCapable: true },
+  { id: 'codesuc-haiku', name: 'Claude Haiku 4.5 [特价]', icon: '🏷️', desc: '特价渠道', provider: 'codesuc', toolCapable: true },
 ];
 
 export const TOOL_CAPABLE_MODELS = MODELS.filter(m => m.toolCapable).map(m => m.id);

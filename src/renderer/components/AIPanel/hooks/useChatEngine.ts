@@ -7,6 +7,43 @@ import { useAIStore, AIMode, Plan, ToolCallStatus } from '../../../stores';
 import { useFileStore } from '../../../stores';
 import { MODELS, TOOL_CAPABLE_MODELS } from '../ModelPicker';
 
+// 检测是否是询问模型身份的问题
+const isModelIdentityQuestion = (text: string): boolean => {
+  const patterns = [
+    /你是什么模型/i, /你是哪个模型/i, /你是谁/i, /你叫什么/i,
+    /what model/i, /which model/i, /who are you/i,
+    /你的名字/i, /你是.*(?:AI|助手|模型)/i, /使用的.*模型/i,
+    /(?:当前|现在).*模型/i, /模型.*是什么/i, /什么.*模型/i
+  ];
+  return patterns.some(p => p.test(text));
+};
+
+// 检测消息是否包含模型身份声明（用于过滤历史）
+const containsModelIdentity = (text: string): boolean => {
+  const patterns = [
+    /^(?:你好[！!]?\s*)?我是\s*\**\s*(?:Claude|GPT|Gemini|DeepSeek|GLM|Qwen|通义|文心|星火|MindCode)/im,
+    /^(?:Hi[,.]?\s*)?I(?:'m| am)\s*(?:Claude|GPT|Gemini|DeepSeek|GLM)/im,
+    /我是.*(?:由|开发的).*(?:AI|助手|模型)/i,
+    /I am an? AI (?:assistant|model)/i,
+    /📊\s*\*\*模型信息\*\*/  // 我们追加的模型信息块
+  ];
+  return patterns.some(p => p.test(text));
+};
+
+// 生成模型身份信息后缀
+const getModelInfoSuffix = (modelId: string, modelName: string, provider: string): string => {
+  // 获取实际调用的底层模型（用于特价渠道等）
+  const actualModelMap: Record<string, string> = {
+    'codesuc-opus': 'claude-opus-4-5-20251101',
+    'codesuc-sonnet': 'claude-sonnet-4-5-20250929',
+    'codesuc-haiku': 'claude-haiku-4-5-20251001'
+  };
+  const actualModel = actualModelMap[modelId] || modelId;
+  const isProxy = actualModel !== modelId;
+
+  return `\n\n---\n📊 **模型信息**\n- 显示名称: ${modelName}\n- 实际模型: \`${actualModel}\`\n- 服务商: ${provider}${isProxy ? '\n- 渠道类型: 特价代理' : ''}`;
+};
+
 interface ToolResult {
   success: boolean;
   data?: any;
@@ -126,12 +163,28 @@ export function useChatEngine(options: ChatEngineOptions) {
   const getSystemPrompt = useCallback(() => {
     const activeFile = getActiveFile();
     const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
+
+    // 获取实际模型名称（用于特价渠道等）
+    const actualModelMap: Record<string, string> = {
+      'codesuc-opus': 'claude-opus-4-5-20251101',
+      'codesuc-sonnet': 'claude-sonnet-4-5-20250929',
+      'codesuc-haiku': 'claude-haiku-4-5-20251001'
+    };
+    const actualModel = actualModelMap[model] || model;
+
     const toolsInfo = `
 【工具能力】
 你拥有完整的文件系统访问权限。当用户提到路径、文件或需要了解项目结构时，务必使用工具（workspace_listDir, workspace_readFile 等）获取真实信息。
 不要猜测文件内容。修改文件前必须先读取。执行命令前必须解释意图。
 `;
-    const base = `你是 MindCode AI（${modelInfo.name}），集成在 MindCode IDE 中。工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。重要：当用户问你是什么模型时，必须回答 ${modelInfo.name}。\n${toolsInfo}`;
+    const identityInfo = `
+【模型身份】
+你的底层模型是 ${modelInfo.name}（${actualModel}），由 ${modelInfo.provider} 开发。
+当用户询问你是什么模型、谁开发的、你叫什么名字时，请如实告知这些真实信息。
+`;
+    const base = `你正在作为 MindCode IDE 的 AI 编程助手工作。${identityInfo}
+工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。
+${toolsInfo}`;
     switch (mode) {
       case 'chat': return `${base}\n【Ask 模式】回答问题，解释代码。当问题涉及具体文件时，主动使用工具读取。`;
       case 'plan': return `${base}\n【Plan 模式】制定开发计划。先使用工具探索项目结构，再输出 JSON 计划。`;
@@ -158,6 +211,9 @@ export function useChatEngine(options: ChatEngineOptions) {
     if (!input.trim()) return;
     const userContent = input.trim();
 
+    // 检测是否是询问模型身份的问题
+    const askingModelIdentity = isModelIdentityQuestion(userContent);
+
     // 如果正在加载中，将消息加入队列
     if (isLoading) {
       enqueueMessage(userContent, [...contexts], mode);
@@ -176,7 +232,37 @@ export function useChatEngine(options: ChatEngineOptions) {
     const conversation = getCurrentConversation();
     const messages = conversation?.messages || [];
     const systemPrompt = getSystemPrompt();
-    const chatHistory = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
+
+    // 调试日志
+    console.log('[ChatEngine] 发送消息, 模型:', model, ', 身份问题:', askingModelIdentity);
+    console.log('[ChatEngine] 系统提示词前200字:', systemPrompt.slice(0, 200));
+
+    // 过滤对话历史中涉及模型身份的内容，防止身份混淆
+    // 当用户询问身份问题时，过滤掉所有身份相关的问答对
+    const chatHistory = messages.filter(m => m.role !== 'system').filter(m => {
+      // 如果当前问题是身份问题，过滤掉历史中所有身份相关内容
+      if (askingModelIdentity) {
+        // 过滤用户的身份问题
+        if (m.role === 'user' && isModelIdentityQuestion(m.content)) {
+          console.log('[ChatEngine] 过滤身份问题:', m.content.slice(0, 30) + '...');
+          return false;
+        }
+        // 过滤 assistant 的身份声明
+        if (m.role === 'assistant' && containsModelIdentity(m.content)) {
+          console.log('[ChatEngine] 过滤身份回答:', m.content.slice(0, 50) + '...');
+          return false;
+        }
+      } else {
+        // 非身份问题时，仍然过滤掉以身份声明开头的消息（防止污染）
+        if (m.role === 'assistant' && containsModelIdentity(m.content)) {
+          console.log('[ChatEngine] 过滤身份消息:', m.content.slice(0, 50) + '...');
+          return false;
+        }
+      }
+      return true;
+    }).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
     let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: finalContent }];
     const tools = getTools();
 
@@ -198,7 +284,18 @@ export function useChatEngine(options: ChatEngineOptions) {
 
           const newSystemPrompt = getSystemPrompt();
           const currentConv = getCurrentConversation();
-          const newChatHistory = currentConv?.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })) || [];
+          // 队列消息也需要检测是否是身份问题
+          const queueAskingIdentity = isModelIdentityQuestion(nextMsg.content);
+          // 过滤对话历史中涉及模型身份的内容
+          const newChatHistory = currentConv?.messages.filter(m => m.role !== 'system').filter(m => {
+            if (queueAskingIdentity) {
+              if (m.role === 'user' && isModelIdentityQuestion(m.content)) return false;
+              if (m.role === 'assistant' && containsModelIdentity(m.content)) return false;
+            } else {
+              if (m.role === 'assistant' && containsModelIdentity(m.content)) return false;
+            }
+            return true;
+          }).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })) || [];
           let queueFinalContent = nextMsg.content;
           if (nextMsg.contexts.length > 0) {
             queueFinalContent = nextMsg.contexts.map(c => `[${c.type}: ${c.label}]\n${c.data.content || c.data.path}`).join('\n\n') + `\n\n用户: ${nextMsg.content}`;
@@ -273,7 +370,12 @@ export function useChatEngine(options: ChatEngineOptions) {
 
         if (abortRef.current) break;
         if (toolCalls.length === 0) {
-          updateLastMessage(responseText + (usedFallbackModel ? `\n\n*已自动切换到 ${usedFallbackModel}*` : ''));
+          let finalSuffix = usedFallbackModel ? `\n\n*已自动切换到 ${usedFallbackModel}*` : '';
+          // 如果是询问模型身份的问题，追加实际模型信息
+          if (askingModelIdentity) {
+            finalSuffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
+          }
+          updateLastMessage(responseText + finalSuffix);
           break;
         }
 
@@ -320,7 +422,11 @@ export function useChatEngine(options: ChatEngineOptions) {
         onToken: (token: string) => appendStreamingText(token),
         onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => {
           const plan = mode === 'plan' ? parsePlan(fullText) : null;
-          const suffix = meta?.usedFallback ? `\n\n*已自动切换到 ${meta.model}*` : '';
+          let suffix = meta?.usedFallback ? `\n\n*已自动切换到 ${meta.model}*` : '';
+          // 如果是询问模型身份的问题，追加实际模型信息
+          if (askingModelIdentity) {
+            suffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
+          }
           updateLastMessage(fullText + suffix, plan ? { plan } : undefined);
           if (plan) setPlan(plan);
           setStreamingText('');
