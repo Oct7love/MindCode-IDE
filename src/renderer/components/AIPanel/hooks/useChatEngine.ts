@@ -7,6 +7,14 @@ import { useAIStore, AIMode, Plan, ToolCallStatus } from '../../../stores';
 import { useFileStore } from '../../../stores';
 import { MODELS, TOOL_CAPABLE_MODELS } from '../ModelPicker';
 
+// 模式工具权限映射 - 对标 Cursor 的模式差异化设计
+const MODE_TOOLS: Record<AIMode, string[]> = {
+  chat: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'editor_getActiveFile', 'git_status', 'git_diff'], // Ask: 只读
+  plan: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'editor_getActiveFile', 'git_status', 'git_diff'], // Plan: 只读
+  agent: ['workspace_listDir', 'workspace_readFile', 'workspace_writeFile', 'workspace_search', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Agent: 完整
+  debug: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Debug: 只读+执行
+};
+
 // 检测是否是询问模型身份的问题
 const isModelIdentityQuestion = (text: string): boolean => {
   const patterns = [
@@ -172,39 +180,127 @@ export function useChatEngine(options: ChatEngineOptions) {
     };
     const actualModel = actualModelMap[model] || model;
 
-    const toolsInfo = `
-【工具能力】
-你拥有完整的文件系统访问权限。当用户提到路径、文件或需要了解项目结构时，务必使用工具（workspace_listDir, workspace_readFile 等）获取真实信息。
-不要猜测文件内容。修改文件前必须先读取。执行命令前必须解释意图。
-`;
     const identityInfo = `
 【模型身份】
 你的底层模型是 ${modelInfo.name}（${actualModel}），由 ${modelInfo.provider} 开发。
 当用户询问你是什么模型、谁开发的、你叫什么名字时，请如实告知这些真实信息。
 `;
     const base = `你正在作为 MindCode IDE 的 AI 编程助手工作。${identityInfo}
-工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。
-${toolsInfo}`;
+工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。`;
+
+    // 根据模式返回专业级系统提示词
     switch (mode) {
-      case 'chat': return `${base}\n【Ask 模式】回答问题，解释代码。当问题涉及具体文件时，主动使用工具读取。`;
-      case 'plan': return `${base}\n【Plan 模式】制定开发计划。先使用工具探索项目结构，再输出 JSON 计划。`;
-      case 'agent': return `${base}\n【Agent 模式】自主完成任务。执行原则: 1.探索(listDir/search) 2.读取(readFile) 3.思考 4.修改(writeFile)。`;
-      case 'debug': return `${base}\n【Debug 模式】分析错误。主动读取报错文件和日志。`;
+      case 'chat': return `${base}
+
+【Ask 模式 - 编程顾问】
+你是专业的编程顾问，专注于解答问题和代码分析。
+
+行为准则：
+${workspaceRoot ? `1. 当用户提到文件/目录时，使用 workspace_listDir、workspace_readFile 查看真实内容
+2. 不要猜测代码内容，优先使用工具获取
+3. 不要主动修改文件，如需修改请建议用户切换到 Agent 模式` : `注意：当前没有打开工作区，无法读取文件。请直接回答用户的编程问题。`}
+
+${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspace_search, editor_getActiveFile, git_status, git_diff` : ``}`;
+
+      case 'plan': return `${base}
+
+【Plan 模式 - 项目架构师】
+你是专业的软件架构师，负责制定开发计划。
+
+工作流程：
+${workspaceRoot ? `1. 如需了解现有代码，可使用 workspace_listDir 探索项目结构
+2. 使用 workspace_readFile 分析关键代码
+3. 理解现有架构后，输出结构化的 JSON 计划` : `注意：当前没有打开工作区，请直接根据用户需求制定计划，无需探索文件。`}
+
+输出格式（必须用 \`\`\`json 包裹）：
+{
+  "title": "计划标题",
+  "goal": "目标描述",
+  "assumptions": ["假设条件"],
+  "milestones": [{ "id": "m1", "label": "里程碑名称", "estimated": "预估时间" }],
+  "tasks": [{ "id": "t1", "label": "任务描述", "files": ["涉及文件"], "milestone": "m1" }],
+  "risks": ["潜在风险"]
+}
+
+${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspace_search, editor_getActiveFile, git_status, git_diff` : `当前无工作区，请直接输出计划，不要调用工具。`}`;
+
+      case 'agent': return `${base}
+
+【Agent 模式 - 自主编程代理】
+${workspaceRoot ? `你是具有完整文件系统权限的自主编程代理。
+
+执行原则（Cursor 风格）：
+1. 探索 - 先用 workspace_listDir/workspace_search 了解项目结构
+2. 阅读 - 修改前必须用 workspace_readFile 读取原文件
+3. 思考 - 分析代码，规划最小改动方案
+4. 执行 - 使用 workspace_writeFile 修改，terminal_execute 运行命令
+5. 验证 - 执行后说明改动内容和验证方法
+
+安全机制：
+- workspace_writeFile 和 terminal_execute 会要求用户确认
+- 避免删除重要文件
+- 命令执行前解释意图
+
+可用工具：workspace_listDir, workspace_readFile, workspace_writeFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff` : `⚠️ 注意：当前没有打开工作区！
+Agent 模式需要工作区才能操作文件。请先使用 "文件 → 打开文件夹" 打开一个项目目录。
+
+在此之前，我只能回答你的编程问题，无法执行文件操作。`}`;
+
+      case 'debug': return `${base}
+
+【Debug 模式 - 调试专家】
+你是专业的调试专家，专注于错误分析和问题诊断。
+
+诊断流程：
+1. 分析错误信息，识别错误类型（语法/运行时/逻辑/配置）
+${workspaceRoot ? `2. 使用 workspace_readFile 查看相关源码
+3. 使用 git_diff 查看最近改动
+4. 提出假设并验证` : `2. 根据错误信息分析可能的原因
+3. 提出修复建议`}
+
+输出格式：
+## 错误分析
+- 错误类型：[类型]
+- 根本原因：[分析]
+${workspaceRoot ? `- 相关文件：[文件列表]` : ``}
+
+## 修复方案
+\`\`\`[语言]
+// 修复代码
+\`\`\`
+
+## 预防建议
+- [建议]
+
+${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff
+注意：不直接修改文件，建议用户切换到 Agent 模式执行修复` : `当前无工作区，请直接分析用户提供的错误信息。`}`;
+
       default: return base;
     }
   }, [mode, model, workspaceRoot, getActiveFile]);
 
-  // 获取工具定义
-  const getTools = useCallback(() => [
-    { name: 'workspace_listDir', description: '列出目录', parameters: { type: 'object' as const, properties: { path: { type: 'string' } }, required: ['path'] } },
-    { name: 'workspace_readFile', description: '读取文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, startLine: { type: 'number' }, endLine: { type: 'number' } }, required: ['path'] } },
-    { name: 'workspace_writeFile', description: '写入文件', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
-    { name: 'workspace_search', description: '搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string' }, maxResults: { type: 'number' } }, required: ['query'] } },
-    { name: 'editor_getActiveFile', description: '获取当前文件', parameters: { type: 'object' as const, properties: {} } },
-    { name: 'terminal_execute', description: '执行终端命令（用户确认后执行）', parameters: { type: 'object' as const, properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
-    { name: 'git_status', description: 'Git状态', parameters: { type: 'object' as const, properties: {} } },
-    { name: 'git_diff', description: 'Git差异', parameters: { type: 'object' as const, properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: ['path'] } },
-  ], []);
+  // 获取工具定义 - 根据模式和工作区状态过滤可用工具
+  const getTools = useCallback(() => {
+    // 没有工作区时，不提供文件系统相关的工具
+    if (!workspaceRoot) {
+      console.log('[ChatEngine] 无工作区，不提供工具');
+      return [];
+    }
+
+    const allTools = [
+      { name: 'workspace_listDir', description: '列出目录内容，了解项目结构', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '目录路径' } }, required: ['path'] } },
+      { name: 'workspace_readFile', description: '读取文件内容，支持指定行范围', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '文件路径' }, startLine: { type: 'number', description: '起始行' }, endLine: { type: 'number', description: '结束行' } }, required: ['path'] } },
+      { name: 'workspace_writeFile', description: '写入文件（需用户确认）', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '文件路径' }, content: { type: 'string', description: '文件内容' } }, required: ['path', 'content'] } },
+      { name: 'workspace_search', description: '在项目中搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string', description: '搜索关键词' }, maxResults: { type: 'number', description: '最大结果数' } }, required: ['query'] } },
+      { name: 'editor_getActiveFile', description: '获取当前编辑器打开的文件', parameters: { type: 'object' as const, properties: {} } },
+      { name: 'terminal_execute', description: '执行终端命令（需用户确认）', parameters: { type: 'object' as const, properties: { command: { type: 'string', description: '要执行的命令' }, cwd: { type: 'string', description: '工作目录' } }, required: ['command'] } },
+      { name: 'git_status', description: '获取 Git 状态', parameters: { type: 'object' as const, properties: {} } },
+      { name: 'git_diff', description: '获取 Git 差异', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '文件路径' }, staged: { type: 'boolean', description: '是否暂存区' } }, required: ['path'] } },
+    ];
+    // 根据当前模式过滤工具
+    const allowedTools = MODE_TOOLS[mode] || [];
+    return allTools.filter(t => allowedTools.includes(t.name));
+  }, [mode, workspaceRoot]);
 
   // 发送消息核心逻辑
   const handleSend = useCallback(async (input: string) => {
@@ -266,9 +362,13 @@ ${toolsInfo}`;
     let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: finalContent }];
     const tools = getTools();
 
-    const isAgentMode = mode === 'agent';
-    const useTools = tools.length > 0 && (isAgentMode || TOOL_CAPABLE_MODELS.includes(model));
-    const requiresConfirm = ['workspace_writeFile', 'terminal_execute'];
+    // 所有模式都可以使用工具（工具已按 MODE_TOOLS 过滤），只要模型支持
+    const useTools = tools.length > 0 && TOOL_CAPABLE_MODELS.includes(model);
+    // 只有 Agent 和 Debug 模式下的危险操作需要确认
+    const requiresConfirm = (mode === 'agent' || mode === 'debug')
+      ? ['workspace_writeFile', 'terminal_execute']
+      : [];
+    console.log('[ChatEngine] 模式:', mode, ', 可用工具数:', tools.length, ', 使用工具:', useTools);
 
     let usedFallbackModel: string | null = null;
 
@@ -336,6 +436,7 @@ ${toolsInfo}`;
 
       while (iterations < maxIterations && !abortRef.current) {
         iterations++;
+        console.log(`[ChatEngine] 工具循环 #${iterations}, 消息数: ${apiMessages.length}`);
         let responseText = '';
         let toolCalls: any[] = [];
         try {
@@ -344,19 +445,25 @@ ${toolsInfo}`;
               reject(new Error('API 不可用'));
               return;
             }
+            console.log('[ChatEngine] 调用 chatStreamWithTools, 工具数:', tools.length, ', 工具名:', tools.map(t => t.name).join(', '));
             window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
               onToken: (token) => {
                 responseText += token;
                 appendStreamingText(token);
               },
               onToolCall: (calls) => {
+                console.log('[ChatEngine] 收到工具调用:', calls);
                 toolCalls = calls;
               },
               onComplete: (_fullText, meta) => {
+                console.log('[ChatEngine] chatStreamWithTools 完成');
                 if (meta?.usedFallback) usedFallbackModel = meta.model;
                 resolve();
               },
-              onError: (err) => reject(new Error(err)),
+              onError: (err) => {
+                console.error('[ChatEngine] chatStreamWithTools 错误:', err);
+                reject(new Error(err));
+              },
               onFallback: (from, to) => {
                 appendStreamingText(`\n\n> ⚠️ ${from} 服务繁忙，已自动切换到 ${to}\n\n`);
                 usedFallbackModel = to;
@@ -364,10 +471,12 @@ ${toolsInfo}`;
             });
           });
         } catch (e: any) {
-          updateLastMessage(e.message || '请求失败');
+          console.error('[ChatEngine] 工具调用错误:', e);
+          updateLastMessage(`错误: ${e.message || '请求失败'}`);
           break;
         }
 
+        console.log(`[ChatEngine] 工具调用完成, 响应长度: ${responseText.length}, 工具调用数: ${toolCalls.length}`);
         if (abortRef.current) break;
         if (toolCalls.length === 0) {
           let finalSuffix = usedFallbackModel ? `\n\n*已自动切换到 ${usedFallbackModel}*` : '';
