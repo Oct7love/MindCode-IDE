@@ -638,11 +638,44 @@ export class IndexStore {
     return results;
   }
   
+  // ============ 向量搜索 ============
+
+  /** 向量相似度搜索（余弦相似度，内存计算） */
+  searchByEmbedding(queryEmbedding: number[], topK: number = 10): { chunk: CodeChunk; score: number }[] {
+    if (!this.db) throw new Error('Database not initialized');
+    const startTime = Date.now();
+    const stmt = this.db.prepare('SELECT * FROM code_chunks WHERE embedding IS NOT NULL');
+    const results: { chunk: CodeChunk; score: number }[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      const embedding = row.embedding ? Array.from(new Float32Array((row.embedding as Uint8Array).buffer)) : null;
+      if (!embedding || embedding.length !== queryEmbedding.length) continue;
+      const score = this.cosineSimilarity(queryEmbedding, embedding);
+      results.push({ chunk: { id: row.id as string, symbolId: row.symbol_id as string | undefined, filePath: row.file_path as string, startLine: row.start_line as number, endLine: row.end_line as number, text: row.text as string, embedding, embeddingModel: row.embedding_model as string | undefined }, score });
+    }
+    stmt.free();
+    results.sort((a, b) => b.score - a.score);
+    console.log(`[IndexStore] 向量搜索完成: ${results.length} 候选, ${Date.now() - startTime}ms`);
+    return results.slice(0, topK);
+  }
+
+  /** 余弦相似度计算 */
+  private cosineSimilarity(a: number[], b: number[]): number {
+    let dot = 0, normA = 0, normB = 0;
+    for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i]; }
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  /** 获取所有有嵌入的 chunks 数量 */
+  getEmbeddedChunksCount(): number {
+    if (!this.db) throw new Error('Database not initialized');
+    const result = this.db.exec('SELECT COUNT(*) FROM code_chunks WHERE embedding IS NOT NULL');
+    return result[0]?.values[0]?.[0] as number || 0;
+  }
+
   // ============ 统计信息 ============
-  
-  /**
-   * 获取索引统计
-   */
+
+  /** 获取索引统计 */
   getStats(): {
     totalFiles: number;
     totalSymbols: number;

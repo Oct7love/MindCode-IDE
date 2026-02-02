@@ -1,17 +1,11 @@
 /**
  * 混合搜索服务
- * 结合符号搜索和语义搜索
+ * 结合符号搜索和向量语义搜索
  */
 
-import type {
-  SearchQuery,
-  SearchResults,
-  SearchResult,
-  CodeSymbol,
-  CodeChunk,
-  SymbolKind,
-} from '../types';
+import type { SearchQuery, SearchResults, SearchResult, CodeSymbol, CodeChunk, SymbolKind } from '../types';
 import { IndexStore } from '../storage/sqliteStore';
+import { getEmbeddingsService } from '../embeddings';
 
 /** 搜索配置 */
 export interface SearchConfig {
@@ -113,37 +107,33 @@ export class HybridSearch {
     return results;
   }
   
-  /**
-   * 语义搜索（基于向量相似度）
-   */
+  /** 语义搜索（基于向量相似度） */
   private async semanticSearch(query: SearchQuery, limit: number): Promise<SearchResult[]> {
-    // TODO: 实现向量搜索
-    // 当前版本使用简单的文本匹配作为占位
-    
     const results: SearchResult[] = [];
+    const embeddedCount = this.store.getEmbeddedChunksCount();
+    if (embeddedCount > 0) { // 有向量嵌入，使用向量搜索
+      try {
+        const embeddingsService = getEmbeddingsService();
+        const { embedding: queryEmbedding } = await embeddingsService.embed(query.query);
+        const vectorResults = this.store.searchByEmbedding(queryEmbedding, limit);
+        for (const { chunk, score } of vectorResults) {
+          if (score >= this.config.minScore) {
+            results.push({ item: chunk, score, matchType: 'semantic', highlights: [], context: chunk.text.slice(0, 200) });
+          }
+        }
+        return results;
+      } catch (e) { console.warn('[HybridSearch] 向量搜索失败，回退到文本搜索:', e); }
+    }
+    // Fallback: 简单文本匹配
     const queryLower = query.query.toLowerCase();
-    
-    // 获取所有文件的代码片段
     const fileIndexes = this.store.getAllFileIndexes();
-    
     for (const fileIndex of fileIndexes.slice(0, 20)) {
       const chunks = this.store.getCodeChunksInFile(fileIndex.filePath);
-      
       for (const chunk of chunks) {
         const score = this.calculateTextScore(chunk.text, queryLower);
-        
-        if (score >= this.config.minScore) {
-          results.push({
-            item: chunk,
-            score,
-            matchType: 'semantic',
-            highlights: [],
-            context: chunk.text.slice(0, 200),
-          });
-        }
+        if (score >= this.config.minScore) results.push({ item: chunk, score, matchType: 'semantic', highlights: [], context: chunk.text.slice(0, 200) });
       }
     }
-    
     return results.sort((a, b) => b.score - a.score).slice(0, limit);
   }
   

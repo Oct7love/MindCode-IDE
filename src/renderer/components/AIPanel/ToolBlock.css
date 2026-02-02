@@ -303,3 +303,73 @@
 .tool-block-code-preview .syntax-operator {
   color: #d4d4d4;
 }
+
+/* ============================================
+ * Compact Mode - Cursor 风格紧凑工具调用
+ * ============================================ */
+.tool-block-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  margin: var(--space-2, 8px) 0;
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-lg, 8px);
+  font-size: var(--text-xs, 12px);
+  color: var(--color-text-secondary, #a1a1aa);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+  max-width: 100%;
+}
+
+.tool-block-compact:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  border-color: var(--color-border-default, rgba(255, 255, 255, 0.1));
+}
+
+.tool-compact-status {
+  font-size: 14px;
+  line-height: 1;
+}
+.tool-compact-status-pending { color: var(--color-text-muted, #71717a); }
+.tool-compact-status-running { color: var(--color-accent-ai, #8b5cf6); animation: spin 1s linear infinite; }
+.tool-compact-status-success { color: var(--color-success, #22c55e); }
+.tool-compact-status-failed { color: var(--color-error, #ef4444); }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tool-compact-icon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.tool-compact-label {
+  font-weight: 500;
+  color: var(--color-text-primary, #e4e4e7);
+  white-space: nowrap;
+}
+
+.tool-compact-path {
+  color: var(--color-text-tertiary, #71717a);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs, 11px);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-compact-badge {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.tool-compact-expand {
+  font-size: 10px;
+  opacity: 0.5;
+  margin-left: auto;
+}

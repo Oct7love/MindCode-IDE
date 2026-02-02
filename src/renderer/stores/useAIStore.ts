@@ -45,6 +45,7 @@ export interface Message {
   toolCallId?: string; // tool 消息的调用 ID
   plan?: Plan; // Plan 模式生成的计划
   thinkingUI?: ThinkingUIData; // Thinking UI 结构化数据
+  thinkingContent?: string; // 思考过程内容（完成后保留用于折叠显示）
 }
 
 export interface Conversation {

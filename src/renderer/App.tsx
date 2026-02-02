@@ -15,9 +15,13 @@ import { Terminal } from './components/Terminal';
 import { GitPanel } from './components/GitPanel';
 import { AIPanel } from './components/AIPanel';
 import { DiffEditorPanel } from './components/DiffEditorPanel';
+import { ComposerPanel } from './components/ComposerPanel';
 import { applyTheme, loadTheme, saveTheme } from './utils/themes';
-import { useFileStore, SUPPORTED_LANGUAGES } from './stores';
+import { useFileStore, SUPPORTED_LANGUAGES, EditorFile } from './stores';
 import { MindCodeLogo } from './components/MindCodeLogo';
+import { useZoom } from './hooks/useZoom';
+import { StatusBar } from './components/StatusBar';
+import { ErrorBoundary, AIPanelErrorBoundary, EditorErrorBoundary } from './components/ErrorBoundary';
 
 // ==================== VSCode 风格 Codicon 图标 ====================
 const Icons = {
@@ -113,19 +117,6 @@ const getLanguageDisplayName = (name: string): string => {
 
 interface TreeNode { name: string; type: 'file' | 'folder'; path?: string; children?: TreeNode[]; }
 
-// 编辑器文件接口
-interface EditorFile {
-  id: string;
-  path: string;
-  name: string;
-  content: string;
-  language?: string;
-  isDirty?: boolean;
-  // Phase 2: 预览文件支持
-  isPreview?: boolean;
-  originalPath?: string;
-  previewSource?: 'ai' | 'diff';
-}
 
 // 模拟文件内容
 const mockFileContents: Record<string, string> = {
@@ -528,19 +519,38 @@ interface Conversation {
 const App: React.FC = () => {
   const [tab, setTab] = useState<'files'|'search'|'git'|'ext'>('files');
   const [showAI, setShowAI] = useState(true);
+  const [showComposer, setShowComposer] = useState(false); // Composer 面板
   const [selected, setSelected] = useState('');
   const [model, setModel] = useState('claude-opus-4-5-thinking'); // 默认使用 Claude 4.5 Opus Thinking
   const [aiPanelWidth, setAiPanelWidth] = useState(380);
   const [isResizing, setIsResizing] = useState(false);
+  
+  // 全局缩放 (Ctrl+Shift++ / Ctrl+Shift+-)
+  const { zoomPercent } = useZoom();
+  
+  // 光标位置
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
 
   // Command Palette 状态
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandPaletteMode, setCommandPaletteMode] = useState<'files' | 'commands' | 'search'>('files');
 
-  // 工作区状态
-  const [workspaceRoot, setWorkspaceRoot] = useState<string | null>(null);
+  // 工作区状态 - 从 localStorage 恢复
+  const WORKSPACE_KEY = 'mindcode.workspace';
+  const [workspaceRoot, setWorkspaceRootState] = useState<string | null>(() => {
+    try { return localStorage.getItem(WORKSPACE_KEY); } catch { return null; }
+  });
   const [fileTree, setFileTree] = useState<TreeNode[]>(mockTree);
-  const [workspaceName, setWorkspaceName] = useState('MindCode');
+  const [workspaceName, setWorkspaceName] = useState(() => {
+    const saved = localStorage.getItem(WORKSPACE_KEY);
+    return saved ? saved.split(/[/\\]/).pop() || 'Workspace' : 'MindCode';
+  });
+  // 包装 setWorkspaceRoot 以同步 localStorage
+  const setWorkspaceRoot = useCallback((path: string | null) => {
+    setWorkspaceRootState(path);
+    if (path) localStorage.setItem(WORKSPACE_KEY, path);
+    else localStorage.removeItem(WORKSPACE_KEY);
+  }, []);
 
   // 同步到 Store（供 AI 面板使用）+ 订阅预览文件
   const {
@@ -549,6 +559,7 @@ const App: React.FC = () => {
     openFiles: storeOpenFiles,
     createNewFile: storeCreateNewFile,
     saveFile: storeSaveFile,
+    setFileLanguage,
   } = useFileStore();
 
   // 右键菜单状态
@@ -1263,6 +1274,13 @@ const App: React.FC = () => {
         return;
       }
 
+      // Ctrl+Shift+I - 打开 Composer（多文件重构）
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+        setShowComposer(true);
+        return;
+      }
+
       // Ctrl+L - 打开/关闭 AI 面板
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
         e.preventDefault();
@@ -1678,6 +1696,31 @@ const App: React.FC = () => {
     return cleanup;
   }, [refreshFileTree, workspaceRoot, loadDirectory, setStoreFileTree]);
 
+  // 启动时恢复工作区
+  const workspaceRestoredRef = useRef(false);
+  useEffect(() => {
+    if (workspaceRestoredRef.current) return;
+    const restoreWorkspace = async () => {
+      const saved = localStorage.getItem('mindcode.workspace');
+      if (saved) {
+        workspaceRestoredRef.current = true;
+        try {
+          const tree = await loadDirectory(saved, true);
+          if (tree.length > 0) {
+            const name = saved.split(/[/\\]/).pop() || 'Workspace';
+            setWorkspaceRootState(saved); // 恢复 workspaceRoot 状态
+            setFileTree(tree);
+            setStoreFileTree(tree);
+            setWorkspaceName(name);
+            setStoreWorkspace(saved, name); // 同步到 Store（AI 面板需要）
+            console.log('[App] 工作区已恢复:', saved);
+          } else { localStorage.removeItem('mindcode.workspace'); }
+        } catch (e) { console.warn('[App] 恢复工作区失败:', e); localStorage.removeItem('mindcode.workspace'); }
+      }
+    };
+    restoreWorkspace();
+  }, [loadDirectory, setStoreFileTree, setStoreWorkspace]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => {
     if (inputRef.current) {
@@ -1924,14 +1967,9 @@ const App: React.FC = () => {
           </div>
           <div className="editor-content" style={{ flex: showTerminal ? `1 1 calc(100% - ${terminalHeight}px)` : '1 1 100%' }}>
             {activeFile ? (
-              <CodeEditor
-                file={{
-                  path: activeFile.path,
-                  content: activeFile.content,
-                }}
-                onContentChange={updateFileContent}
-                onSave={saveFile}
-              />
+              <EditorErrorBoundary>
+                <CodeEditor file={{ path: activeFile.path, content: activeFile.content }} onContentChange={updateFileContent} onSave={saveFile} onCursorPositionChange={(line, column) => setCursorPosition({ line, column })} />
+              </EditorErrorBoundary>
             ) : (
               <div className="editor-scroll">
                 <div className="welcome">
@@ -2070,30 +2108,21 @@ const App: React.FC = () => {
                 zIndex: 1000
               }}
             />
-            <AIPanel
-              model={model}
-              onModelChange={setModel}
-              onClose={() => setShowAI(false)}
-              width={aiPanelWidth}
-              isResizing={isResizing}
-            />
+            <AIPanelErrorBoundary>
+              <AIPanel model={model} onModelChange={setModel} onClose={() => setShowAI(false)} width={aiPanelWidth} isResizing={isResizing} />
+            </AIPanelErrorBoundary>
           </div>
         )}
       </div>
 
       {/* Status Bar */}
-      <div className="statusbar">
-        <div className="statusbar-left">
-          <span className="status-item">⎇ main</span>
-          <span className="status-item">○ 0 △ 0</span>
-        </div>
-        <div className="statusbar-right">
-          <span className="status-item">Ln 1, Col 1</span>
-          <span className="status-item">Spaces: 2</span>
-          <span className="status-item">UTF-8</span>
-          <span className="status-item">{activeFile ? getLanguageDisplayName(activeFile.name) : 'Plain Text'}</span>
-        </div>
-      </div>
+      <StatusBar
+        workspaceRoot={workspaceRoot}
+        activeFile={activeFile}
+        zoomPercent={zoomPercent}
+        cursorPosition={cursorPosition}
+        onLanguageChange={(id, lang) => setFileLanguage(id, lang)}
+      />
 
       {!showAI && <button className="chat-fab" onClick={() => setShowAI(true)}><Icons.Chat /></button>}
 
@@ -2191,6 +2220,9 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Composer 多文件重构面板 */}
+      <ComposerPanel isOpen={showComposer} onClose={() => setShowComposer(false)} workspacePath={workspaceRoot || undefined} />
     </div>
   );
 };

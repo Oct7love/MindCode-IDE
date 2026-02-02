@@ -183,6 +183,7 @@ interface CodeEditorProps {
   file?: EditorFile;
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void;
+  onCursorPositionChange?: (line: number, column: number) => void; // 光标位置变化
   readOnly?: boolean;
   minimap?: boolean;
   lineNumbers?: 'on' | 'off' | 'relative';
@@ -264,11 +265,9 @@ const createLocalCompletionProvider = (): monaco.languages.InlineCompletionsProv
     };
 
     try {
+      if (token.isCancellationRequested) return { items: [] }; // 提前检查取消
       const response = await completionService.getCompletion(request);
-
-      if (token.isCancellationRequested || !response || !response.completion) {
-        return { items: [] };
-      }
+      if (token.isCancellationRequested || !response || !response.completion) return { items: [] };
 
       // 多行补全：计算结束位置
       const completionLines = response.completion.split('\n');
@@ -290,7 +289,8 @@ const createLocalCompletionProvider = (): monaco.languages.InlineCompletionsProv
         }],
         enableForwardStability: true, // 启用部分接受
       };
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.name === 'AbortError' || e?.message?.includes('Canceled')) return { items: [] }; // 静默处理取消
       console.error('[CodeEditor] 补全请求失败:', e);
       return { items: [] };
     }
@@ -304,6 +304,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   file,
   onContentChange,
   onSave,
+  onCursorPositionChange,
   readOnly = false,
   minimap = true,
   lineNumbers = 'on',
@@ -396,18 +397,27 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         comments: false,
         strings: false,
       },
-      inlineSuggest: { // Ghost Text 配置
+      inlineSuggest: { // Ghost Text 配置 (Cursor 风格)
         enabled: true,
-        mode: 'subwordSmart',
-        showToolbar: 'onHover', // 悬停时显示工具栏
+        mode: 'subwordSmart', // 智能子词匹配
+        showToolbar: 'always', // 始终显示工具栏（接受/拒绝）
         suppressSuggestions: false, // 不抑制普通建议
+        keepOnBlur: false, // 失焦时隐藏
       },
-      tabCompletion: 'on', // Tab 接受补全
-      acceptSuggestionOnEnter: 'smart', // 智能 Enter 接受
+      tabCompletion: 'off', // 禁用普通 Tab 补全，由 inline suggest 接管
+      acceptSuggestionOnEnter: 'off', // Enter 不接受，避免冲突
     });
 
     editorRef.current = editor;
     setIsReady(true);
+
+    // 监听光标位置变化
+    const cursorDisposable = editor.onDidChangeCursorPosition((e) => {
+      onCursorPositionChange?.(e.position.lineNumber, e.position.column);
+    });
+    // 初始位置
+    const pos = editor.getPosition();
+    if (pos) onCursorPositionChange?.(pos.lineNumber, pos.column);
 
     // 监听主题变化 - 动态更新编辑器颜色
     const handleThemeChange = (event: CustomEvent<{ themeId: string; editorTheme: string; type: string }>) => {
@@ -456,30 +466,35 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       onSave?.(content);
     });
 
-    // ========== 补全快捷键 ==========
-    // Alt+\ - 手动触发补全（Cursor 风格）
+    // ========== 补全快捷键 (Cursor 风格) ==========
+    // Tab - 接受 inline completion (最高优先级)
+    editor.addAction({
+      id: 'mindcode.acceptInlineCompletion',
+      label: 'Accept Inline Completion',
+      keybindings: [monaco.KeyCode.Tab],
+      precondition: 'inlineSuggestionVisible', // 仅当 inline suggestion 可见时
+      run: (ed) => { ed.trigger('mindcode', 'editor.action.inlineSuggest.commit', {}); }
+    });
+    // Esc - 取消 inline completion
+    editor.addAction({
+      id: 'mindcode.cancelInlineCompletion',
+      label: 'Cancel Inline Completion',
+      keybindings: [monaco.KeyCode.Escape],
+      precondition: 'inlineSuggestionVisible',
+      run: (ed) => { ed.trigger('mindcode', 'editor.action.inlineSuggest.hide', {}); }
+    });
+    // Alt+\ - 手动触发补全
     editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Backslash, () => {
-      if (currentFilePath) {
-        triggerInlineCompletion(editor, currentFilePath);
-      }
+      if (currentFilePath) triggerInlineCompletion(editor, currentFilePath);
     });
-
-    // Ctrl+Shift+Space - 备选触发方式
+    // Ctrl+Shift+Space - 备选触发
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Space, () => {
-      if (currentFilePath) {
-        triggerInlineCompletion(editor, currentFilePath);
-      }
+      if (currentFilePath) triggerInlineCompletion(editor, currentFilePath);
     });
-
-    // Ctrl+Right - 按词接受补全
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.RightArrow, () => {
-      acceptCompletionWord(editor);
-    });
-
-    // Ctrl+Shift+Right - 按行接受补全
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.RightArrow, () => {
-      acceptCompletionLine(editor);
-    });
+    // Ctrl+Right - 按词接受
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.RightArrow, () => acceptCompletionWord(editor));
+    // Ctrl+Shift+Right - 按行接受
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.RightArrow, () => acceptCompletionLine(editor));
 
     // ========== 编辑快捷键 ==========
     // Ctrl+K - 内联编辑
@@ -532,6 +547,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     });
 
     return () => {
+      cursorDisposable.dispose();
       disposable.dispose();
       editor.dispose();
       window.removeEventListener('theme-changed', handleThemeChange as EventListener);

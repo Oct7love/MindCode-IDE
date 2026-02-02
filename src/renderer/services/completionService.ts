@@ -72,31 +72,21 @@ const COMMENT_PATTERNS = ['//', '/*', '#', '"""', "'''"];
 class CompletionService {
   private baseUrl: string;
   private cache: LRUCache<string, CompletionResponse>;
+  private fuzzyCache: LRUCache<string, CompletionResponse>; // 模糊缓存（相似上下文）
   private pendingRequest: AbortController | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private defaultDebounceMs: number;
   private instantDebounceMs: number;
-  private mode: ServiceMode = 'ipc';  // 默认使用 IPC 模式
+  private mode: ServiceMode = 'ipc';
 
-  constructor(
-    baseUrl = 'http://localhost:8765',
-    defaultDebounceMs = 80,  // 默认防抖：80ms（比之前的 150ms 快很多）
-    instantDebounceMs = 20,  // 智能触发：20ms（几乎立即）
-    cacheSize = 200
-  ) {
+  constructor(baseUrl = 'http://localhost:8765', defaultDebounceMs = 30, instantDebounceMs = 5, cacheSize = 500) { // 极速防抖：30ms/5ms
     this.baseUrl = baseUrl;
     this.defaultDebounceMs = defaultDebounceMs;
     this.instantDebounceMs = instantDebounceMs;
     this.cache = new LRUCache<string, CompletionResponse>(cacheSize);
-    
-    // 检测是否在 Electron 环境中
-    if (typeof window !== 'undefined' && window.mindcode?.ai?.completion) {
-      this.mode = 'ipc';
-      console.log('[CompletionService] 使用 IPC 模式 (Electron)');
-    } else {
-      this.mode = 'http';
-      console.log('[CompletionService] 使用 HTTP 模式 (本地服务器)');
-    }
+    this.fuzzyCache = new LRUCache<string, CompletionResponse>(cacheSize); // 模糊缓存
+    if (typeof window !== 'undefined' && window.mindcode?.ai?.completion) { this.mode = 'ipc'; console.log('[CompletionService] 使用 IPC 模式'); }
+    else { this.mode = 'http'; console.log('[CompletionService] 使用 HTTP 模式'); }
   }
   
   /**
@@ -134,9 +124,30 @@ class CompletionService {
   }
 
   private getCacheKey(request: CompletionRequest): string {
-    // 更精确的缓存 key，包含更多上下文
     const contentHash = request.content.slice(-500);
     return `${request.file_path}:${request.cursor_line}:${request.cursor_column}:${request.mode}:${contentHash}`;
+  }
+
+  private getFuzzyCacheKey(request: CompletionRequest): string { // 模糊缓存 key（忽略列位置）
+    const lines = request.content.split('\n');
+    const currentLine = lines[request.cursor_line] || '';
+    const prefix = currentLine.slice(0, Math.min(request.cursor_column, 30)); // 只取当前行前 30 字符
+    return `${request.file_path}:${request.cursor_line}:${prefix}:${request.mode}`;
+  }
+
+  private tryFuzzyCache(request: CompletionRequest): CompletionResponse | null {
+    const fuzzyKey = this.getFuzzyCacheKey(request);
+    const cached = this.fuzzyCache.get(fuzzyKey);
+    if (cached && cached.completion) {
+      const lines = request.content.split('\n');
+      const currentLine = lines[request.cursor_line] || '';
+      const typed = currentLine.slice(0, request.cursor_column);
+      // 检查缓存的补全是否仍然适用
+      if (cached.completion.startsWith(typed.slice(-10)) || typed.endsWith(cached.completion.slice(0, 5))) {
+        return { ...cached, cached: true };
+      }
+    }
+    return null;
   }
 
   // 判断是否应该立即触发
@@ -178,16 +189,15 @@ class CompletionService {
     }
   }
 
-  /**
-   * 请求代码补全（智能防抖）
-   */
+  /** 请求代码补全（智能防抖 + 模糊缓存） */
   async getCompletion(request: CompletionRequest): Promise<CompletionResponse | null> {
-    // 检查缓存
+    // 1. 精确缓存
     const cacheKey = this.getCacheKey(request);
     const cached = this.cache.get(cacheKey);
-    if (cached) {
-      return { ...cached, cached: true };
-    }
+    if (cached) return { ...cached, cached: true };
+    // 2. 模糊缓存（相似上下文）
+    const fuzzyCached = this.tryFuzzyCache(request);
+    if (fuzzyCached) return fuzzyCached;
 
     // 取消之前的请求
     if (this.pendingRequest) {
@@ -234,11 +244,11 @@ class CompletionService {
             data = await response.json();
           }
 
-          // 存入缓存（只缓存有效补全）
+          // 存入缓存（精确 + 模糊）
           if (data && data.completion && data.completion.length > 0) {
             this.cache.set(cacheKey, data);
+            this.fuzzyCache.set(this.getFuzzyCacheKey(request), data); // 模糊缓存
           }
-
           resolve(data);
         } catch (error) {
           if ((error as Error).name === 'AbortError') {

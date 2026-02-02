@@ -23,12 +23,15 @@ interface ThinkingBlockProps {
 export const ThinkingBlock: React.FC<ThinkingBlockProps> = memo(({
   content,
   isThinking,
-  autoCollapseDelay = 2000 // 默认 2 秒后自动折叠
+  autoCollapseDelay = 800 // 默认 0.8 秒后自动折叠
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(isThinking); // 初始状态：思考中展开，已完成折叠
   const [isTransitioning, setIsTransitioning] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const wasThinkingRef = useRef(false);
+
+  // 清理思考标签（移到最前面）
+  const displayContent = content.replace(/<\/?thinking>/gi, '').trim();
 
   // 流式输出时自动滚动到底部
   useEffect(() => {
@@ -47,7 +50,7 @@ export const ThinkingBlock: React.FC<ThinkingBlockProps> = memo(({
 
   // 思考完成后，延迟自动折叠（带过渡动画）
   useEffect(() => {
-    if (!isThinking && wasThinkingRef.current && autoCollapseDelay > 0 && content) {
+    if (!isThinking && wasThinkingRef.current && autoCollapseDelay > 0 && displayContent) {
       // 先显示过渡状态
       setIsTransitioning(true);
       
@@ -59,10 +62,10 @@ export const ThinkingBlock: React.FC<ThinkingBlockProps> = memo(({
       
       return () => clearTimeout(timer);
     }
-  }, [isThinking, autoCollapseDelay, content]);
+  }, [isThinking, autoCollapseDelay, displayContent]);
 
   // 无内容时不渲染
-  if (!content && !isThinking) return null;
+  if (!displayContent && !isThinking) return null;
 
   const toggleExpanded = () => {
     if (!isThinking) {
@@ -71,9 +74,9 @@ export const ThinkingBlock: React.FC<ThinkingBlockProps> = memo(({
   };
 
   // 计算思考摘要
-  const summary = content.length > 40
-    ? content.slice(0, 40).replace(/\n/g, ' ').replace(/[-*]/g, '').trim() + '...'
-    : content.replace(/\n/g, ' ').replace(/[-*]/g, '').trim();
+  const summary = displayContent.length > 40
+    ? displayContent.slice(0, 40).replace(/\n/g, ' ').replace(/[-*]/g, '').trim() + '...'
+    : displayContent.replace(/\n/g, ' ').replace(/[-*]/g, '').trim();
 
   return (
     <div className={`thinking-block ${isThinking ? 'thinking' : 'done'} ${isExpanded ? 'expanded' : 'collapsed'} ${isTransitioning ? 'transitioning' : ''}`}>
@@ -124,7 +127,7 @@ export const ThinkingBlock: React.FC<ThinkingBlockProps> = memo(({
         className={`thinking-content ${isExpanded ? 'show' : 'hide'}`}
         aria-hidden={!isExpanded}
       >
-        {content || (isThinking ? 'Analyzing...' : '')}
+        {displayContent || (isThinking ? 'Analyzing...' : '')}
         {isThinking && <span className="thinking-cursor" />}
       </div>
     </div>

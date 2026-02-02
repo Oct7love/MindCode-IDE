@@ -333,10 +333,10 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(({
           />
         ) : (
           <>
-            {/* 传统模式：思考过程块 */}
-            {(thinkingText || isThinking) && (
+            {/* 传统模式：思考过程块 - 流式时用 thinkingText，完成后用 message.thinkingContent */}
+            {(thinkingText || isThinking || (message as any).thinkingContent) && (
               <ThinkingBlock
-                content={thinkingText || ''}
+                content={thinkingText || (message as any).thinkingContent || ''}
                 isThinking={isThinking}
               />
             )}

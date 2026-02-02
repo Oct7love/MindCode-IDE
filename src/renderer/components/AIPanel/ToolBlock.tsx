@@ -14,6 +14,7 @@ interface ToolBlockProps {
   error?: string;
   duration?: number;
   onCopy?: (content: string) => void;
+  compact?: boolean; // 紧凑模式（默认开启）
 }
 
 const TOOL_ICONS: Record<string, string> = {
@@ -26,6 +27,17 @@ const TOOL_ICONS: Record<string, string> = {
   git_status: '📊',
   git_diff: '📋',
   default: '⚡'
+};
+
+const TOOL_LABELS: Record<string, string> = {
+  workspace_listDir: 'Workspace List Dir',
+  workspace_readFile: 'Read File',
+  workspace_writeFile: 'Write File',
+  workspace_search: 'Search',
+  editor_getActiveFile: 'Get Active File',
+  terminal_execute: 'Terminal',
+  git_status: 'Git Status',
+  git_diff: 'Git Diff',
 };
 
 const STATUS_ICONS: Record<ToolStatus, string> = {
@@ -43,100 +55,82 @@ export const ToolBlock: React.FC<ToolBlockProps> = memo(({
   result,
   error,
   duration,
-  onCopy
+  onCopy,
+  compact = true // 默认紧凑模式
 }) => {
-  // workspace_writeFile 特殊处理：使用 DiffBlock 预览
-  if (name === 'workspace_writeFile' && args.path && args.content) {
-    return (
-      <WriteFileToolBlock
-        id={id}
-        filePath={args.path}
-        newContent={args.content}
-        status={status}
-        error={error}
-        duration={duration}
-      />
-    );
-  }
-
+  // ===== 所有 hooks 必须在最前面，任何条件返回之前 =====
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const icon = TOOL_ICONS[name] || TOOL_ICONS.default;
-  const statusIcon = STATUS_ICONS[status];
-
   const handleCopy = useCallback(async () => {
-    const content = result
-      ? JSON.stringify(result, null, 2)
-      : JSON.stringify(args, null, 2);
-
+    const copyContent = result ? JSON.stringify(result, null, 2) : JSON.stringify(args, null, 2);
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(copyContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      onCopy?.(content);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+      onCopy?.(copyContent);
+    } catch (err) { console.error('Failed to copy:', err); }
   }, [result, args, onCopy]);
 
-  const toggleExpand = useCallback(() => {
-    setExpanded(prev => !prev);
-  }, []);
+  const toggleExpand = useCallback(() => { setExpanded(prev => !prev); }, []);
 
-  const formatToolName = (name: string) => {
-    return name.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
-  };
-
-  const formatArgs = (args: Record<string, any>) => {
-    const entries = Object.entries(args);
-    if (entries.length === 0) return '(no arguments)';
-    if (entries.length === 1) {
-      const [key, value] = entries[0];
-      const strValue = typeof value === 'string' ? value : JSON.stringify(value);
-      // 对于路径类参数，直接显示
-      if (key === 'path' || key === 'cwd' || key === 'query') {
-        return strValue.length > 60 ? strValue.slice(0, 60) + '...' : strValue;
-      }
-      return strValue.length > 50 ? strValue.slice(0, 50) + '...' : strValue;
-    }
-    // 如果有 path 参数，优先显示
-    if (args.path) {
-      return `${args.path}`;
-    }
-    return `${entries.length} parameters`;
-  };
-
-  // 格式化参数用于展开显示
-  const formatArgsForDisplay = (args: Record<string, any>) => {
-    // 对于包含 content 的参数（如 writeFile），特殊处理
-    if (args.content && typeof args.content === 'string') {
-      const { content, ...rest } = args;
-      const otherArgs = Object.keys(rest).length > 0
-        ? JSON.stringify(rest, null, 2).slice(1, -1) + ',\n'
-        : '';
-      // content 单独显示，不转义
-      return `{\n${otherArgs}  "content": <见下方代码>\n}`;
-    }
-    return JSON.stringify(args, null, 2);
-  };
-
-  // 获取 content 内容（如果有）
-  const getContentPreview = () => {
-    if (args.content && typeof args.content === 'string') {
-      return args.content;
-    }
-    return null;
-  };
-
-  const contentPreview = getContentPreview();
-
-  // 从 path 推断语言并高亮代码
+  const contentPreview = args.content && typeof args.content === 'string' ? args.content : null;
   const highlightedContent = useMemo(() => {
     if (!contentPreview) return null;
     const language = args.path ? getLanguageFromPath(args.path) : 'text';
     return highlightCode(contentPreview, language);
   }, [contentPreview, args.path]);
+  // ===== hooks 结束 =====
+
+  const icon = TOOL_ICONS[name] || TOOL_ICONS.default;
+  const statusIcon = STATUS_ICONS[status];
+  const label = TOOL_LABELS[name] || name.replace(/_/g, ' ');
+  const pathArg = args.path || args.cwd || args.query || '';
+  const shortPath = pathArg.length > 30 ? '...' + pathArg.slice(-30) : pathArg;
+
+  // workspace_writeFile 特殊处理
+  if (name === 'workspace_writeFile' && args.path && args.content) {
+    return <WriteFileToolBlock id={id} filePath={args.path} newContent={args.content} status={status} error={error} duration={duration} />;
+  }
+
+  // 紧凑模式：Cursor 风格单行显示
+  if (compact && !expanded) {
+    return (
+      <div className={`tool-block-compact tool-block-compact-${status}`} onClick={() => setExpanded(true)} title="点击展开详情">
+        <span className={`tool-compact-status tool-compact-status-${status}`}>
+          {status === 'success' ? '✓' : status === 'failed' ? '✗' : status === 'running' ? '⟳' : '○'}
+        </span>
+        <span className="tool-compact-icon">{icon}</span>
+        <span className="tool-compact-label">{label}</span>
+        {shortPath && <span className="tool-compact-path">{shortPath}</span>}
+        {result?.items && <span className="tool-compact-badge">📋</span>}
+        <span className="tool-compact-expand">▾</span>
+      </div>
+    );
+  }
+
+  // 辅助函数
+  const formatToolName = (n: string) => n.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
+  const formatArgs = (a: Record<string, any>) => {
+    const entries = Object.entries(a);
+    if (entries.length === 0) return '(no arguments)';
+    if (entries.length === 1) {
+      const [key, value] = entries[0];
+      const strValue = typeof value === 'string' ? value : JSON.stringify(value);
+      if (key === 'path' || key === 'cwd' || key === 'query') return strValue.length > 60 ? strValue.slice(0, 60) + '...' : strValue;
+      return strValue.length > 50 ? strValue.slice(0, 50) + '...' : strValue;
+    }
+    if (a.path) return `${a.path}`;
+    return `${entries.length} parameters`;
+  };
+  const formatArgsForDisplay = (a: Record<string, any>) => {
+    if (a.content && typeof a.content === 'string') {
+      const { content: _, ...rest } = a;
+      const otherArgs = Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2).slice(1, -1) + ',\n' : '';
+      return `{\n${otherArgs}  "content": <见下方代码>\n}`;
+    }
+    return JSON.stringify(a, null, 2);
+  };
 
   return (
     <div className={`tool-block tool-block-${status}`}>

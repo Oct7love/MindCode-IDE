@@ -15,6 +15,7 @@ export interface EditorFile {
   language?: string;
   isDirty?: boolean;
   isUntitled?: boolean;        // 是否为未保存的新文件
+  encoding?: string;           // 文件编码 (默认 utf8)
   // Phase 2: 预览文件支持
   isPreview?: boolean;         // 是否为预览文件
   originalPath?: string;       // 原始文件路径（预览文件用）
@@ -71,6 +72,7 @@ interface FileActions {
   // 新建文件支持
   createNewFile: (language?: string) => string; // 返回新文件的 id
   setFileLanguage: (id: string, language: string) => void;
+  setFileEncoding: (id: string, encoding: string) => void; // 设置文件编码
   saveFile: (id: string, targetPath?: string) => Promise<boolean>;
   // Phase 2: 预览文件支持
   openPreviewFile: (originalPath: string, content: string, source: 'ai' | 'diff', language?: string) => void;
@@ -190,6 +192,11 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
       }),
     };
   }),
+
+  // 设置文件编码
+  setFileEncoding: (id, encoding) => set((state) => ({
+    openFiles: state.openFiles.map(f => f.id === id ? { ...f, encoding, isDirty: true } : f)
+  })),
 
   // 保存文件
   saveFile: async (id, targetPath) => {

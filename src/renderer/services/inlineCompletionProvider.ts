@@ -118,27 +118,22 @@ export function createInlineCompletionProvider(
 }
 
 /**
- * 注册内联补全提供者
+ * 注册内联补全提供者 + 接受回调命令
  */
 export function registerInlineCompletionProvider(
-  getFilePath: () => string
+  getFilePath: () => string,
+  onAccepted?: (model: string, latencyMs: number) => void // 补全接受回调
 ): monaco.IDisposable {
   const provider = createInlineCompletionProvider(getFilePath);
-
-  const languages = [
-    'typescript', 'javascript', 'typescriptreact', 'javascriptreact',
-    'python', 'java', 'go', 'rust', 'cpp', 'c', 'csharp',
-    'html', 'css', 'json', 'markdown', 'yaml', 'xml', 'sql',
-    'shell', 'powershell', 'php', 'ruby', 'swift', 'kotlin',
-  ];
-
-  const disposables = languages.map((lang) =>
-    monaco.languages.registerInlineCompletionsProvider(lang, provider)
-  );
-
-  return {
-    dispose: () => disposables.forEach((d) => d.dispose()),
-  };
+  const languages = ['typescript', 'javascript', 'typescriptreact', 'javascriptreact', 'python', 'java', 'go', 'rust', 'cpp', 'c', 'csharp', 'html', 'css', 'json', 'markdown', 'yaml', 'xml', 'sql', 'shell', 'powershell', 'php', 'ruby', 'swift', 'kotlin'];
+  const disposables: monaco.IDisposable[] = languages.map((lang) => monaco.languages.registerInlineCompletionsProvider(lang, provider));
+  // 注册补全接受命令（用于统计）
+  const cmdDisposable = monaco.editor.registerCommand('mindcode.completionAccepted', (_accessor, model?: string, latencyMs?: number) => {
+    console.log(`[Completion] Accepted: model=${model}, latency=${latencyMs}ms`);
+    onAccepted?.(model || 'unknown', latencyMs || 0);
+  });
+  disposables.push(cmdDisposable);
+  return { dispose: () => disposables.forEach((d) => d.dispose()) };
 }
 
 /**

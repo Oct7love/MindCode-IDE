@@ -11,6 +11,7 @@ import { defaultAIConfig } from '../core/ai/config';
 import { LLMClient, classifyError, getUserFriendlyError } from '../core/ai/llm-client';
 import { startupTracker, markStartup, logStartupReport } from '../core/performance';
 import { warmupConnections, StreamBuffer } from '../core/ai/request-optimizer';
+import { readFileWithEncoding, writeFileWithEncoding, detectEncoding, SUPPORTED_ENCODINGS, EncodingId } from '../core/encoding';
 
 markStartup('main_start');
 
@@ -78,12 +79,13 @@ function createWindow(): void {
     mainWindow = null;
   });
 
+  let retryCount = 0;
   mainWindow.webContents.on('did-fail-load', () => {
-    if (isDev) {
-      console.log('页面加载失败，2秒后重试...');
-      setTimeout(() => {
-        mainWindow?.loadURL('http://localhost:5173');
-      }, 2000);
+    if (isDev && retryCount < 10) {
+      retryCount++;
+      const delay = Math.min(500 * retryCount, 3000); // 500ms, 1s, 1.5s... 最大 3s
+      console.log(`页面加载失败，${delay}ms 后重试 (${retryCount}/10)...`);
+      setTimeout(() => mainWindow?.loadURL('http://localhost:5173'), delay);
     }
   });
 }
@@ -91,14 +93,13 @@ function createWindow(): void {
 app.whenReady().then(() => {
   markStartup('app_ready');
   createMenu();
-  if (isDev) setTimeout(createWindow, 500); // 等待 Vite 启动
-  else createWindow();
-  // 后台预热 (不阻塞窗口创建)
-  setTimeout(() => {
+  createWindow(); // 立即创建窗口，开发模式下 did-fail-load 会自动重试
+  // 并行预热 Provider 和连接（无延迟）
+  Promise.resolve().then(() => {
     getProviders();
     markStartup('providers_preloaded');
     warmupConnections().then(() => markStartup('connections_warmed'));
-  }, 100);
+  });
 });
 
 // 创建应用菜单
@@ -520,23 +521,71 @@ ipcMain.handle('fs:readDir', async (_event, dirPath: string) => {
   }
 });
 
-// 读取文件内容
-ipcMain.handle('fs:readFile', async (_event, filePath: string) => {
+// 读取文件内容（支持多编码）
+ipcMain.handle('fs:readFile', async (_event, filePath: string, encoding?: EncodingId) => {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return { success: true, data: content };
+    const result = readFileWithEncoding(filePath, encoding);
+    return { success: true, data: result.content, encoding: result.encoding };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-// 写入文件
-ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string) => {
+// 大文件分片读取（支持 10MB+ 文件）
+ipcMain.handle('fs:readFileChunk', async (_event, filePath: string, startLine: number, endLine: number) => {
   try {
-    fs.writeFileSync(filePath, content, 'utf-8');
+    const fs = require('fs');
+    const readline = require('readline');
+    const lines: string[] = [];
+    const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    let lineNum = 0;
+    for await (const line of rl) {
+      lineNum++;
+      if (lineNum >= startLine && lineNum <= endLine) lines.push(line);
+      if (lineNum > endLine) break;
+    }
+    stream.destroy();
+    return { success: true, data: { lines, startLine, endLine, totalRead: lines.length } };
+  } catch (error: any) { return { success: false, error: error.message }; }
+});
+
+// 获取文件行数（用于大文件虚拟化）
+ipcMain.handle('fs:getLineCount', async (_event, filePath: string) => {
+  try {
+    const fs = require('fs');
+    const readline = require('readline');
+    const stream = fs.createReadStream(filePath);
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    let count = 0;
+    for await (const _ of rl) count++;
+    stream.destroy();
+    return { success: true, data: count };
+  } catch (error: any) { return { success: false, error: error.message }; }
+});
+
+// 写入文件（支持多编码）
+ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string, encoding: EncodingId = 'utf8') => {
+  try {
+    writeFileWithEncoding(filePath, content, encoding);
     // 通知渲染进程文件系统已变更
     mainWindow?.webContents.send('fs:fileChanged', { filePath, type: 'write' });
     return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取支持的编码列表
+ipcMain.handle('fs:getEncodings', async () => {
+  return SUPPORTED_ENCODINGS.map(e => ({ id: e.id, label: e.label }));
+});
+
+// 检测文件编码
+ipcMain.handle('fs:detectEncoding', async (_event, filePath: string) => {
+  try {
+    const buffer = fs.readFileSync(filePath);
+    return { success: true, encoding: detectEncoding(buffer) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -1117,7 +1166,7 @@ ipcMain.handle('ai:completion', async (_event, request: {
   cursorColumn: number;
   model?: string;
 }) => {
-  const { filePath, code, cursorLine, cursorColumn, model = 'codesuc-sonnet' } = request;
+  const { filePath, code, cursorLine, cursorColumn, model = 'codesuc-sonnet' } = request; // Codesuc Sonnet (特价渠道)
   const start = Date.now();
   
   // 生成缓存 key (包含代码上下文)

@@ -11,10 +11,10 @@ import { THINKING_UI_SYSTEM_PROMPT, buildThinkingUserPrompt, parseThinkingOutput
 
 // 模式工具权限映射 - 对标 Cursor 的模式差异化设计
 const MODE_TOOLS: Record<AIMode, string[]> = {
-  chat: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'editor_getActiveFile', 'git_status', 'git_diff'], // Ask: 只读
-  plan: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'editor_getActiveFile', 'git_status', 'git_diff'], // Plan: 只读
-  agent: ['workspace_listDir', 'workspace_readFile', 'workspace_writeFile', 'workspace_search', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Agent: 完整
-  debug: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Debug: 只读+执行
+  chat: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'codebase_semantic', 'editor_getActiveFile', 'git_status', 'git_diff'], // Ask: 只读 + 语义搜索
+  plan: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'codebase_semantic', 'editor_getActiveFile', 'git_status', 'git_diff'], // Plan: 只读
+  agent: ['workspace_listDir', 'workspace_readFile', 'workspace_writeFile', 'workspace_search', 'codebase_semantic', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Agent: 完整
+  debug: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'codebase_semantic', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Debug: 只读+执行
 };
 
 // 检测是否是询问模型身份的问题
@@ -320,6 +320,11 @@ export function useChatEngine(options: ChatEngineOptions) {
             query: args.query,
             maxResults: args.maxResults || 50
           }) || { success: false, error: '搜索失败' };
+        case 'codebase_semantic': { // @codebase 语义搜索（使用向量嵌入）
+          const results = await window.mindcode?.index?.getRelatedCode?.(args.query, args.topK || 5);
+          if (!results?.success) return { success: false, error: '语义搜索失败，请先执行 index:indexWorkspace 构建索引' };
+          return { success: true, data: results.data };
+        }
         case 'editor_getActiveFile': {
           const f = getActiveFile();
           return { success: true, data: f ? { path: f.path, content: f.content } : null };
@@ -419,26 +424,36 @@ export function useChatEngine(options: ChatEngineOptions) {
 [正式回答]
 `;
 
+    // 工具使用指南
+    const toolGuide = workspaceRoot ? `
+**工具使用策略：**
+- 阅读项目时：先 listDir 了解结构，再递归读取关键目录（src/, core/, main/）
+- 理解代码时：读取入口文件、配置文件、README、主要模块
+- 搜索代码时：用 workspace_search 快速定位关键词
+- 大文件：使用 startLine/endLine 参数分段读取
+- 每次工具调用后分析结果，决定是否需要更多信息` : '';
+
     // 根据模式返回系统提示词
     switch (mode) {
       case 'chat': return `编程助手。${context} ${identityNote}
 ${thinkingProtocol}
-直接简洁回答，不自我介绍。${workspaceRoot ? '可用工具读取文件。' : ''}`;
+直接简洁回答，不自我介绍。${toolGuide}`;
 
       case 'plan': return `项目架构师。${context} ${identityNote}
 ${thinkingProtocol}
 分析需求，输出 JSON 计划：
 \`\`\`json
 {"title":"","goal":"","tasks":[{"id":"t1","label":"","files":[]}],"risks":[]}
-\`\`\``;
+\`\`\`
+${toolGuide}`;
 
       case 'agent': return `自主编程代理。${context} ${identityNote}
 ${thinkingProtocol}
-${workspaceRoot ? `可读写文件、执行命令。流程：读取 → 规划 → 执行 → 反馈。` : '需要先打开工作区。'}`;
+${workspaceRoot ? `可读写文件、执行命令。流程：读取 → 规划 → 执行 → 反馈。${toolGuide}` : '需要先打开工作区。'}`;
 
       case 'debug': return `调试专家。${context} ${identityNote}
 ${thinkingProtocol}
-分析错误根因，给出修复方案。${workspaceRoot ? '可查看源码和 git diff。' : ''}`;
+分析错误根因，给出修复方案。${workspaceRoot ? `可查看源码和 git diff。${toolGuide}` : ''}`;
 
       default: return `助手。${context} ${identityNote}
 ${thinkingProtocol}`;
@@ -480,7 +495,8 @@ ${thinkingProtocol}`;
       { name: 'workspace_listDir', description: '列出目录内容，了解项目结构', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '目录路径' } }, required: ['path'] } },
       { name: 'workspace_readFile', description: '读取文件内容，支持指定行范围', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '文件路径' }, startLine: { type: 'number', description: '起始行' }, endLine: { type: 'number', description: '结束行' } }, required: ['path'] } },
       { name: 'workspace_writeFile', description: '写入文件（需用户确认）', parameters: { type: 'object' as const, properties: { path: { type: 'string', description: '文件路径' }, content: { type: 'string', description: '文件内容' } }, required: ['path', 'content'] } },
-      { name: 'workspace_search', description: '在项目中搜索代码', parameters: { type: 'object' as const, properties: { query: { type: 'string', description: '搜索关键词' }, maxResults: { type: 'number', description: '最大结果数' } }, required: ['query'] } },
+      { name: 'workspace_search', description: '在项目中搜索代码（文本匹配）', parameters: { type: 'object' as const, properties: { query: { type: 'string', description: '搜索关键词' }, maxResults: { type: 'number', description: '最大结果数' } }, required: ['query'] } },
+      { name: 'codebase_semantic', description: '语义搜索代码库（@codebase），使用向量嵌入找到语义相关的代码', parameters: { type: 'object' as const, properties: { query: { type: 'string', description: '自然语言查询' }, topK: { type: 'number', description: '返回结果数' } }, required: ['query'] } },
       { name: 'editor_getActiveFile', description: '获取当前编辑器打开的文件', parameters: { type: 'object' as const, properties: {} } },
       { name: 'terminal_execute', description: '执行终端命令（需用户确认）', parameters: { type: 'object' as const, properties: { command: { type: 'string', description: '要执行的命令' }, cwd: { type: 'string', description: '工作目录' } }, required: ['command'] } },
       { name: 'git_status', description: '获取 Git 状态', parameters: { type: 'object' as const, properties: {} } },
@@ -596,7 +612,8 @@ ${thinkingProtocol}`;
           const cleanup = window.mindcode?.ai?.chatStream?.(model, queueApiMessages, {
             onToken: (token: string) => handleStreamToken(token),
             onComplete: (fullText: string) => {
-              updateLastMessage(stripThinkingTags(fullText));
+              const savedThinking = useAIStore.getState().thinkingText; // 保存思考内容
+              updateLastMessage(stripThinkingTags(fullText), savedThinking ? { thinkingContent: savedThinking } : undefined);
               setStreamingText('');
               resetThinkingState();
               setLoading(false);
@@ -624,11 +641,11 @@ ${thinkingProtocol}`;
       }
       addMessage({ role: 'assistant', content: '', mode });
       let iterations = 0;
-      const maxIterations = 15;
+      const maxIterations = 50; // 增加工具循环上限
 
       while (iterations < maxIterations && !abortRef.current) {
         iterations++;
-        console.log(`[ChatEngine] 工具循环 #${iterations}, 消息数: ${apiMessages.length}`);
+        console.log(`[ChatEngine] 工具循环 #${iterations}/${maxIterations}, 消息数: ${apiMessages.length}`);
         let responseText = '';
         let toolCalls: any[] = [];
         try {
@@ -677,8 +694,9 @@ ${thinkingProtocol}`;
           if (askingModelIdentity) {
             finalSuffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
           }
-          // 清理 thinking 标签后保存
-          updateLastMessage(stripThinkingTags(responseText) + finalSuffix);
+          // 清理 thinking 标签后保存，保留思考内容
+          const savedThinking = useAIStore.getState().thinkingText;
+          updateLastMessage(stripThinkingTags(responseText) + finalSuffix, savedThinking ? { thinkingContent: savedThinking } : undefined);
           resetThinkingState();
           break;
         }
@@ -689,9 +707,12 @@ ${thinkingProtocol}`;
           args: tc.arguments,
           status: 'pending' as const
         }));
-        updateLastMessage(responseText, { toolCalls: calls });
+        // 清理 thinking 标签并保存思考内容
+        const savedThinking = useAIStore.getState().thinkingText;
+        const cleanedResponse = stripThinkingTags(responseText);
+        updateLastMessage(cleanedResponse, { toolCalls: calls, ...(savedThinking ? { thinkingContent: savedThinking } : {}) });
         setStreamingText('');
-        apiMessages.push({ role: 'assistant', content: responseText, toolCalls });
+        apiMessages.push({ role: 'assistant', content: cleanedResponse, toolCalls });
 
         for (const call of calls) {
           if (abortRef.current) break;
@@ -716,6 +737,14 @@ ${thinkingProtocol}`;
             content: JSON.stringify(result.success ? result.data : { error: result.error })
           });
         }
+      }
+      // 如果达到最大迭代次数，提示用户
+      if (iterations >= maxIterations) {
+        const limitWarning = `\n\n> ⚠️ 工具调用已达上限（${maxIterations}次），任务可能未完成。请继续对话让我完成剩余工作。`;
+        appendStreamingText(limitWarning);
+        const thinkingContent = useAIStore.getState().thinkingText;
+        const currentContent = useAIStore.getState().streamingText || '';
+        updateLastMessage(stripThinkingTags(currentContent), thinkingContent ? { thinkingContent } : undefined);
       }
       setStreamingText('');
       setLoading(false);
@@ -780,7 +809,8 @@ ${thinkingProtocol}`;
           if (askingModelIdentity) {
             suffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
           }
-          updateLastMessage(cleanedText + suffix, plan ? { plan } : undefined);
+          const savedThinking = useAIStore.getState().thinkingText; // 保存思考内容
+          updateLastMessage(cleanedText + suffix, { ...(plan ? { plan } : {}), ...(savedThinking ? { thinkingContent: savedThinking } : {}) });
           if (plan) setPlan(plan);
           setStreamingText('');
           resetThinkingState();

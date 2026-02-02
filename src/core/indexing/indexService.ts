@@ -1,10 +1,10 @@
 /**
- * 代码索引服务
- * 负责管理整个索引过程
+ * 代码索引服务 - 支持增量索引
  */
 
 import * as path from 'path';
 import * as fs from 'fs';
+import { FSWatcher, watch } from 'chokidar';
 import type {
   IndexConfig,
   IndexProgress,
@@ -24,6 +24,7 @@ export interface IndexServiceEvents {
   onFileIndexed: (filePath: string, symbols: number) => void;
   onError: (error: Error, filePath?: string) => void;
   onComplete: (stats: { files: number; symbols: number; time: number }) => void;
+  onFileChanged: (filePath: string, changeType: 'add' | 'change' | 'unlink') => void; // 增量索引事件
 }
 
 /** 索引服务 */
@@ -34,12 +35,11 @@ export class IndexService {
   private config: IndexConfig;
   private isIndexing = false;
   private abortController: AbortController | null = null;
-  private progress: IndexProgress = {
-    totalFiles: 0,
-    indexedFiles: 0,
-    status: 'idle',
-  };
+  private progress: IndexProgress = { totalFiles: 0, indexedFiles: 0, status: 'idle' };
   private events: Partial<IndexServiceEvents> = {};
+  private watcher: FSWatcher | null = null; // chokidar 文件监听器
+  private watchRoot: string | null = null; // 监听的根目录
+  private pendingUpdates = new Map<string, NodeJS.Timeout>(); // 防抖更新队列
   
   constructor(config: Partial<IndexConfig> = {}) {
     this.config = {
@@ -396,12 +396,65 @@ export class IndexService {
     await this.store.loadFrom(data);
   }
   
-  /**
-   * 关闭服务
-   */
+  /** 关闭服务 */
   close(): void {
+    this.stopWatching();
     this.store.close();
   }
+
+  // ============ 增量索引 (chokidar) ============
+
+  /** 启动文件监听（增量索引） */
+  startWatching(rootPath: string): void {
+    if (this.watcher) this.stopWatching();
+    this.watchRoot = rootPath;
+    console.log(`[IndexService] 启动文件监听: ${rootPath}`);
+    this.watcher = watch(rootPath, {
+      ignored: (p: string) => this.shouldExclude(p),
+      persistent: true,
+      ignoreInitial: true, // 忽略初始扫描
+      awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 }, // 等待写入完成
+    });
+    this.watcher.on('add', (p) => this.handleFileChange(p, 'add'));
+    this.watcher.on('change', (p) => this.handleFileChange(p, 'change'));
+    this.watcher.on('unlink', (p) => this.handleFileChange(p, 'unlink'));
+    this.watcher.on('error', (err) => this.events.onError?.(err as Error));
+  }
+
+  /** 停止文件监听 */
+  stopWatching(): void {
+    if (this.watcher) {
+      console.log('[IndexService] 停止文件监听');
+      this.watcher.close();
+      this.watcher = null;
+    }
+    this.pendingUpdates.forEach(clearTimeout);
+    this.pendingUpdates.clear();
+  }
+
+  /** 处理文件变化（防抖 300ms） */
+  private handleFileChange(filePath: string, changeType: 'add' | 'change' | 'unlink'): void {
+    if (!this.shouldInclude(filePath)) return;
+    const existing = this.pendingUpdates.get(filePath);
+    if (existing) clearTimeout(existing);
+    this.pendingUpdates.set(filePath, setTimeout(async () => {
+      this.pendingUpdates.delete(filePath);
+      const startTime = Date.now();
+      try {
+        if (changeType === 'unlink') {
+          this.store.deleteFileIndex(filePath);
+          console.log(`[IndexService] 文件删除，移除索引: ${filePath}`);
+        } else {
+          const count = await this.indexFile(filePath);
+          console.log(`[IndexService] 增量索引完成: ${filePath} (${count} 符号, ${Date.now() - startTime}ms)`);
+        }
+        this.events.onFileChanged?.(filePath, changeType);
+      } catch (err) { this.events.onError?.(err as Error, filePath); }
+    }, 300));
+  }
+
+  /** 是否正在监听 */
+  isWatching(): boolean { return this.watcher !== null; }
 }
 
 /** 创建索引服务 */

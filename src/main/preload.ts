@@ -51,10 +51,14 @@ contextBridge.exposeInMainWorld('mindcode', {
   fs: {
     openFolder: () => ipcRenderer.invoke('fs:openFolder'),
     readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
-    readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
-    writeFile: (filePath: string, content: string) =>
-      ipcRenderer.invoke('fs:writeFile', filePath, content),
+    readFile: (filePath: string, encoding?: string) => ipcRenderer.invoke('fs:readFile', filePath, encoding),
+    readFileChunk: (filePath: string, startLine: number, endLine: number) => ipcRenderer.invoke('fs:readFileChunk', filePath, startLine, endLine), // 大文件分片读取
+    getLineCount: (filePath: string) => ipcRenderer.invoke('fs:getLineCount', filePath), // 获取文件行数
+    writeFile: (filePath: string, content: string, encoding?: string) =>
+      ipcRenderer.invoke('fs:writeFile', filePath, content, encoding),
     stat: (filePath: string) => ipcRenderer.invoke('fs:stat', filePath),
+    getEncodings: () => ipcRenderer.invoke('fs:getEncodings'),
+    detectEncoding: (filePath: string) => ipcRenderer.invoke('fs:detectEncoding', filePath),
     getAllFiles: (workspacePath: string) => ipcRenderer.invoke('fs:getAllFiles', workspacePath),
     searchInFiles: (params: { workspacePath: string; query: string; maxResults?: number }) =>
       ipcRenderer.invoke('fs:searchInFiles', params),
@@ -212,9 +216,13 @@ declare global {
       fs: {
         openFolder: () => Promise<string | null>;
         readDir: (dirPath: string) => Promise<{ success: boolean; data?: any[]; error?: string }>;
-        readFile: (filePath: string) => Promise<{ success: boolean; data?: string; error?: string }>;
-        writeFile: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>;
+        readFile: (filePath: string, encoding?: string) => Promise<{ success: boolean; data?: string; encoding?: string; error?: string }>;
+        readFileChunk: (filePath: string, startLine: number, endLine: number) => Promise<{ success: boolean; data?: { lines: string[]; startLine: number; endLine: number; totalRead: number }; error?: string }>; // 大文件分片读取
+        getLineCount: (filePath: string) => Promise<{ success: boolean; data?: number; error?: string }>; // 获取文件行数
+        writeFile: (filePath: string, content: string, encoding?: string) => Promise<{ success: boolean; error?: string }>;
         stat: (filePath: string) => Promise<{ success: boolean; data?: any; error?: string }>;
+        getEncodings: () => Promise<{ id: string; label: string }[]>;
+        detectEncoding: (filePath: string) => Promise<{ success: boolean; encoding?: string; error?: string }>;
         getAllFiles: (workspacePath: string) => Promise<{
           success: boolean;
           data?: Array<{ name: string; path: string; relativePath: string }>;
