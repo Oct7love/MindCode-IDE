@@ -7,6 +7,7 @@ import type { GitHubUser, GitHubRepo, GitHubPR, GitHubIssue, CheckRun, WorkflowR
 
 const API_BASE = 'https://api.github.com';
 const KEYTAR_SERVICE = 'mindcode-github';
+const win = window as any; // 类型断言简化
 
 export class GitHubClient {
   private token: string | null = null;
@@ -15,8 +16,8 @@ export class GitHubClient {
   /** 初始化 - 从 keytar 加载 Token */
   async init(): Promise<boolean> {
     try {
-      if (window.mindcode?.keytar?.getPassword) {
-        this.token = await window.mindcode.keytar.getPassword(KEYTAR_SERVICE, 'token');
+      if (win.mindcode?.keytar?.getPassword) {
+        this.token = await win.mindcode.keytar.getPassword(KEYTAR_SERVICE, 'token');
         if (this.token) { this.user = await this.getUser(); return !!this.user; }
       }
     } catch (e) { console.error('[GitHub] 初始化失败:', e); }
@@ -26,11 +27,11 @@ export class GitHubClient {
   /** OAuth 登录（通过主进程） */
   async login(): Promise<GitHubAuth | null> {
     try {
-      if (window.mindcode?.github?.login) {
-        const result = await window.mindcode.github.login();
+      if (win.mindcode?.github?.login) {
+        const result = await win.mindcode.github.login();
         if (result.success && result.token) {
           this.token = result.token;
-          await window.mindcode.keytar?.setPassword(KEYTAR_SERVICE, 'token', result.token);
+          await win.mindcode.keytar?.setPassword(KEYTAR_SERVICE, 'token', result.token);
           this.user = await this.getUser();
           return { token: result.token, user: this.user!, scopes: result.scopes || [] };
         }
@@ -43,7 +44,7 @@ export class GitHubClient {
   async logout(): Promise<void> {
     this.token = null;
     this.user = null;
-    await window.mindcode?.keytar?.deletePassword(KEYTAR_SERVICE, 'token');
+    await win.mindcode?.keytar?.deletePassword(KEYTAR_SERVICE, 'token');
   }
 
   /** 是否已登录 */
@@ -59,7 +60,7 @@ export class GitHubClient {
   // ============ 仓库 API ============
 
   async listRepos(page = 1, perPage = 30): Promise<GitHubRepo[]> {
-    return this.request<GitHubRepo[]>('GET', `/user/repos?sort=updated&per_page=${perPage}&page=${page}`) || [];
+    return (await this.request<GitHubRepo[]>('GET', `/user/repos?sort=updated&per_page=${perPage}&page=${page}`)) || [];
   }
 
   async getRepo(owner: string, repo: string): Promise<GitHubRepo | null> {
@@ -69,7 +70,7 @@ export class GitHubClient {
   // ============ PR API ============
 
   async listPRs(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<GitHubPR[]> {
-    return this.request<GitHubPR[]>('GET', `/repos/${owner}/${repo}/pulls?state=${state}`) || [];
+    return (await this.request<GitHubPR[]>('GET', `/repos/${owner}/${repo}/pulls?state=${state}`)) || [];
   }
 
   async getPR(owner: string, repo: string, number: number): Promise<GitHubPR | null> {
@@ -81,11 +82,11 @@ export class GitHubClient {
   }
 
   async getPRReviews(owner: string, repo: string, number: number): Promise<PRReview[]> {
-    return this.request<PRReview[]>('GET', `/repos/${owner}/${repo}/pulls/${number}/reviews`) || [];
+    return (await this.request<PRReview[]>('GET', `/repos/${owner}/${repo}/pulls/${number}/reviews`)) || [];
   }
 
   async getPRComments(owner: string, repo: string, number: number): Promise<PRComment[]> {
-    return this.request<PRComment[]>('GET', `/repos/${owner}/${repo}/pulls/${number}/comments`) || [];
+    return (await this.request<PRComment[]>('GET', `/repos/${owner}/${repo}/pulls/${number}/comments`)) || [];
   }
 
   async createPRComment(owner: string, repo: string, number: number, body: string): Promise<PRComment | null> {
@@ -108,7 +109,7 @@ export class GitHubClient {
   // ============ Issue API ============
 
   async listIssues(owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<GitHubIssue[]> {
-    return this.request<GitHubIssue[]>('GET', `/repos/${owner}/${repo}/issues?state=${state}`) || [];
+    return (await this.request<GitHubIssue[]>('GET', `/repos/${owner}/${repo}/issues?state=${state}`)) || [];
   }
 
   async createIssue(owner: string, repo: string, title: string, body?: string, labels?: string[]): Promise<GitHubIssue | null> {

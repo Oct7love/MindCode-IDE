@@ -11,8 +11,9 @@ export * from './agent';
 // Indexing 模块
 export * from './indexing';
 
-// LSP 模块
-export * from './lsp';
+// LSP 模块 (避免 SymbolKind 冲突)
+export { LSPClient, getLSPClient, createLSPClient, stopAllLSPClients, LANGUAGE_SERVERS } from './lsp';
+export type { LSPClientConfig, Position as LSPPosition, Diagnostic, CompletionItem, Hover, Location, DocumentSymbol, ServerCapabilities, LSPClientState, LSPClientInfo } from './lsp';
 
 // GitHub 模块
 export * from './github';

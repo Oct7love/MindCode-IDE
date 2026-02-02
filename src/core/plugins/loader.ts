@@ -5,6 +5,8 @@
 
 import type { PluginManifest, PluginInstance, PluginContext, PluginAPI, PluginState, Disposable, ActivateFunction, DeactivateFunction } from './types';
 
+const win = window as any; // 类型断言简化
+
 export class PluginLoader {
   private plugins = new Map<string, PluginInstance>();
   private api: PluginAPI;
@@ -104,7 +106,7 @@ export class PluginLoader {
     // 在浏览器环境中使用动态 import 或 eval（简化版）
     // 生产环境应使用 Worker 或 iframe 沙箱
     try {
-      if (window.mindcode?.plugins?.loadModule) return await window.mindcode.plugins.loadModule(path);
+      if (win.mindcode?.plugins?.loadModule) return await win.mindcode.plugins.loadModule(path);
       console.warn('[PluginLoader] 插件模块加载未实现');
       return null;
     } catch { return null; }

@@ -7,6 +7,8 @@ import type { PluginAPI, PluginInstance, Disposable } from './types';
 import { PluginLoader } from './loader';
 import { CommandRegistry, getCommandRegistry } from './commands';
 
+const win = window as any; // 类型断言简化
+
 export class PluginManager {
   private loader: PluginLoader;
   private commandRegistry: CommandRegistry;
@@ -27,12 +29,12 @@ export class PluginManager {
   /** 扫描插件目录并加载 */
   async scanAndLoadPlugins(): Promise<void> {
     try {
-      if (!window.mindcode?.fs?.listDir) return;
-      const files = await window.mindcode.fs.listDir(this.pluginsDir);
+      if (!win.mindcode?.fs?.listDir) return;
+      const files = await win.mindcode.fs.listDir(this.pluginsDir);
       for (const file of files.data || []) {
         if (file.isDirectory) {
           const manifestPath = `${this.pluginsDir}/${file.name}/manifest.json`;
-          const exists = await window.mindcode.fs.exists?.(manifestPath);
+          const exists = await win.mindcode.fs.exists?.(manifestPath);
           if (exists) await this.loader.loadPlugin(manifestPath);
         }
       }
@@ -79,8 +81,8 @@ export class PluginManager {
     const registry = this.commandRegistry;
     return {
       editor: {
-        getActiveEditor: () => window.mindcode?.editor?.getActive?.(),
-        openFile: async (path) => window.mindcode?.fs?.openFile?.(path),
+        getActiveEditor: () => win.mindcode?.editor?.getActive?.(),
+        openFile: async (path) => win.mindcode?.fs?.openFile?.(path),
         showMessage: (message, type = 'info') => {
           if (type === 'error') console.error(message);
           else if (type === 'warning') console.warn(message);
@@ -93,9 +95,9 @@ export class PluginManager {
         executeCommand: async (command, ...args) => registry.executeCommand(command, ...args),
       },
       fs: {
-        readFile: async (path) => { const r = await window.mindcode?.fs?.readFile?.(path); return r?.data || ''; },
-        writeFile: async (path, content) => { await window.mindcode?.fs?.writeFile?.(path, content); },
-        exists: async (path) => window.mindcode?.fs?.exists?.(path) || false,
+        readFile: async (path) => { const r = await win.mindcode?.fs?.readFile?.(path); return r?.data || ''; },
+        writeFile: async (path, content) => { await win.mindcode?.fs?.writeFile?.(path, content); },
+        exists: async (path) => win.mindcode?.fs?.exists?.(path) || false,
       },
       window: {
         showInputBox: async (options) => prompt(options?.prompt || '', options?.value) || undefined,

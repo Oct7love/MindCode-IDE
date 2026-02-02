@@ -8,6 +8,7 @@ import type { Position, Diagnostic, CompletionItem, Hover, Location, DocumentSym
 export interface LSPClientConfig { language: string; serverCommand?: string; serverArgs?: string[]; rootPath?: string; }
 
 type LSPEventHandler = (data: any) => void;
+const win = window as any; // 类型断言简化
 
 export class LSPClient {
   private config: LSPClientConfig;
@@ -30,8 +31,8 @@ export class LSPClient {
     this.state = 'starting';
     try {
       // 通过 IPC 启动服务器
-      if (window.mindcode?.lsp?.start) {
-        const result = await window.mindcode.lsp.start(this.config.language, { command: this.config.serverCommand, args: this.config.serverArgs, rootPath: this.config.rootPath });
+      if (win.mindcode?.lsp?.start) {
+        const result = await win.mindcode.lsp.start(this.config.language, { command: this.config.serverCommand, args: this.config.serverArgs, rootPath: this.config.rootPath });
         if (result.success) {
           this.capabilities = result.capabilities || null;
           this.state = 'running';
@@ -49,7 +50,7 @@ export class LSPClient {
   async stop(): Promise<void> {
     if (this.state !== 'running') return;
     try {
-      if (window.mindcode?.lsp?.stop) await window.mindcode.lsp.stop(this.config.language);
+      if (win.mindcode?.lsp?.stop) await win.mindcode.lsp.stop(this.config.language);
     } catch (err) { console.error('[LSP] 停止失败:', err); }
     this.state = 'stopped';
     this.pendingRequests.clear();
@@ -126,14 +127,14 @@ export class LSPClient {
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
       const timeout = setTimeout(() => { this.pendingRequests.delete(id); reject(new Error('LSP request timeout')); }, 10000);
-      if (window.mindcode?.lsp?.request) {
-        window.mindcode.lsp.request(this.config.language, method, params, id).then((result: any) => { clearTimeout(timeout); this.pendingRequests.delete(id); resolve(result); }).catch((err: any) => { clearTimeout(timeout); this.pendingRequests.delete(id); reject(err); });
+      if (win.mindcode?.lsp?.request) {
+        win.mindcode.lsp.request(this.config.language, method, params, id).then((result: any) => { clearTimeout(timeout); this.pendingRequests.delete(id); resolve(result); }).catch((err: any) => { clearTimeout(timeout); this.pendingRequests.delete(id); reject(err); });
       } else { clearTimeout(timeout); reject(new Error('LSP not available')); }
     });
   }
 
   private async notify(method: string, params: any): Promise<void> {
-    if (window.mindcode?.lsp?.notify) await window.mindcode.lsp.notify(this.config.language, method, params);
+    if (win.mindcode?.lsp?.notify) await win.mindcode.lsp.notify(this.config.language, method, params);
   }
 
   private on(event: string, handler: LSPEventHandler): () => void {
@@ -143,8 +144,8 @@ export class LSPClient {
   }
 
   private setupEventListeners(): void {
-    if (window.mindcode?.lsp?.onNotification) {
-      window.mindcode.lsp.onNotification(this.config.language, (method: string, params: any) => {
+    if (win.mindcode?.lsp?.onNotification) {
+      win.mindcode.lsp.onNotification(this.config.language, (method: string, params: any) => {
         const handlers = this.eventHandlers.get(method);
         if (handlers) handlers.forEach(h => h(params));
       });
