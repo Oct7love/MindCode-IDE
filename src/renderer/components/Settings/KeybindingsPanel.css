@@ -1,0 +1,36 @@
+/* 快捷键设置面板样式 */
+.keybindings-panel { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); }
+
+.keybindings-header { display: flex; justify-content: space-between; align-items: center; }
+.keybindings-header h3 { margin: 0; font-size: var(--text-lg); font-weight: 600; color: var(--color-text-primary); }
+
+.keybindings-actions { display: flex; gap: var(--space-3); }
+
+.vim-toggle { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: var(--text-sm); color: var(--color-text-secondary); }
+.vim-toggle input { accent-color: var(--color-accent); }
+
+.keybindings-conflicts { background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); border-radius: var(--radius-md); padding: var(--space-3); }
+.conflict-warning { font-weight: 600; color: var(--color-warning); margin-bottom: var(--space-2); }
+.conflict-item { display: flex; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-secondary); }
+.conflict-key { font-family: var(--font-mono); background: var(--color-bg-subtle); padding: 2px 6px; border-radius: var(--radius-sm); }
+
+.keybindings-search input { width: 100%; padding: var(--space-2) var(--space-3); background: var(--color-bg-subtle); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); color: var(--color-text-primary); font-size: var(--text-sm); }
+.keybindings-search input:focus { outline: none; border-color: var(--color-accent); }
+
+.keybindings-list { display: flex; flex-direction: column; gap: 1px; background: var(--color-border-default); border-radius: var(--radius-md); overflow: hidden; }
+
+.keybindings-list-header { display: grid; grid-template-columns: 1fr 150px 80px 60px; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--color-bg-subtle); font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
+
+.keybinding-row { display: grid; grid-template-columns: 1fr 150px 80px 60px; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--color-bg-base); align-items: center; font-size: var(--text-sm); }
+.keybinding-row:hover { background: var(--color-bg-hover); }
+.keybinding-row.editing { background: var(--color-bg-active); }
+
+.col-command { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-primary); }
+.col-key kbd { display: inline-block; padding: 2px 8px; background: var(--color-bg-elevated); border: 1px solid var(--color-border-default); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--text-xs); cursor: pointer; transition: all 0.15s; }
+.col-key kbd:hover { border-color: var(--color-accent); background: var(--color-bg-hover); }
+.col-source { font-size: var(--text-xs); color: var(--color-text-muted); }
+.col-actions { display: flex; gap: var(--space-1); }
+.col-actions .btn-reset { padding: 4px 8px; background: transparent; border: none; cursor: pointer; color: var(--color-text-muted); border-radius: var(--radius-sm); }
+.col-actions .btn-reset:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
+
+.key-recorder { width: 100%; padding: 4px 8px; background: var(--color-bg-base); border: 2px solid var(--color-accent); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-primary); outline: none; }

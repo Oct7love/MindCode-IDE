@@ -1,0 +1,99 @@
+/**
+ * MindCode 高性能动画系统
+ * 仅使用 transform + opacity (GPU 加速，60fps)
+ */
+
+/* ==================== 动画变量 ==================== */
+:root {
+  --anim-fast: 150ms;
+  --anim-normal: 250ms;
+  --anim-slow: 350ms;
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ==================== GPU 加速基础类 ==================== */
+.gpu-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ==================== 淡入淡出 ==================== */
+.fade-enter { opacity: 0; }
+.fade-enter-active { opacity: 1; transition: opacity var(--anim-normal) var(--ease-out); }
+.fade-exit { opacity: 1; }
+.fade-exit-active { opacity: 0; transition: opacity var(--anim-fast) var(--ease-in-out); }
+
+/* ==================== 滑动 (仅 transform) ==================== */
+.slide-up-enter { transform: translateY(8px); opacity: 0; }
+.slide-up-enter-active { transform: translateY(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
+.slide-up-exit { transform: translateY(0); opacity: 1; }
+.slide-up-exit-active { transform: translateY(-8px); opacity: 0; transition: transform var(--anim-fast) var(--ease-in-out), opacity var(--anim-fast) var(--ease-in-out); }
+
+.slide-down-enter { transform: translateY(-8px); opacity: 0; }
+.slide-down-enter-active { transform: translateY(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
+
+.slide-left-enter { transform: translateX(16px); opacity: 0; }
+.slide-left-enter-active { transform: translateX(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
+
+.slide-right-enter { transform: translateX(-16px); opacity: 0; }
+.slide-right-enter-active { transform: translateX(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
+
+/* ==================== 缩放 (仅 transform) ==================== */
+.scale-enter { transform: scale(0.95); opacity: 0; }
+.scale-enter-active { transform: scale(1); opacity: 1; transition: transform var(--anim-normal) var(--ease-spring), opacity var(--anim-normal) var(--ease-out); }
+.scale-exit { transform: scale(1); opacity: 1; }
+.scale-exit-active { transform: scale(0.95); opacity: 0; transition: transform var(--anim-fast) var(--ease-in-out), opacity var(--anim-fast) var(--ease-in-out); }
+
+/* ==================== 弹性效果 ==================== */
+.pop-enter { transform: scale(0.9); opacity: 0; }
+.pop-enter-active { transform: scale(1); opacity: 1; transition: transform var(--anim-slow) var(--ease-bounce), opacity var(--anim-normal) var(--ease-out); }
+
+/* ==================== 侧边栏展开/收起 ==================== */
+.sidebar-expand { transform: translateX(-100%); }
+.sidebar-expand-active { transform: translateX(0); transition: transform var(--anim-normal) var(--ease-out); }
+.sidebar-collapse { transform: translateX(0); }
+.sidebar-collapse-active { transform: translateX(-100%); transition: transform var(--anim-fast) var(--ease-in-out); }
+
+/* ==================== 面板展开 ==================== */
+.panel-expand { transform: scaleY(0); transform-origin: top; opacity: 0; }
+.panel-expand-active { transform: scaleY(1); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-fast) var(--ease-out); }
+
+/* ==================== 加载状态 ==================== */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+.loading-spin { animation: spin 1s linear infinite; }
+.loading-pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+.loading-shimmer { position: relative; overflow: hidden; }
+.loading-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+/* ==================== 骨架屏 ==================== */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-bg-muted) 50%, var(--color-bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ==================== 减少动画 (用户偏好) ==================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

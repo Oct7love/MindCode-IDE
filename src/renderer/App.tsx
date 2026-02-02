@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './styles/main.css'; // 主布局样式
-import './styles/chat-tokens.css'; // Chat CSS 变量（必须在 markdown.css 之前）
+import './styles/animations.css'; // GPU加速动画系统
+import './styles/chat-tokens.css'; // Chat CSS 变量
 import './styles/ai-panel.css'; // AI 面板样式
 import './styles/components.css'; // 组件样式
 import './styles/markdown.css'; // Markdown 样式
@@ -1628,24 +1629,16 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [workspaceRoot]);
 
-  // 主题初始化
+  // 主题初始化 - 优化: 移除不必要延迟
   useEffect(() => {
-    // 等待 DOM 和样式加载完成
     const initTheme = async () => {
-      // 确保 DOM 已加载
       if (document.readyState === 'loading') {
-        await new Promise(resolve => {
-          document.addEventListener('DOMContentLoaded', resolve);
-        });
+        await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
       }
-      // 额外延迟确保样式已加载
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      // 移除 100ms 延迟 - CSS 已在 HTML head 中同步加载
       const themeId = await loadTheme();
-      console.log('Initializing theme:', themeId);
       applyTheme(themeId);
     };
-    
     initTheme();
 
     // 监听 IPC 主题切换（菜单触发）

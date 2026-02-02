@@ -9,48 +9,46 @@ import { GLMProvider } from '../core/ai/providers/glm';
 import { CodesucProvider } from '../core/ai/providers/codesuc';
 import { defaultAIConfig } from '../core/ai/config';
 import { LLMClient, classifyError, getUserFriendlyError } from '../core/ai/llm-client';
+import { startupTracker, markStartup, logStartupReport } from '../core/performance';
+import { warmupConnections, StreamBuffer } from '../core/ai/request-optimizer';
+
+markStartup('main_start');
 
 let mainWindow: BrowserWindow | null = null;
 
 const isDev = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
-// 初始化 AI Providers
-const providers = {
-  claude: new ClaudeProvider({
-    apiKey: defaultAIConfig.claude.apiKey,
-    baseUrl: defaultAIConfig.claude.baseUrl,
-    model: defaultAIConfig.claude.model
-  }),
-  openai: new OpenAIProvider({
-    apiKey: defaultAIConfig.openai.apiKey,
-    baseUrl: defaultAIConfig.openai.baseUrl,
-    model: defaultAIConfig.openai.model
-  }),
-  gpt4: new OpenAIProvider({
-    apiKey: defaultAIConfig.openai.apiKey,
-    baseUrl: defaultAIConfig.openai.baseUrl,
-    model: defaultAIConfig.openai.model
-  }),
-  gemini: new GeminiProvider({
-    apiKey: defaultAIConfig.gemini.apiKey,
-    baseUrl: defaultAIConfig.gemini.baseUrl,
-    model: defaultAIConfig.gemini.model
-  }),
-  deepseek: new DeepSeekProvider({
-    apiKey: defaultAIConfig.deepseek.apiKey,
-    baseUrl: defaultAIConfig.deepseek.baseUrl,
-    model: defaultAIConfig.deepseek.model
-  }),
-  glm: new GLMProvider({ apiKey: defaultAIConfig.glm.apiKey, baseUrl: defaultAIConfig.glm.baseUrl, model: defaultAIConfig.glm.model }),
-  codesuc: new CodesucProvider({ apiKey: defaultAIConfig.codesuc.apiKey, baseUrl: defaultAIConfig.codesuc.baseUrl, model: defaultAIConfig.codesuc.model }) // 特价渠道
-};
+// 懒加载 AI Providers - 延迟到首次使用时初始化
+let _providers: Record<string, any> | null = null;
+let _llmClient: LLMClient | null = null;
 
-// 初始化 LLM 客户端 (带限流/重试/熔断/降级)
-const llmClient = new LLMClient(new Map(Object.entries(providers)));
-llmClient.on('fallback', (from, to) => console.log(`[LLM] 模型降级: ${from} -> ${to}`));
+function getProviders() {
+  if (!_providers) {
+    markStartup('providers_init_start');
+    _providers = {
+      claude: new ClaudeProvider({ apiKey: defaultAIConfig.claude.apiKey, baseUrl: defaultAIConfig.claude.baseUrl, model: defaultAIConfig.claude.model }),
+      openai: new OpenAIProvider({ apiKey: defaultAIConfig.openai.apiKey, baseUrl: defaultAIConfig.openai.baseUrl, model: defaultAIConfig.openai.model }),
+      gpt4: new OpenAIProvider({ apiKey: defaultAIConfig.openai.apiKey, baseUrl: defaultAIConfig.openai.baseUrl, model: defaultAIConfig.openai.model }),
+      gemini: new GeminiProvider({ apiKey: defaultAIConfig.gemini.apiKey, baseUrl: defaultAIConfig.gemini.baseUrl, model: defaultAIConfig.gemini.model }),
+      deepseek: new DeepSeekProvider({ apiKey: defaultAIConfig.deepseek.apiKey, baseUrl: defaultAIConfig.deepseek.baseUrl, model: defaultAIConfig.deepseek.model }),
+      glm: new GLMProvider({ apiKey: defaultAIConfig.glm.apiKey, baseUrl: defaultAIConfig.glm.baseUrl, model: defaultAIConfig.glm.model }),
+      codesuc: new CodesucProvider({ apiKey: defaultAIConfig.codesuc.apiKey, baseUrl: defaultAIConfig.codesuc.baseUrl, model: defaultAIConfig.codesuc.model })
+    };
+    markStartup('providers_init_end');
+    // 后台探测能力（不阻塞）
+    (_providers.codesuc as CodesucProvider).probeCapabilities().then(cap => console.log(`[LLM] Codesuc: tools=${cap.tools}, stream=${cap.stream}`)).catch(() => {});
+  }
+  return _providers;
+}
 
-// 启动时探测 codesuc 渠道能力
-providers.codesuc.probeCapabilities().then(cap => console.log(`[LLM] Codesuc capabilities: tools=${cap.tools}, stream=${cap.stream}`)).catch(() => {});
+function getLLMClient(): LLMClient {
+  if (!_llmClient) {
+    const providers = getProviders();
+    _llmClient = new LLMClient(new Map(Object.entries(providers)));
+    _llmClient.on('fallback', (from, to) => console.log(`[LLM] 降级: ${from} -> ${to}`));
+  }
+  return _llmClient;
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -91,12 +89,16 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  markStartup('app_ready');
   createMenu();
-  if (isDev) {
-    setTimeout(createWindow, 2000);
-  } else {
-    createWindow();
-  }
+  if (isDev) setTimeout(createWindow, 500); // 等待 Vite 启动
+  else createWindow();
+  // 后台预热 (不阻塞窗口创建)
+  setTimeout(() => {
+    getProviders();
+    markStartup('providers_preloaded');
+    warmupConnections().then(() => markStartup('connections_warmed'));
+  }, 100);
 });
 
 // 创建应用菜单
@@ -432,53 +434,56 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 
 // 根据模型名选择 Provider (保留兼容)
 function getProviderForModel(model: string) {
-  if (model.startsWith('codesuc-')) return providers.codesuc;  // 特价渠道优先
+  const providers = getProviders();
+  if (model.startsWith('codesuc-')) return providers.codesuc;
   if (model.startsWith('claude-')) return providers.claude;
   if (model.startsWith('gemini-')) return providers.gemini;
   if (model.startsWith('deepseek-')) return providers.deepseek;
   if (model.startsWith('glm-')) return providers.glm;
   if (model.startsWith('gpt-')) return providers.openai;
-  return providers.codesuc;  // 默认使用特价渠道
+  return providers.codesuc;
 }
 
 // AI 聊天（非流式）- 使用 LLM 客户端
 ipcMain.handle('ai-chat', async (_event, { model, messages }) => {
   console.log(`[AI] chat request: model=${model}, messages=${messages.length}`);
-  const result = await llmClient.chat({ model, messages });
+  const result = await getLLMClient().chat({ model, messages });
   console.log(`[AI] chat result: success=${result.success}, model=${result.model}, fallback=${result.usedFallback}`);
   if (result.success) return { success: true, data: result.data, model: result.model, usedFallback: result.usedFallback };
   return { success: false, error: getUserFriendlyError(result.error!), errorType: result.error?.type };
 });
 
-// AI 聊天（流式）- 使用 LLM 客户端
+// AI 聊天（流式）- 使用 LLM 客户端 + StreamBuffer 优化
 ipcMain.on('ai-chat-stream', async (event, { model, messages, requestId }) => {
   console.log(`[AI] stream request: id=${requestId}, model=${model}, mode=chat`);
+  const buffer = new StreamBuffer((text) => event.sender.send('ai-stream-token', { requestId, token: text }), 16);
   try {
-    await llmClient.chatStream({ model, messages }, {
-      onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
-      onComplete: (fullText, meta) => { console.log(`[AI] stream complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
-      onError: (error) => { console.error(`[AI] stream error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
+    await getLLMClient().chatStream({ model, messages }, {
+      onToken: (token) => buffer.push(token),
+      onComplete: (fullText, meta) => { buffer.destroy(); console.log(`[AI] stream complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
+      onError: (error) => { buffer.destroy(); console.error(`[AI] stream error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
       onFallback: (from, to) => { console.log(`[AI] fallback: ${from} -> ${to}`); event.sender.send('ai-stream-fallback', { requestId, from, to }); }
     });
-  } catch (e: any) { console.error(`[AI] stream exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
+  } catch (e: any) { buffer.destroy(); console.error(`[AI] stream exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
 });
 
-// AI 聊天（流式 + 工具调用）- 使用 LLM 客户端
+// AI 聊天（流式 + 工具调用）- 使用 LLM 客户端 + StreamBuffer 优化
 ipcMain.on('ai-chat-stream-with-tools', async (event, { model, messages, tools, requestId }) => {
   console.log(`[AI] stream+tools request: id=${requestId}, model=${model}, mode=agent, tools=${tools?.length || 0}`);
+  const buffer = new StreamBuffer((text) => event.sender.send('ai-stream-token', { requestId, token: text }), 16);
   try {
-    await llmClient.chatStream({ model, messages, tools }, {
-      onToken: (token) => event.sender.send('ai-stream-token', { requestId, token }),
+    await getLLMClient().chatStream({ model, messages, tools }, {
+      onToken: (token) => buffer.push(token),
       onToolCall: (calls) => { console.log(`[AI] tool calls: id=${requestId}`, calls.map((c: any) => c.name)); event.sender.send('ai-stream-tool-call', { requestId, toolCalls: calls }); },
-      onComplete: (fullText, meta) => { console.log(`[AI] stream+tools complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
-      onError: (error) => { console.error(`[AI] stream+tools error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
+      onComplete: (fullText, meta) => { buffer.destroy(); console.log(`[AI] stream+tools complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
+      onError: (error) => { buffer.destroy(); console.error(`[AI] stream+tools error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
       onFallback: (from, to) => { console.log(`[AI] fallback: ${from} -> ${to}`); event.sender.send('ai-stream-fallback', { requestId, from, to }); }
     });
-  } catch (e: any) { console.error(`[AI] stream+tools exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
+  } catch (e: any) { buffer.destroy(); console.error(`[AI] stream+tools exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
 });
 
 // LLM 状态查询
-ipcMain.handle('ai-stats', () => llmClient.getStats());
+ipcMain.handle('ai-stats', () => getLLMClient().getStats());
 
 // ==================== 文件系统操作 ====================
 
@@ -1099,11 +1104,12 @@ import {
   DEFAULT_COMPLETION_REQUEST_CONFIG,
 } from '../core/ai/completion-config';
 
-// 补全请求缓存
-const completionCache = new Map<string, { result: string; timestamp: number }>();
-const COMPLETION_CACHE_TTL = 5000; // 5秒缓存
+// 补全请求缓存 - 增强版
+import { completionCache as perfCompletionCache } from '../core/performance';
 
-// 补全请求处理
+const COMPLETION_CACHE_TTL = 30000; // 30秒缓存 (增加缓存时间)
+
+// 补全请求处理 - 使用增强缓存
 ipcMain.handle('ai:completion', async (_event, request: {
   filePath: string;
   code: string;
@@ -1112,57 +1118,38 @@ ipcMain.handle('ai:completion', async (_event, request: {
   model?: string;
 }) => {
   const { filePath, code, cursorLine, cursorColumn, model = 'codesuc-sonnet' } = request;
+  const start = Date.now();
   
-  // 生成缓存 key
-  const cacheKey = `${filePath}:${cursorLine}:${cursorColumn}:${code.length}`;
-  const cached = completionCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < COMPLETION_CACHE_TTL) {
-    return { success: true, data: cached.result, cached: true };
+  // 生成缓存 key (包含代码上下文)
+  const prefix = code.split('\n').slice(Math.max(0, cursorLine - 5), cursorLine).join('\n');
+  const cacheKey = `${filePath}:${cursorLine}:${prefix.slice(-200)}`;
+  
+  // 检查缓存
+  const cached = perfCompletionCache.get(cacheKey);
+  if (cached) {
+    console.log(`[AI] completion cache hit: ${Date.now() - start}ms`);
+    return { success: true, data: cached, cached: true };
   }
   
   try {
-    // 构建上下文
-    const context = await buildCompletionContext(
-      filePath,
-      code,
-      cursorLine,
-      cursorColumn,
-      {
-        maxPrefixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxPrefixLines,
-        maxSuffixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxSuffixLines,
-      }
-    );
-    
-    // 生成提示词
-    const messages = generateCompletionMessages(context, {
-      useFIM: true,
-      includeSymbols: true,
-      includeDiagnostics: false, // 暂不使用诊断
-      includeRelatedSnippets: false, // 暂不使用跨文件
-      includeStyleHints: true,
+    const context = await buildCompletionContext(filePath, code, cursorLine, cursorColumn, {
+      maxPrefixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxPrefixLines,
+      maxSuffixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxSuffixLines,
     });
     
-    // 调用 LLM (使用非流式，补全需要完整结果)
+    const messages = generateCompletionMessages(context, {
+      useFIM: true, includeSymbols: true, includeDiagnostics: false, includeRelatedSnippets: false, includeStyleHints: true,
+    });
+    
     const provider = getProviderForModel(model);
     const response = await provider.setModel(model).chat(messages);
-    
-    // 清理输出
     const cleaned = cleanCompletionOutput(response);
     const result = truncateCompletion(cleaned, 20, 2000);
     
     // 缓存结果
-    completionCache.set(cacheKey, { result, timestamp: Date.now() });
+    perfCompletionCache.set(cacheKey, result);
     
-    // 清理过期缓存
-    const now = Date.now();
-    for (const [key, value] of completionCache.entries()) {
-      if (now - value.timestamp > COMPLETION_CACHE_TTL) {
-        completionCache.delete(key);
-      }
-    }
-    
-    console.log(`[AI] completion: file=${filePath}, line=${cursorLine}, model=${model}, result=${result.length} chars`);
-    
+    console.log(`[AI] completion: ${Date.now() - start}ms, ${result.length} chars`);
     return { success: true, data: result, cached: false };
   } catch (error: any) {
     console.error('[AI] completion error:', error);

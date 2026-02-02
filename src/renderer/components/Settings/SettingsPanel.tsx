@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAIStore, useUIStore } from '../../stores';
 import { themes, applyTheme } from '../../utils/themes';
 import './SettingsPanel.css';
@@ -9,6 +9,25 @@ interface SettingsPanelProps {
 }
 
 type SettingsTab = 'ai' | 'editor' | 'shortcuts' | 'appearance';
+
+// 设置项元数据 (用于搜索)
+const SETTING_ITEMS = [
+  { section: 'ai', key: 'defaultModel', label: '默认模型', keywords: 'model claude gemini gpt' },
+  { section: 'ai', key: 'enableGhostText', label: 'Ghost Text 补全', keywords: 'completion ghost inline' },
+  { section: 'ai', key: 'completionDelay', label: '补全延迟', keywords: 'delay latency' },
+  { section: 'ai', key: 'maxTokens', label: '最大 Token', keywords: 'token limit' },
+  { section: 'ai', key: 'temperature', label: '温度', keywords: 'temperature creative' },
+  { section: 'ai', key: 'enableThinkingUI', label: 'Thinking UI', keywords: 'thinking reasoning' },
+  { section: 'editor', key: 'fontSize', label: '字体大小', keywords: 'font size text' },
+  { section: 'editor', key: 'fontFamily', label: '字体', keywords: 'font family mono' },
+  { section: 'editor', key: 'tabSize', label: 'Tab 大小', keywords: 'tab indent' },
+  { section: 'editor', key: 'wordWrap', label: '自动换行', keywords: 'wrap line' },
+  { section: 'editor', key: 'minimap', label: '迷你地图', keywords: 'minimap overview' },
+  { section: 'editor', key: 'lineNumbers', label: '行号', keywords: 'line number' },
+  { section: 'appearance', key: 'theme', label: '主题', keywords: 'theme dark light color' },
+  { section: 'shortcuts', key: 'openAIPanel', label: 'AI 面板', keywords: 'shortcut hotkey ai' },
+  { section: 'shortcuts', key: 'commandPalette', label: '命令面板', keywords: 'command palette' },
+];
 
 const defaultSettings = {
   ai: { 
@@ -31,6 +50,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
   const [activeTab, setActiveTab] = useState<SettingsTab>('ai');
   const [settings, setSettings] = useState(defaultSettings);
   const [isDirty, setIsDirty] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 搜索过滤设置项
+  const matchedItems = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.toLowerCase();
+    return SETTING_ITEMS.filter(item => item.label.toLowerCase().includes(q) || item.keywords.includes(q));
+  }, [searchQuery]);
+
+  // 导出设置
+  const exportSettings = useCallback(() => {
+    const data = JSON.stringify(settings, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'mindcode-settings.json'; a.click();
+    URL.revokeObjectURL(url);
+  }, [settings]);
+
+  // 导入设置
+  const importSettings = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text);
+        setSettings({ ...defaultSettings, ...imported });
+        setIsDirty(true);
+      } catch { alert('导入失败：文件格式错误'); }
+    };
+    input.click();
+  }, []);
 
   useEffect(() => { // 加载设置
     const saved = localStorage.getItem('mindcode-settings');
@@ -78,7 +132,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
       <div className="settings-panel" onClick={e => e.stopPropagation()}>
         <div className="settings-header">
           <h2>设置</h2>
-          <button className="settings-close-btn" onClick={onClose}>×</button>
+          <div className="settings-header-actions">
+            <input type="text" className="settings-search" placeholder="搜索设置..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+            <button className="settings-action-btn" onClick={importSettings} title="导入设置">📥</button>
+            <button className="settings-action-btn" onClick={exportSettings} title="导出设置">📤</button>
+            <button className="settings-close-btn" onClick={onClose}>×</button>
+          </div>
         </div>
         
         <div className="settings-content">

@@ -1,0 +1,7 @@
+{
+  "file_path": "test.c",
+  "content": "//打印一个helloworld\n#include <stdio.h>\nint main()\n{\n    \n}",
+  "cursor_line": 4,
+  "cursor_column": 4,
+  "mode": "inline"
+}
