@@ -144,3 +144,46 @@
 .settings-btn.primary { background: var(--accent-primary, #3b82f6); border-color: var(--accent-primary, #3b82f6); color: white; }
 .settings-btn.primary:hover { background: var(--accent-secondary, #60a5fa); }
 .settings-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 设置分隔线 */
+.setting-divider {
+  height: 1px;
+  background: var(--border-subtle, rgba(255,255,255,0.04));
+  margin: var(--space-4, 16px) 0;
+}
+
+/* 设置子标题 */
+.setting-subtitle {
+  margin: 0 0 var(--space-2, 8px) 0;
+  font-size: var(--font-size-sm, 12px);
+  font-weight: var(--font-ui-weight-semibold, 600);
+  color: var(--text-primary, #f5f5f7);
+}
+
+/* 设置提示文字 */
+.setting-hint {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted, #71717a);
+  font-weight: normal;
+  margin-top: 2px;
+}
+
+/* 设置描述 */
+.setting-description {
+  margin: 0;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted, #71717a);
+  background: var(--bg-0, #0a0a0c);
+  border-radius: var(--radius-sm, 4px);
+  border-left: 2px solid var(--accent-primary, #3b82f6);
+}
+
+/* 设置 label 多行布局 */
+.setting-item label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

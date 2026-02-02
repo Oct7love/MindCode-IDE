@@ -6,7 +6,16 @@
 import React, { useState, useMemo, memo } from 'react';
 
 // === 代码块组件 ===
-interface CodeBlockProps { language: string; code: string; filename?: string; maxLines?: number; onCopy?: () => void; onApply?: () => void; }
+interface CodeBlockProps {
+  language: string;
+  code: string;
+  filename?: string;
+  maxLines?: number;
+  onCopy?: () => void;
+  onApply?: () => void;  // Accept - 应用代码（写入文件）
+  onPreview?: () => void; // 点击代码 - 预览代码（在编辑器中显示）
+  onOpenInEditor?: (code: string, language: string, filename?: string) => void; // Phase 2: 在编辑器中打开
+}
 
 // 文件扩展名到语言的映射
 export const EXT_TO_LANG: Record<string, string> = {
@@ -86,9 +95,11 @@ export const highlightCode = (code: string, language: string): React.ReactNode[]
   });
 };
 
-export const CodeBlock: React.FC<CodeBlockProps> = memo(({ language, code, filename, maxLines = 15, onCopy, onApply }) => {
+export const CodeBlock: React.FC<CodeBlockProps> = memo(({ language, code, filename, maxLines = 15, onCopy, onApply, onPreview, onOpenInEditor }) => {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [applied, setApplied] = useState(false);
+  const [applying, setApplying] = useState(false);
   const lines = code.split('\n');
   const shouldCollapse = lines.length > maxLines;
   const displayCode = shouldCollapse && !expanded ? lines.slice(0, maxLines - 2).join('\n') : code;
@@ -96,21 +107,62 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({ language, code, filen
   const isDiff = language.toLowerCase() === 'diff' || code.split('\n').some(l => l.startsWith('+ ') || l.startsWith('- ') || l.startsWith('@@ '));
 
   const handleCopy = async () => { await navigator.clipboard.writeText(code); setCopied(true); onCopy?.(); setTimeout(() => setCopied(false), 1500); };
+  const handleOpenInEditor = () => onOpenInEditor?.(code, language, filename);
+  
+  // 点击代码区域 - 预览代码
+  const handleCodeClick = () => {
+    if (onPreview) {
+      onPreview();
+    }
+  };
+
+  // 点击 Accept 按钮 - 应用代码
+  const handleApply = async () => {
+    if (onApply && !applying) {
+      setApplying(true);
+      try {
+        await onApply();
+        setApplied(true);
+        setTimeout(() => setApplied(false), 2000);
+      } finally {
+        setApplying(false);
+      }
+    }
+  };
 
   return (
-    <div className={`code-block ${isDiff ? 'code-block--diff' : ''}`}>
+    <div className={`code-block ${isDiff ? 'code-block--diff' : ''} ${applied ? 'code-block--applied' : ''}`}>
       <div className="code-block-header">
         <span className="code-block-lang">{language || 'text'}</span>
         {filename && <span className="code-block-filename">{filename}</span>}
+        {applied && <span className="code-block-applied-badge">✓ Applied</span>}
         <div className="code-block-actions">
+          {/* Accept 按钮 */}
+          {onApply && !applied && (
+            <button 
+              className={`code-block-btn code-block-btn--accept ${applying ? 'applying' : ''}`} 
+              onClick={handleApply} 
+              title="应用代码到文件"
+              disabled={applying}
+            >
+              {applying ? <SpinnerIcon /> : <ApplyIcon />}
+              <span>{applying ? 'Applying...' : 'Accept'}</span>
+            </button>
+          )}
+          {/* Copy 按钮 */}
           <button className="code-block-btn" onClick={handleCopy} title={copied ? '已复制' : '复制代码'}>
             {copied ? <CheckIcon /> : <CopyIcon />}
             <span>{copied ? 'Copied!' : 'Copy'}</span>
           </button>
-          {onApply && <button className="code-block-btn code-block-apply" onClick={onApply} title="接受代码"><ApplyIcon /><span>Accept</span></button>}
         </div>
       </div>
-      <div className="code-block-content"><pre><code>{highlightCode(displayCode, language)}</code></pre></div>
+      <div 
+        className={`code-block-content ${onPreview ? 'clickable' : ''}`}
+        onClick={handleCodeClick}
+        title={onPreview ? '点击在编辑器中预览' : undefined}
+      >
+        <pre><code>{highlightCode(displayCode, language)}</code></pre>
+      </div>
       {shouldCollapse && (
         <button className="code-block-toggle" onClick={() => setExpanded(!expanded)}>
           {expanded ? <><ChevronUpIcon /> 收起</> : <><ChevronDownIcon /> 展开剩余 {hiddenLines} 行</>}
@@ -249,15 +301,20 @@ const renderTable = (content: string): React.ReactNode => { // 表格渲染
   );
 };
 
-interface MarkdownProps { content: string; onApplyCode?: (code: string, language: string) => void; }
+interface MarkdownProps {
+  content: string;
+  onApplyCode?: (code: string, language: string) => void;  // Accept - 应用代码
+  onPreviewCode?: (code: string, language: string) => void; // 点击代码 - 预览
+  onOpenInEditor?: (code: string, language: string, filename?: string) => void; // Phase 2
+}
 
-export const MarkdownRenderer: React.FC<MarkdownProps> = memo(({ content, onApplyCode }) => {
+export const MarkdownRenderer: React.FC<MarkdownProps> = memo(({ content, onApplyCode, onPreviewCode, onOpenInEditor }) => {
   const blocks = useMemo(() => parseMarkdown(content), [content]);
   return (
     <div className="markdown-content">
       {blocks.map((block, i) => {
         switch (block.type) {
-          case 'code': return <CodeBlock key={i} language={block.language || 'text'} code={block.content} onApply={onApplyCode ? () => onApplyCode(block.content, block.language || 'text') : undefined} />;
+          case 'code': return <CodeBlock key={i} language={block.language || 'text'} code={block.content} onApply={onApplyCode ? () => onApplyCode(block.content, block.language || 'text') : undefined} onPreview={onPreviewCode ? () => onPreviewCode(block.content, block.language || 'text') : undefined} onOpenInEditor={onOpenInEditor} />;
           case 'callout': return <Callout key={i} type={block.calloutType!}>{renderInline(block.content)}</Callout>;
           case 'table': return <React.Fragment key={i}>{renderTable(block.content)}</React.Fragment>;
           case 'heading': const H = `h${block.level}` as keyof JSX.IntrinsicElements; return <H key={i} className="md-heading">{renderInline(block.content)}</H>;
@@ -275,6 +332,8 @@ export const MarkdownRenderer: React.FC<MarkdownProps> = memo(({ content, onAppl
 const CopyIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg>;
 const CheckIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 111.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>;
 const ApplyIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 111.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>;
+const SpinnerIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" className="spin"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm.75 2.015v2.993a.75.75 0 01-1.5 0V2.015A6.502 6.502 0 0114 8a.75.75 0 01-1.5 0A5 5 0 007.25 2.015z"/></svg>;
+const EditorIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4.708 5.578L2.061 8.224l2.647 2.646-.708.708-3-3V7.87l3-3 .708.708zm7-.708L11 5.578l2.647 2.646L11 10.87l.708.708 3-3v-.708l-3-3zM4.908 13l.894.448 5-10L9.908 3l-5 10z"/></svg>;
 const ChevronDownIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M12.78 5.22a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06 0L3.22 6.28a.75.75 0 011.06-1.06L8 8.94l3.72-3.72a.75.75 0 011.06 0z"/></svg>;
 const ChevronUpIcon = () => <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M3.22 10.78a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 01-1.06 1.06L8 7.06l-3.72 3.72a.75.75 0 01-1.06 0z"/></svg>;
 const ExternalIcon = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" style={{ marginLeft: 2, verticalAlign: 'middle' }}><path d="M3.75 2A1.75 1.75 0 002 3.75v8.5c0 .966.784 1.75 1.75 1.75h8.5A1.75 1.75 0 0014 12.25v-3.5a.75.75 0 00-1.5 0v3.5a.25.25 0 01-.25.25h-8.5a.25.25 0 01-.25-.25v-8.5a.25.25 0 01.25-.25h3.5a.75.75 0 000-1.5h-3.5z"/><path d="M10 1a.75.75 0 000 1.5h2.44L7.22 7.72a.75.75 0 001.06 1.06l5.22-5.22V6a.75.75 0 001.5 0V1.75a.75.75 0 00-.75-.75H10z"/></svg>;

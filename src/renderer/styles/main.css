@@ -7,6 +7,8 @@
 
 @import './design-tokens.css';
 @import './chat-tokens.css';
+@import './cursor-premium.css';
+@import './theme-sync.css';
 
 /* Tailwind 主题映射 — 桥接现有 CSS 变量 */
 @theme {
@@ -270,14 +272,15 @@ body {
  * ============================================ */
 
 .sidebar {
-  width: var(--size-sidebar-default);
-  min-width: var(--size-sidebar-min);
-  max-width: var(--size-sidebar-max);
+  /* width 由 JS 动态控制，不再使用 CSS 变量 */
+  min-width: 120px;
+  max-width: 480px;
   background: var(--color-bg-surface);
   border-right: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   position: relative;
+  flex-shrink: 0;
 }
 
 .sidebar-title {
@@ -297,6 +300,38 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* 侧边栏拖动分隔条 */
+.sidebar-resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 100%;
+  background: var(--color-border-subtle);
+  transition: width 0.15s ease, background 0.15s ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer.resizing::after {
+  width: 2px;
+  background: var(--color-accent);
+}
+
+.sidebar-resizer.resizing {
+  background: rgba(139, 92, 246, 0.1);
 }
 
 /* ============================================
@@ -485,10 +520,28 @@ body {
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
+  scroll-behavior: smooth;
+  /* 支持鼠标滚轮水平滚动 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar, rgba(255, 255, 255, 0.1)) transparent;
 }
 
+/* 细滚动条样式 */
 .tabs-scroll::-webkit-scrollbar {
-  height: 0;
+  height: 4px;
+}
+
+.tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar, rgba(255, 255, 255, 0.1));
+  border-radius: 2px;
+}
+
+.tabs-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.2));
 }
 
 .tab {
@@ -604,6 +657,49 @@ body {
 .tab-close svg {
   width: 10px;
   height: 10px;
+}
+
+/* Phase 2: 预览文件标签样式 */
+.tab.preview {
+  background: rgba(153, 102, 204, 0.08);
+  border-right-color: rgba(153, 102, 204, 0.3);
+}
+
+.tab.preview .tab-label {
+  font-style: italic;
+  color: #9966cc;
+}
+
+.tab.preview.active {
+  background: rgba(153, 102, 204, 0.12);
+}
+
+.tab.preview.active .tab-label {
+  color: #b388e6;
+}
+
+.tab.preview .tab-icon {
+  opacity: 1;
+}
+
+/* Phase 3: Diff 面板样式 */
+.diff-panel {
+  border-top: 1px solid var(--color-accent-ai, #8b5cf6);
+}
+
+.diff-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.5) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 /* ============================================

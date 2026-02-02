@@ -51,6 +51,19 @@
   --color-accent-cyan: #06b6d4;       /* 青色强调 */
   --color-accent-cyan-glow: rgba(6, 182, 212, 0.35);
 
+  /* Logo 主题变量 - 暗色主题（银灰+科技紫蓝） */
+  --logo-base-light: #e0e0e8;         /* 钻石最亮面 */
+  --logo-base-mid: #9090a0;           /* 钻石中间色 */
+  --logo-base-dark: #505060;          /* 钻石暗面 */
+  --logo-base-shadow: #303040;        /* 钻石阴影 */
+  --logo-accent-1: #8b5cf6;           /* 科技紫 */
+  --logo-accent-2: #3b82f6;           /* 蓝色 */
+  --logo-accent-3: #06b6d4;           /* 青色 */
+  --logo-glow: rgba(139, 92, 246, 0.25); /* 紫色辉光 */
+  --logo-highlight: rgba(255, 255, 255, 0.4); /* 高光 */
+  --logo-m-gradient-start: #c0c0d0;   /* M字亮面 */
+  --logo-m-gradient-end: #707080;     /* M字暗面 */
+
   /* 渐变 - 更柔和 */
   --gradient-ai: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%);
   --gradient-ai-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(59, 130, 246, 0.12) 50%, rgba(6, 182, 212, 0.12) 100%);
@@ -149,22 +162,22 @@
                       "SF Mono", "Consolas", "Liberation Mono", monospace;
   --font-family-mono: var(--font-family-code);
 
-  /* 字号 - 更现代的比例 */
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-base: 13px;
-  --font-size-md: 14px;
-  --font-size-lg: 15px;
-  --font-size-xl: 17px;
-  --font-size-2xl: 20px;
-  --font-size-3xl: 26px;
-  --font-size-4xl: 32px;
+  /* 字号 - 紧凑版本 (Cursor 风格) */
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-base: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 16px;
+  --font-size-2xl: 18px;
+  --font-size-3xl: 22px;
+  --font-size-4xl: 28px;
 
-  /* 行高 */
-  --line-height-tight: 1.25;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.625;
-  --line-height-code: 1.7;
+  /* 行高 - 紧凑版本 */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.5;
+  --line-height-code: 1.5;
 
   /* 字重 */
   --font-weight-normal: 400;
@@ -400,6 +413,19 @@
   --color-accent-ai-secondary: #0891b2;
   --color-accent-ai-glow: rgba(124, 58, 237, 0.2);
 
+  /* Logo 主题变量 - 亮色主题（更深色调适应浅背景） */
+  --logo-base-light: #a8a8b8;
+  --logo-base-mid: #686880;
+  --logo-base-dark: #484860;
+  --logo-base-shadow: #383850;
+  --logo-accent-1: #7c3aed;
+  --logo-accent-2: #2563eb;
+  --logo-accent-3: #0891b2;
+  --logo-glow: rgba(124, 58, 237, 0.2);
+  --logo-highlight: rgba(255, 255, 255, 0.5);
+  --logo-m-gradient-start: #9090a0;
+  --logo-m-gradient-end: #585868;
+
   /* 渐变 - 浅色版本 */
   --gradient-ai-subtle: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(0, 120, 212, 0.08) 50%, rgba(8, 145, 178, 0.08) 100%);
   --gradient-surface: linear-gradient(180deg, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0) 100%);
@@ -476,6 +502,19 @@
   --color-bg-elevated: #1a1a1a;
   --color-bg-hover: rgba(255, 255, 255, 0.1);
   --color-bg-active: rgba(255, 255, 255, 0.15);
+
+  /* Logo 主题变量 - 高对比主题（更鲜明） */
+  --logo-base-light: #f0f0f8;
+  --logo-base-mid: #b0b0c0;
+  --logo-base-dark: #707088;
+  --logo-base-shadow: #404058;
+  --logo-accent-1: #a855f7;
+  --logo-accent-2: #3b82f6;
+  --logo-accent-3: #06b6d4;
+  --logo-glow: rgba(168, 85, 247, 0.4);
+  --logo-highlight: rgba(255, 255, 255, 0.6);
+  --logo-m-gradient-start: #d0d0e0;
+  --logo-m-gradient-end: #8080a0;
 
   --color-border: #ffffff;
   --color-border-subtle: rgba(255, 255, 255, 0.5);

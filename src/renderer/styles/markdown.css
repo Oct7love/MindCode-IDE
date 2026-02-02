@@ -108,16 +108,72 @@ h4.md-heading, h5.md-heading, h6.md-heading { font-size: 1em; }
   transition: all var(--chat-transition-fast, 100ms);
 }
 .code-block-btn:hover { background: var(--chat-bg-hover, #333); color: var(--chat-text-primary, #e0e0e0); }
+
+/* Accept 按钮样式 */
+.code-block-btn--accept {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  margin-right: 8px; /* 与 Copy 按钮保持距离 */
+}
+.code-block-btn--accept:hover {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+.code-block-btn--accept.applying {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* Spin 动画 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.code-block-btn svg.spin {
+  animation: spin 1s linear infinite;
+}
+
 .code-block-apply { color: var(--chat-success, #52c41a); }
 .code-block-apply:hover { background: rgba(82, 196, 26, 0.15); }
+.code-block-editor { color: var(--chat-accent, #0078d4); }
+.code-block-editor:hover { background: rgba(0, 120, 212, 0.15); }
 
 .code-block-content {
   overflow-x: auto;
   max-height: 500px;
   overflow-y: auto;
+  transition: all 150ms ease;
 }
 .code-block-content pre { margin: 0; padding: 0; }
 .code-block-content code { display: block; padding: var(--chat-spacing-sm, 8px) 0; }
+
+/* 可点击的代码块 */
+.code-block-content.clickable {
+  cursor: pointer;
+}
+.code-block-content.clickable:hover {
+  background: rgba(59, 130, 246, 0.05);
+}
+.code-block-content.clickable:active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* 已应用状态 */
+.code-block--applied {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+}
+.code-block--applied .code-block-header {
+  background: rgba(34, 197, 94, 0.1);
+}
+.code-block-applied-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: #22c55e;
+  margin-left: auto;
+  margin-right: 8px;
+}
 
 .code-line {
   display: flex;

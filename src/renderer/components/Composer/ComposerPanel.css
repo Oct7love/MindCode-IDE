@@ -1,0 +1,487 @@
+/**
+ * Composer 面板样式
+ */
+
+/* 遮罩层 */
+.composer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 面板 */
+.composer-panel {
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  background: #1e1e1e;
+  border: 1px solid #3c3c3c;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 头部 */
+.composer-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #3c3c3c;
+  background: #252526;
+}
+
+.composer-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.composer-subtitle {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #8a8a8a;
+}
+
+.composer-close {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #8a8a8a;
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.composer-close:hover {
+  background: #3c3c3c;
+  color: #ffffff;
+}
+
+/* 内容 */
+.composer-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* 输入区域 */
+.composer-input-section label {
+  display: block;
+  margin-bottom: 12px;
+  color: #cccccc;
+  font-size: 14px;
+}
+
+.composer-textarea {
+  width: 100%;
+  padding: 14px;
+  background: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.composer-textarea:focus {
+  outline: none;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+.composer-textarea::placeholder {
+  color: #6e6e6e;
+}
+
+/* 操作按钮 */
+.composer-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  align-items: center;
+}
+
+.composer-btn {
+  padding: 10px 20px;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  background: #2d2d2d;
+  color: #e0e0e0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.composer-btn:hover {
+  background: #3c3c3c;
+}
+
+.composer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.composer-btn-primary {
+  background: #0078d4;
+  border-color: #0078d4;
+  color: #ffffff;
+}
+
+.composer-btn-primary:hover:not(:disabled) {
+  background: #006cbd;
+}
+
+.composer-warning {
+  color: #f0a020;
+  font-size: 13px;
+}
+
+/* 加载状态 */
+.composer-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.composer-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #3c3c3c;
+  border-top-color: #0078d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.composer-loading p {
+  margin-top: 16px;
+  color: #8a8a8a;
+}
+
+/* 影响分析 */
+.composer-impact {
+  margin-bottom: 24px;
+}
+
+.composer-impact h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: #e0e0e0;
+}
+
+.impact-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 20px;
+  background: #252526;
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0078d4;
+}
+
+.stat-value.stat-risk {
+  color: #f44336;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #8a8a8a;
+  margin-top: 4px;
+}
+
+.impact-files {
+  background: #252526;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.impact-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.impact-file:hover {
+  background: #2d2d2d;
+}
+
+.file-icon {
+  font-size: 14px;
+}
+
+.file-path {
+  flex: 1;
+  font-size: 13px;
+  color: #cccccc;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.risk-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.risk-badge.low {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.risk-badge.medium {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.risk-badge.high {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.impact-more {
+  padding: 8px;
+  text-align: center;
+  color: #6e6e6e;
+  font-size: 13px;
+}
+
+/* 执行计划 */
+.composer-plan h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: #e0e0e0;
+}
+
+.plan-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #252526;
+  border-radius: 8px;
+  border-left: 3px solid #3c3c3c;
+}
+
+.plan-step.status-completed {
+  border-left-color: #4caf50;
+}
+
+.plan-step.status-running {
+  border-left-color: #0078d4;
+  background: #1a3a5c;
+}
+
+.plan-step.status-failed {
+  border-left-color: #f44336;
+}
+
+.plan-step.status-rolled_back {
+  border-left-color: #ff9800;
+  opacity: 0.7;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3c3c3c;
+  border-radius: 50%;
+  font-size: 12px;
+  color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin-bottom: 4px;
+}
+
+.step-desc {
+  font-size: 13px;
+  color: #8a8a8a;
+  margin-bottom: 8px;
+}
+
+.step-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.step-file {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #2d2d2d;
+  border-radius: 4px;
+  color: #8a8a8a;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.step-file-more {
+  font-size: 11px;
+  color: #6e6e6e;
+}
+
+.step-status {
+  font-size: 16px;
+  color: #8a8a8a;
+}
+
+.status-completed .step-status {
+  color: #4caf50;
+}
+
+.status-running .step-status {
+  color: #0078d4;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.status-failed .step-status {
+  color: #f44336;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 执行中 */
+.composer-executing h3 {
+  margin: 0 0 16px;
+  color: #e0e0e0;
+}
+
+.execution-progress {
+  height: 6px;
+  background: #3c3c3c;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0078d4, #00a8ff);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.execution-log {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.log-item {
+  padding: 4px 0;
+  color: #cccccc;
+}
+
+/* 完成状态 */
+.composer-complete,
+.composer-error {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.complete-icon,
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.composer-complete h3,
+.composer-error h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #e0e0e0;
+}
+
+.composer-complete p,
+.composer-error p {
+  color: #8a8a8a;
+  margin: 0;
+}
+
+.error-message {
+  color: #f44336 !important;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  padding: 12px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 6px;
+  margin-top: 12px !important;
+}

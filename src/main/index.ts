@@ -253,25 +253,97 @@ function createMenu() {
           label: 'Theme',
           submenu: [
             {
-              label: 'Dark Themes',
+              label: '🌙 Dark Themes',
               submenu: [
-                { label: 'Dark+ (default dark)', click: () => mainWindow?.webContents.send('theme:change', 'dark-plus') },
-                { label: 'Monokai', click: () => mainWindow?.webContents.send('theme:change', 'monokai') },
-                { label: 'GitHub Dark', click: () => mainWindow?.webContents.send('theme:change', 'github-dark') },
+                { label: 'MindCode Dark', click: () => mainWindow?.webContents.send('theme:change', 'mindcode-dark') },
+                { label: 'Dark+ (VS Code)', click: () => mainWindow?.webContents.send('theme:change', 'dark-plus') },
+                { type: 'separator' },
+                { label: 'Catppuccin Mocha', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-mocha') },
+                { label: 'Catppuccin Macchiato', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-macchiato') },
+                { label: 'Catppuccin Frappé', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-frappe') },
+                { type: 'separator' },
+                { label: 'Tokyo Night', click: () => mainWindow?.webContents.send('theme:change', 'tokyo-night') },
+                { label: 'Tokyo Night Storm', click: () => mainWindow?.webContents.send('theme:change', 'tokyo-night-storm') },
+                { type: 'separator' },
+                { label: 'Kanagawa Wave', click: () => mainWindow?.webContents.send('theme:change', 'kanagawa-wave') },
+                { label: 'Kanagawa Dragon', click: () => mainWindow?.webContents.send('theme:change', 'kanagawa-dragon') },
+                { type: 'separator' },
+                { label: 'Everforest Dark', click: () => mainWindow?.webContents.send('theme:change', 'everforest-dark') },
+                { label: 'Everforest Dark Hard', click: () => mainWindow?.webContents.send('theme:change', 'everforest-dark-hard') },
+                { type: 'separator' },
+                { label: 'Material Ocean', click: () => mainWindow?.webContents.send('theme:change', 'material-ocean') },
+                { label: 'Material Palenight', click: () => mainWindow?.webContents.send('theme:change', 'material-palenight') },
+                { label: 'Material Darker', click: () => mainWindow?.webContents.send('theme:change', 'material-darker') },
+                { type: 'separator' },
                 { label: 'Dracula', click: () => mainWindow?.webContents.send('theme:change', 'dracula') },
-                { label: 'One Dark Pro', click: () => mainWindow?.webContents.send('theme:change', 'one-dark-pro') }
+                { label: 'One Dark Pro', click: () => mainWindow?.webContents.send('theme:change', 'one-dark-pro') },
+                { label: 'Atom One Dark', click: () => mainWindow?.webContents.send('theme:change', 'atom-one-dark') },
+                { label: 'Monokai', click: () => mainWindow?.webContents.send('theme:change', 'monokai') },
+                { type: 'separator' },
+                { label: 'GitHub Dark', click: () => mainWindow?.webContents.send('theme:change', 'github-dark') },
+                { label: 'GitHub Dark Dimmed', click: () => mainWindow?.webContents.send('theme:change', 'github-dark-dimmed') },
+                { type: 'separator' },
+                { label: 'Nord', click: () => mainWindow?.webContents.send('theme:change', 'nord') },
+                { label: 'Gruvbox Dark', click: () => mainWindow?.webContents.send('theme:change', 'gruvbox-dark') },
+                { label: 'Solarized Dark', click: () => mainWindow?.webContents.send('theme:change', 'solarized-dark') },
+                { type: 'separator' },
+                { label: 'Rosé Pine', click: () => mainWindow?.webContents.send('theme:change', 'rose-pine') },
+                { label: 'Rosé Pine Moon', click: () => mainWindow?.webContents.send('theme:change', 'rose-pine-moon') },
+                { type: 'separator' },
+                { label: 'Night Owl', click: () => mainWindow?.webContents.send('theme:change', 'night-owl') },
+                { label: 'Cobalt2', click: () => mainWindow?.webContents.send('theme:change', 'cobalt2') },
+                { label: 'Palenight', click: () => mainWindow?.webContents.send('theme:change', 'palenight') },
+                { label: 'Panda Syntax', click: () => mainWindow?.webContents.send('theme:change', 'panda') },
+                { type: 'separator' },
+                { label: 'Ayu Dark', click: () => mainWindow?.webContents.send('theme:change', 'ayu-dark') },
+                { label: 'Vitesse Dark', click: () => mainWindow?.webContents.send('theme:change', 'vitesse-dark') },
+                { label: 'Andromeda', click: () => mainWindow?.webContents.send('theme:change', 'andromeda') },
+                { label: 'Moonlight II', click: () => mainWindow?.webContents.send('theme:change', 'moonlight') },
+                { type: 'separator' },
+                { label: "Synthwave '84", click: () => mainWindow?.webContents.send('theme:change', 'synthwave-84') },
+                { label: 'Horizon Dark', click: () => mainWindow?.webContents.send('theme:change', 'horizon-dark') },
+                { label: 'Shades of Purple', click: () => mainWindow?.webContents.send('theme:change', 'shades-of-purple') },
+                { label: 'Laserwave', click: () => mainWindow?.webContents.send('theme:change', 'laserwave') },
+                { label: 'Aura Dark', click: () => mainWindow?.webContents.send('theme:change', 'aura-dark') },
+                { type: 'separator' },
+                { label: 'Bluloco Dark', click: () => mainWindow?.webContents.send('theme:change', 'bluloco-dark') },
+                { label: 'Bearded Arc', click: () => mainWindow?.webContents.send('theme:change', 'bearded-arc') },
+                { label: 'Slack Dark', click: () => mainWindow?.webContents.send('theme:change', 'slack-dark') },
+                { label: 'Min Dark', click: () => mainWindow?.webContents.send('theme:change', 'min-dark') }
               ]
             },
             {
-              label: 'Light Themes',
+              label: '☀️ Light Themes',
               submenu: [
                 { label: 'Light+ (default light)', click: () => mainWindow?.webContents.send('theme:change', 'light-plus') },
                 { label: 'GitHub Light', click: () => mainWindow?.webContents.send('theme:change', 'github-light') },
-                { label: 'Quiet Light', click: () => mainWindow?.webContents.send('theme:change', 'quiet-light') }
+                { label: 'Quiet Light', click: () => mainWindow?.webContents.send('theme:change', 'quiet-light') },
+                { type: 'separator' },
+                { label: 'Catppuccin Latte', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-latte') },
+                { label: 'Tokyo Night Day', click: () => mainWindow?.webContents.send('theme:change', 'tokyo-night-day') },
+                { type: 'separator' },
+                { label: 'Everforest Light', click: () => mainWindow?.webContents.send('theme:change', 'everforest-light') },
+                { label: 'Kanagawa Lotus', click: () => mainWindow?.webContents.send('theme:change', 'kanagawa-lotus') },
+                { type: 'separator' },
+                { label: 'Solarized Light', click: () => mainWindow?.webContents.send('theme:change', 'solarized-light') },
+                { label: 'Ayu Light', click: () => mainWindow?.webContents.send('theme:change', 'ayu-light') },
+                { label: 'One Light', click: () => mainWindow?.webContents.send('theme:change', 'one-light') },
+                { type: 'separator' },
+                { label: 'Rosé Pine Dawn', click: () => mainWindow?.webContents.send('theme:change', 'rose-pine-dawn') },
+                { label: 'Vitesse Light', click: () => mainWindow?.webContents.send('theme:change', 'vitesse-light') },
+                { label: 'Night Owl Light', click: () => mainWindow?.webContents.send('theme:change', 'night-owl-light') },
+                { label: 'Material Light', click: () => mainWindow?.webContents.send('theme:change', 'material-light') },
+                { type: 'separator' },
+                { label: 'Material Lighter', click: () => mainWindow?.webContents.send('theme:change', 'material-lighter') },
+                { label: 'Bluloco Light', click: () => mainWindow?.webContents.send('theme:change', 'bluloco-light') },
+                { label: 'Min Light', click: () => mainWindow?.webContents.send('theme:change', 'min-light') },
+                { label: 'Horizon Light', click: () => mainWindow?.webContents.send('theme:change', 'horizon-light') },
+                { label: 'Bearded Antique', click: () => mainWindow?.webContents.send('theme:change', 'bearded-antique') },
+                { label: 'Slack Ochin', click: () => mainWindow?.webContents.send('theme:change', 'slack-ochin') }
               ]
             },
             {
-              label: 'High Contrast',
+              label: '🔲 High Contrast',
               submenu: [
                 { label: 'Dark High Contrast', click: () => mainWindow?.webContents.send('theme:change', 'hc-black') },
                 { label: 'Light High Contrast', click: () => mainWindow?.webContents.send('theme:change', 'hc-light') }
@@ -360,12 +432,13 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 
 // 根据模型名选择 Provider (保留兼容)
 function getProviderForModel(model: string) {
+  if (model.startsWith('codesuc-')) return providers.codesuc;  // 特价渠道优先
   if (model.startsWith('claude-')) return providers.claude;
   if (model.startsWith('gemini-')) return providers.gemini;
   if (model.startsWith('deepseek-')) return providers.deepseek;
   if (model.startsWith('glm-')) return providers.glm;
   if (model.startsWith('gpt-')) return providers.openai;
-  return providers.claude;
+  return providers.codesuc;  // 默认使用特价渠道
 }
 
 // AI 聊天（非流式）- 使用 LLM 客户端
@@ -456,6 +529,8 @@ ipcMain.handle('fs:readFile', async (_event, filePath: string) => {
 ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string) => {
   try {
     fs.writeFileSync(filePath, content, 'utf-8');
+    // 通知渲染进程文件系统已变更
+    mainWindow?.webContents.send('fs:fileChanged', { filePath, type: 'write' });
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -978,7 +1053,305 @@ ipcMain.handle('settings:set', (_event, key: string, value: any) => {
   saveSettings(settingsCache);
 });
 
+// ==================== Dialog ====================
+ipcMain.handle('dialog:showSaveDialog', async (_event, options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
+  const result = await dialog.showSaveDialog(mainWindow!, {
+    defaultPath: options.defaultPath,
+    filters: options.filters || [{ name: 'All Files', extensions: ['*'] }],
+  });
+  return { canceled: result.canceled, filePath: result.filePath };
+});
+
+ipcMain.handle('dialog:showOpenDialog', async (_event, options: { filters?: { name: string; extensions: string[] }[]; properties?: any[] }) => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
+    filters: options.filters || [{ name: 'All Files', extensions: ['*'] }],
+    properties: options.properties as any || ['openFile'],
+  });
+  return { canceled: result.canceled, filePaths: result.filePaths };
+});
+
+ipcMain.handle('dialog:showMessageBox', async (_event, options: { type?: string; title?: string; message: string; buttons?: string[] }) => {
+  const result = await dialog.showMessageBox(mainWindow!, {
+    type: (options.type as any) || 'info',
+    title: options.title || 'MindCode',
+    message: options.message,
+    buttons: options.buttons || ['OK'],
+  });
+  return { response: result.response };
+});
+
 // ==================== Theme ====================
 ipcMain.on('theme:change', (_event, themeId: string) => {
   mainWindow?.webContents.send('theme:change', themeId);
+});
+
+// ==================== AI Code Completion ====================
+import {
+  generateCompletionMessages,
+  cleanCompletionOutput,
+  truncateCompletion,
+} from '../core/ai/completion-prompt';
+import {
+  buildCompletionContext,
+  CompletionContext,
+} from '../core/ai/completion-context';
+import {
+  DEFAULT_COMPLETION_REQUEST_CONFIG,
+} from '../core/ai/completion-config';
+
+// 补全请求缓存
+const completionCache = new Map<string, { result: string; timestamp: number }>();
+const COMPLETION_CACHE_TTL = 5000; // 5秒缓存
+
+// 补全请求处理
+ipcMain.handle('ai:completion', async (_event, request: {
+  filePath: string;
+  code: string;
+  cursorLine: number;
+  cursorColumn: number;
+  model?: string;
+}) => {
+  const { filePath, code, cursorLine, cursorColumn, model = 'codesuc-sonnet' } = request;
+  
+  // 生成缓存 key
+  const cacheKey = `${filePath}:${cursorLine}:${cursorColumn}:${code.length}`;
+  const cached = completionCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < COMPLETION_CACHE_TTL) {
+    return { success: true, data: cached.result, cached: true };
+  }
+  
+  try {
+    // 构建上下文
+    const context = await buildCompletionContext(
+      filePath,
+      code,
+      cursorLine,
+      cursorColumn,
+      {
+        maxPrefixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxPrefixLines,
+        maxSuffixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxSuffixLines,
+      }
+    );
+    
+    // 生成提示词
+    const messages = generateCompletionMessages(context, {
+      useFIM: true,
+      includeSymbols: true,
+      includeDiagnostics: false, // 暂不使用诊断
+      includeRelatedSnippets: false, // 暂不使用跨文件
+      includeStyleHints: true,
+    });
+    
+    // 调用 LLM (使用非流式，补全需要完整结果)
+    const provider = getProviderForModel(model);
+    const response = await provider.setModel(model).chat(messages);
+    
+    // 清理输出
+    const cleaned = cleanCompletionOutput(response);
+    const result = truncateCompletion(cleaned, 20, 2000);
+    
+    // 缓存结果
+    completionCache.set(cacheKey, { result, timestamp: Date.now() });
+    
+    // 清理过期缓存
+    const now = Date.now();
+    for (const [key, value] of completionCache.entries()) {
+      if (now - value.timestamp > COMPLETION_CACHE_TTL) {
+        completionCache.delete(key);
+      }
+    }
+    
+    console.log(`[AI] completion: file=${filePath}, line=${cursorLine}, model=${model}, result=${result.length} chars`);
+    
+    return { success: true, data: result, cached: false };
+  } catch (error: any) {
+    console.error('[AI] completion error:', error);
+    return { success: false, error: error?.message || 'Completion failed' };
+  }
+});
+
+// 获取补全设置
+ipcMain.handle('ai:completion-settings', async () => {
+  const enabled = settingsCache['completion.enabled'] ?? true;
+  const model = settingsCache['completion.model'] ?? 'codesuc-sonnet';
+  const debounceMs = settingsCache['completion.debounceMs'] ?? 150;
+  return { enabled, model, debounceMs };
+});
+
+// 更新补全设置
+ipcMain.handle('ai:completion-settings-set', async (_event, settings: {
+  enabled?: boolean;
+  model?: string;
+  debounceMs?: number;
+}) => {
+  if (settings.enabled !== undefined) {
+    settingsCache['completion.enabled'] = settings.enabled;
+  }
+  if (settings.model !== undefined) {
+    settingsCache['completion.model'] = settings.model;
+  }
+  if (settings.debounceMs !== undefined) {
+    settingsCache['completion.debounceMs'] = settings.debounceMs;
+  }
+  saveSettings(settingsCache);
+  return { success: true };
+});
+
+// ==================== 代码索引服务 ====================
+import { IndexService, createIndexService } from '../core/indexing';
+
+let indexService: IndexService | null = null;
+
+// 初始化索引服务
+async function getOrCreateIndexService(): Promise<IndexService> {
+  if (!indexService) {
+    indexService = createIndexService();
+    await indexService.initialize();
+  }
+  return indexService;
+}
+
+// 索引整个工作区
+ipcMain.handle('index:indexWorkspace', async (_event, workspacePath: string) => {
+  try {
+    const service = await getOrCreateIndexService();
+    
+    // 发送进度更新到渲染进程
+    service.on('onProgress', (progress) => {
+      mainWindow?.webContents.send('index:progress', progress);
+    });
+    
+    service.on('onFileIndexed', (filePath, symbolCount) => {
+      mainWindow?.webContents.send('index:fileIndexed', { filePath, symbolCount });
+    });
+    
+    service.on('onError', (error, filePath) => {
+      console.error('[Index] Error:', filePath, error.message);
+    });
+    
+    service.on('onComplete', (stats) => {
+      mainWindow?.webContents.send('index:complete', stats);
+    });
+    
+    // 开始索引（异步）
+    service.indexDirectory(workspacePath).catch(err => {
+      console.error('[Index] Indexing failed:', err);
+    });
+    
+    return { success: true, message: 'Indexing started' };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取索引进度
+ipcMain.handle('index:getProgress', async () => {
+  if (!indexService) {
+    return { status: 'idle', totalFiles: 0, indexedFiles: 0 };
+  }
+  return indexService.getProgress();
+});
+
+// 获取索引统计
+ipcMain.handle('index:getStats', async () => {
+  if (!indexService) {
+    return { totalFiles: 0, totalSymbols: 0, totalCallRelations: 0, totalDependencies: 0, totalChunks: 0 };
+  }
+  return indexService.getStats();
+});
+
+// 搜索代码
+ipcMain.handle('index:search', async (_event, query: {
+  query: string;
+  type?: 'symbol' | 'semantic' | 'hybrid';
+  limit?: number;
+  fileFilter?: string[];
+  kindFilter?: string[];
+}) => {
+  try {
+    const service = await getOrCreateIndexService();
+    const results = await service.searchCode({
+      query: query.query,
+      type: query.type || 'hybrid',
+      limit: query.limit || 20,
+      fileFilter: query.fileFilter,
+      kindFilter: query.kindFilter as any,
+    });
+    return { success: true, data: results };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 搜索符号
+ipcMain.handle('index:searchSymbols', async (_event, name: string, limit?: number) => {
+  try {
+    const service = await getOrCreateIndexService();
+    const symbols = await service.searchSymbols(name, limit || 20);
+    return { success: true, data: symbols };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取文件符号（文件大纲）
+ipcMain.handle('index:getFileSymbols', async (_event, filePath: string) => {
+  try {
+    const service = await getOrCreateIndexService();
+    const symbols = await service.getFileSymbols(filePath);
+    return { success: true, data: symbols };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 查找定义
+ipcMain.handle('index:findDefinition', async (_event, symbolName: string) => {
+  try {
+    const service = await getOrCreateIndexService();
+    const definition = await service.findDefinition(symbolName);
+    return { success: true, data: definition };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 查找引用
+ipcMain.handle('index:findReferences', async (_event, symbolId: string) => {
+  try {
+    const service = await getOrCreateIndexService();
+    const references = await service.findReferences(symbolId);
+    return { success: true, data: references };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取相关代码（用于 @codebase）
+ipcMain.handle('index:getRelatedCode', async (_event, query: string, limit?: number) => {
+  try {
+    const service = await getOrCreateIndexService();
+    const related = await service.getRelatedCode(query, limit || 10);
+    return { success: true, data: related };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 取消索引
+ipcMain.handle('index:cancel', async () => {
+  if (indexService) {
+    indexService.cancelIndexing();
+    return { success: true };
+  }
+  return { success: false, error: 'No indexing in progress' };
+});
+
+// 清空索引
+ipcMain.handle('index:clear', async () => {
+  if (indexService) {
+    indexService.clearIndex();
+    return { success: true };
+  }
+  return { success: false, error: 'Index service not initialized' };
 });

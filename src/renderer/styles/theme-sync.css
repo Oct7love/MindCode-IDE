@@ -1,0 +1,591 @@
+/**
+ * MindCode Theme Sync - 确保所有组件响应主题变化
+ * 使用 CSS 变量代替硬编码颜色，让主题切换时所有区域同步更新
+ */
+
+/* ============================================
+ * MindCode Logo 主题自适应
+ * ============================================ */
+
+:root {
+  /* 暗色主题 Logo 颜色 - 科技紫到淡蓝渐变 */
+  --logo-color-start: #a78bfa;
+  --logo-color-mid: #818cf8;
+  --logo-color-end: #22d3ee;
+  --logo-bg: rgba(139, 92, 246, 0.08);
+  --logo-highlight: rgba(255, 255, 255, 0.25);
+  --logo-highlight-end: rgba(255, 255, 255, 0);
+  --logo-shadow-start: rgba(0, 0, 0, 0);
+  --logo-shadow-end: rgba(0, 0, 0, 0.5);
+  --logo-glow-color: rgba(139, 92, 246, 0.5);
+}
+
+/* 浅色主题 Logo 颜色 - 深紫到深蓝 */
+[data-theme-type="light"] {
+  --logo-color-start: #7c3aed;
+  --logo-color-mid: #4f46e5;
+  --logo-color-end: #0891b2;
+  --logo-bg: rgba(124, 58, 237, 0.1);
+  --logo-highlight: rgba(255, 255, 255, 0.4);
+  --logo-highlight-end: rgba(255, 255, 255, 0.1);
+  --logo-shadow-start: rgba(0, 0, 0, 0);
+  --logo-shadow-end: rgba(0, 0, 0, 0.2);
+  --logo-glow-color: rgba(124, 58, 237, 0.3);
+}
+
+/* 高对比度主题 */
+[data-theme-type="hc"] {
+  --logo-color-start: #c4b5fd;
+  --logo-color-mid: #a5b4fc;
+  --logo-color-end: #67e8f9;
+  --logo-bg: rgba(196, 181, 253, 0.15);
+  --logo-highlight: rgba(255, 255, 255, 0.35);
+  --logo-glow-color: rgba(196, 181, 253, 0.6);
+}
+
+/* Logo 动画与交互 */
+.mindcode-logo {
+  animation: logoFloat 6s ease-in-out infinite;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+  cursor: pointer;
+}
+
+.mindcode-logo:hover {
+  transform: scale(1.08) translateY(-2px);
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4)) drop-shadow(0 0 25px var(--logo-glow, rgba(139,92,246,0.4))) !important;
+}
+
+.mindcode-logo:active {
+  transform: scale(1.02);
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Logo容器 - 无边框，纯透明 */
+.welcome-logo-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.welcome-logo-container:hover {
+  transform: scale(1.02);
+}
+
+/* 欢迎页标题缩放效果 - 直接hover生效 */
+.welcome h1 {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), text-shadow 0.3s ease;
+  cursor: default;
+  display: inline-block;
+}
+
+.welcome h1:hover {
+  transform: scale(1.05);
+  text-shadow: 0 0 20px var(--logo-glow, rgba(139, 92, 246, 0.3));
+}
+
+.welcome-subtitle {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease, letter-spacing 0.3s ease;
+  cursor: default;
+  display: inline-block;
+}
+
+.welcome-subtitle:hover {
+  transform: scale(1.03);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.15em;
+}
+
+/* ============================================
+ * 主题变量桥接 - Premium 变量映射到设计系统变量
+ * ============================================ */
+
+:root {
+  /* 将 Premium 变量映射到 design tokens，这样切换主题时会同步 */
+  --premium-bg-deepest: var(--color-bg-base);
+  --premium-bg-deep: var(--color-bg-base);
+  --premium-bg-base: var(--color-bg-surface);
+  --premium-bg-surface: var(--color-bg-elevated);
+  --premium-bg-elevated: var(--color-bg-elevated);
+  --premium-bg-hover: var(--color-bg-hover);
+  --premium-bg-active: var(--color-bg-active);
+  
+  --premium-border: var(--color-border);
+  --premium-border-hover: var(--color-border-strong);
+  --premium-border-focus: var(--color-accent-primary);
+  
+  --premium-text-primary: var(--color-text-primary);
+  --premium-text-secondary: var(--color-text-secondary);
+  --premium-text-tertiary: var(--color-text-tertiary);
+  --premium-text-muted: var(--color-text-muted);
+  
+  --premium-accent: var(--color-accent-primary);
+  --premium-accent-secondary: var(--color-accent-primary);
+  --premium-accent-glow: var(--color-accent-primary);
+}
+
+/* ============================================
+ * 全局背景同步
+ * ============================================ */
+
+body {
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+}
+
+.workbench {
+  background: var(--color-bg-base);
+}
+
+/* ============================================
+ * Activity Bar 主题同步
+ * ============================================ */
+
+.activitybar {
+  background: var(--vscode-activityBar-background, var(--color-bg-surface));
+  border-right-color: var(--color-border-subtle);
+}
+
+.activity-action {
+  color: var(--vscode-activityBar-inactiveForeground, var(--color-text-muted));
+}
+
+.activity-action:hover {
+  color: var(--vscode-activityBar-foreground, var(--color-text-secondary));
+}
+
+.activity-action.active {
+  color: var(--vscode-activityBar-foreground, var(--color-text-primary));
+}
+
+.activity-action.active::before {
+  background: var(--color-accent-primary);
+}
+
+/* ============================================
+ * Sidebar 主题同步
+ * ============================================ */
+
+.sidebar {
+  background: var(--vscode-sideBar-background, var(--color-bg-surface));
+  border-right-color: var(--color-border-subtle);
+}
+
+.sidebar-title {
+  color: var(--vscode-sideBar-foreground, var(--color-text-tertiary));
+}
+
+.tree-header {
+  background: var(--vscode-sideBarSectionHeader-background, transparent);
+  border-bottom-color: var(--color-border-subtle);
+}
+
+.tree-header-label {
+  color: var(--vscode-sideBar-foreground, var(--color-text-secondary));
+}
+
+.tree-row {
+  color: var(--vscode-sideBar-foreground, var(--color-text-secondary));
+}
+
+.tree-row:hover {
+  background: var(--vscode-list-hoverBackground, var(--color-bg-hover));
+}
+
+.tree-row.selected {
+  background: var(--vscode-list-activeSelectionBackground, var(--color-bg-selected));
+  color: var(--vscode-list-activeSelectionForeground, var(--color-text-primary));
+}
+
+.tree-label {
+  color: inherit;
+}
+
+/* ============================================
+ * Editor Area 主题同步
+ * ============================================ */
+
+.editor-area {
+  background: var(--vscode-editor-background, var(--color-bg-base));
+}
+
+.editor-content {
+  background: var(--vscode-editor-background, var(--color-bg-base));
+}
+
+/* ============================================
+ * Tabs 主题同步
+ * ============================================ */
+
+.tabs-wrapper {
+  background: var(--vscode-tab-inactiveBackground, var(--color-bg-surface));
+  border-bottom-color: var(--color-border-subtle);
+}
+
+.tab {
+  background: var(--vscode-tab-inactiveBackground, transparent);
+  border-right-color: var(--vscode-tab-border, var(--color-border-subtle));
+}
+
+.tab:hover {
+  background: var(--vscode-list-hoverBackground, var(--color-bg-hover));
+}
+
+.tab.active {
+  background: var(--vscode-tab-activeBackground, var(--color-bg-base));
+}
+
+.tab-label {
+  color: var(--color-text-muted);
+}
+
+.tab:hover .tab-label {
+  color: var(--color-text-secondary);
+}
+
+.tab.active .tab-label {
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+ * Status Bar 主题同步
+ * ============================================ */
+
+.statusbar {
+  background: var(--vscode-statusBar-background, var(--color-bg-surface));
+  border-top-color: var(--color-border-subtle);
+  color: var(--vscode-statusBar-foreground, var(--color-text-muted));
+}
+
+.status-item {
+  color: inherit;
+}
+
+.status-item:hover {
+  background: var(--color-bg-hover);
+}
+
+/* ============================================
+ * Title Bar 主题同步
+ * ============================================ */
+
+.titlebar {
+  background: var(--vscode-titleBar-activeBackground, var(--color-bg-surface));
+  border-bottom-color: var(--color-border-subtle);
+}
+
+.titlebar-title {
+  color: var(--vscode-titleBar-activeForeground, var(--color-text-muted));
+}
+
+/* ============================================
+ * Welcome Page 主题同步
+ * ============================================ */
+
+.welcome {
+  background: var(--vscode-editor-background, var(--color-bg-base));
+}
+
+.welcome h1 {
+  color: var(--color-text-primary);
+}
+
+.welcome-subtitle {
+  color: var(--color-text-tertiary);
+}
+
+.shortcut {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+.shortcut:hover {
+  background: var(--color-bg-active);
+  border-color: var(--color-border-strong);
+}
+
+.shortcut-text {
+  color: var(--color-text-secondary);
+}
+
+.shortcut:hover .shortcut-text {
+  color: var(--color-text-primary);
+}
+
+.shortcut-keys kbd {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+/* ============================================
+ * AI Panel 主题同步
+ * ============================================ */
+
+.ai-panel {
+  background: var(--color-bg-surface);
+  border-left-color: var(--color-border-subtle);
+}
+
+.ai-header {
+  background: var(--color-bg-surface);
+  border-bottom-color: var(--color-border-subtle);
+}
+
+.ai-header-title {
+  color: var(--color-text-primary);
+}
+
+.ai-header-btn {
+  color: var(--color-text-muted);
+}
+
+.ai-header-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+}
+
+.ai-messages,
+.chat-messages,
+.message-list {
+  background: var(--color-bg-base);
+}
+
+/* 消息样式 */
+.message-avatar.assistant,
+.ai-msg.assistant .ai-msg-avatar {
+  background: var(--gradient-ai, linear-gradient(135deg, var(--color-accent-ai) 0%, var(--color-accent-primary) 100%));
+}
+
+.message-avatar.user,
+.ai-msg.user .ai-msg-avatar {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.message-name,
+.ai-msg-name {
+  color: var(--color-text-primary);
+}
+
+.message-content,
+.ai-msg-body {
+  color: var(--color-text-secondary);
+}
+
+.message-item.assistant .message-content,
+.ai-msg.assistant .ai-msg-body {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+.message-item.user .message-content,
+.ai-msg.user .ai-msg-body {
+  background: var(--color-bg-selected);
+  border-color: var(--color-border);
+}
+
+/* 输入区域 */
+.ai-input-area,
+.chat-composer,
+.composer-container {
+  background: var(--color-bg-surface);
+  border-top-color: var(--color-border-subtle);
+}
+
+.ai-input-box,
+.composer-input-wrapper {
+  background: var(--color-bg-base);
+  border-color: var(--color-border);
+}
+
+.ai-input-box:focus-within,
+.composer-input-wrapper:focus-within {
+  border-color: var(--color-accent-primary);
+}
+
+.ai-input-box textarea,
+.composer-textarea {
+  color: var(--color-text-primary);
+}
+
+.ai-input-box textarea::placeholder,
+.composer-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.ai-send-btn svg,
+.send-button svg {
+  color: var(--color-accent-primary);
+}
+
+/* 模式按钮 */
+.ai-ctx-btn,
+.mode-button,
+.context-button {
+  background: var(--color-bg-base);
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+.ai-ctx-btn:hover,
+.mode-button:hover,
+.context-button:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+}
+
+.ai-ctx-btn.active,
+.mode-button.active,
+.context-button.active {
+  background: var(--color-bg-selected);
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+/* 模型选择器 */
+.model-picker,
+.ai-model-select {
+  background: var(--color-bg-base);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.model-picker:hover,
+.ai-model-select:hover {
+  border-color: var(--color-border-strong);
+}
+
+.model-picker:focus,
+.ai-model-select:focus {
+  border-color: var(--color-accent-primary);
+}
+
+/* ============================================
+ * Code Block 主题同步
+ * ============================================ */
+
+.code-block {
+  background: var(--color-bg-base);
+  border-color: var(--color-border);
+}
+
+.code-block-header {
+  background: var(--color-bg-hover);
+  border-bottom-color: var(--color-border);
+}
+
+.code-block-lang {
+  color: var(--color-text-tertiary);
+}
+
+.code-block-content code {
+  color: var(--color-text-primary);
+}
+
+.code-block-btn {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+.code-block-btn:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-secondary);
+}
+
+/* ============================================
+ * Thinking Block 主题同步
+ * ============================================ */
+
+.thinking-block {
+  background: var(--color-bg-selected);
+  border-color: var(--color-accent-ai);
+}
+
+.thinking-header {
+  color: var(--color-accent-ai);
+}
+
+.thinking-content {
+  color: var(--color-text-secondary);
+}
+
+/* ============================================
+ * 滚动条主题同步
+ * ============================================ */
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar, var(--vscode-scrollbarSlider-background));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover, var(--vscode-scrollbarSlider-hoverBackground));
+}
+
+/* ============================================
+ * 输入框通用主题同步
+ * ============================================ */
+
+input[type="text"],
+input[type="search"],
+textarea {
+  background: var(--vscode-input-background, var(--color-bg-base));
+  border-color: var(--vscode-input-border, var(--color-border));
+  color: var(--vscode-input-foreground, var(--color-text-primary));
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  border-color: var(--vscode-focusBorder, var(--color-accent-primary));
+}
+
+select {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+select:focus {
+  border-color: var(--color-accent-primary);
+}
+
+/* ============================================
+ * 按钮主题同步
+ * ============================================ */
+
+.btn-primary {
+  background: var(--color-accent-primary);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+ * 过渡动画
+ * ============================================ */
+
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color 200ms ease, 
+              border-color 200ms ease, 
+              color 200ms ease,
+              box-shadow 200ms ease !important;
+}

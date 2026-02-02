@@ -462,6 +462,121 @@
 }
 
 /* ============================================
+ * Inline Suggest Widget (Ghost Text) - Cursor Style
+ * ============================================ */
+
+/* Ghost text 主体样式 */
+.monaco-editor .ghost-text {
+  color: #6B7280 !important;
+  font-style: italic !important;
+  opacity: 0.75;
+}
+
+.monaco-editor .ghost-text-decoration-preview {
+  color: #6B7280 !important;
+  font-style: italic !important;
+}
+
+/* 内联建议容器 */
+.monaco-editor .inlineSuggestionsWidget {
+  z-index: 100;
+}
+
+/* 内联建议工具栏 */
+.monaco-editor .inlineSuggestionsHintsWidget {
+  background: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md), 0 0 15px rgba(139, 92, 246, 0.1) !important;
+  backdrop-filter: var(--backdrop-blur);
+  padding: var(--space-1) var(--space-2) !important;
+  gap: var(--space-2) !important;
+}
+
+/* 工具栏顶部光效 */
+.monaco-editor .inlineSuggestionsHintsWidget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.4) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* 工具栏按钮 */
+.monaco-editor .inlineSuggestionsHintsWidget .action-item {
+  border-radius: var(--radius-sm) !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.monaco-editor .inlineSuggestionsHintsWidget .action-item:hover {
+  background: var(--color-bg-hover) !important;
+}
+
+.monaco-editor .inlineSuggestionsHintsWidget .action-label {
+  color: var(--color-text-secondary) !important;
+  font-size: var(--font-size-xs) !important;
+  padding: var(--space-1) var(--space-1-5) !important;
+}
+
+.monaco-editor .inlineSuggestionsHintsWidget .action-label:hover {
+  color: var(--color-text-primary) !important;
+}
+
+/* 快捷键提示 */
+.monaco-editor .inlineSuggestionsHintsWidget .keybinding {
+  color: var(--color-text-disabled) !important;
+  font-size: 10px !important;
+  background: var(--color-bg-base) !important;
+  padding: 2px 4px !important;
+  border-radius: var(--radius-xs) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+}
+
+/* 多行 ghost text 样式 */
+.monaco-editor .ghost-text-hint-content {
+  color: #6B7280 !important;
+  border-left: 2px solid rgba(139, 92, 246, 0.3) !important;
+  padding-left: var(--space-2) !important;
+  margin-left: var(--space-1) !important;
+}
+
+/* 内联补全预览动画 */
+.monaco-editor .suggest-preview-additional-widget {
+  animation: fadeInGhost 0.15s ease-out;
+}
+
+@keyframes fadeInGhost {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 接受补全时的过渡效果 */
+.monaco-editor .suggest-preview-text {
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+/* Tab 提示标签 */
+.monaco-editor .suggest-preview-additional-widget .suggest-preview-text {
+  background: rgba(139, 92, 246, 0.08) !important;
+  border-radius: var(--radius-xs) !important;
+  padding: 0 2px !important;
+}
+
+/* ============================================
  * Peek View - Premium
  * ============================================ */
 

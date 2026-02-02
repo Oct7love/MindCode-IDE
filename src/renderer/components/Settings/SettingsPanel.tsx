@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAIStore, useUIStore } from '../../stores';
+import { themes, applyTheme } from '../../utils/themes';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -10,14 +11,22 @@ interface SettingsPanelProps {
 type SettingsTab = 'ai' | 'editor' | 'shortcuts' | 'appearance';
 
 const defaultSettings = {
-  ai: { defaultModel: 'claude-4-5-opus', enableGhostText: true, completionDelay: 300, completionModel: 'gemini-2-5-flash-lite', maxTokens: 4096, temperature: 0.7 },
+  ai: { 
+    defaultModel: 'claude-4-5-opus', 
+    enableGhostText: true, 
+    completionDelay: 300, 
+    completionModel: 'gemini-2-5-flash-lite', 
+    maxTokens: 4096, 
+    temperature: 0.7,
+    enableThinkingUI: false  // Cursor 风格的 Thinking UI
+  },
   editor: { fontSize: 14, fontFamily: 'JetBrains Mono', tabSize: 2, wordWrap: 'off', minimap: true, lineNumbers: 'on', formatOnSave: false },
   appearance: { theme: 'dark-plus', sidebarWidth: 240, aiPanelWidth: 380 },
   shortcuts: { openAIPanel: 'Ctrl+L', commandPalette: 'Ctrl+Shift+P', quickOpen: 'Ctrl+P', inlineEdit: 'Ctrl+K', toggleTerminal: 'Ctrl+`' },
 };
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose }) => {
-  const { model, setModel } = useAIStore();
+  const { model, setModel, useThinkingUIMode, setUseThinkingUIMode } = useAIStore();
   const { theme, setTheme, aiPanelWidth, setAIPanelWidth } = useUIStore();
   const [activeTab, setActiveTab] = useState<SettingsTab>('ai');
   const [settings, setSettings] = useState(defaultSettings);
@@ -25,8 +34,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
 
   useEffect(() => { // 加载设置
     const saved = localStorage.getItem('mindcode-settings');
-    if (saved) try { setSettings({ ...defaultSettings, ...JSON.parse(saved) }); } catch {}
-  }, []);
+    if (saved) {
+      try { 
+        const parsed = { ...defaultSettings, ...JSON.parse(saved) };
+        setSettings(parsed);
+        // 同步 Thinking UI 设置到 store
+        if (parsed.ai.enableThinkingUI !== undefined) {
+          setUseThinkingUIMode(parsed.ai.enableThinkingUI);
+        }
+      } catch {}
+    }
+  }, [setUseThinkingUIMode]);
 
   const updateSetting = <T extends keyof typeof settings>(section: T, key: keyof typeof settings[T], value: any) => {
     setSettings(s => ({ ...s, [section]: { ...s[section], [key]: value } }));
@@ -38,6 +56,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
     setModel(settings.ai.defaultModel);
     setTheme(settings.appearance.theme);
     setAIPanelWidth(settings.appearance.aiPanelWidth);
+    setUseThinkingUIMode(settings.ai.enableThinkingUI);  // 应用 Thinking UI 设置
     setIsDirty(false);
     // 发送设置更新事件
     window.dispatchEvent(new CustomEvent('settings-changed', { detail: settings }));
@@ -107,6 +126,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
                   <input type="range" value={settings.ai.temperature} min={0} max={1} step={0.1} onChange={e => updateSetting('ai', 'temperature', +e.target.value)} />
                   <span>{settings.ai.temperature}</span>
                 </div>
+                
+                <div className="setting-divider" />
+                <h4 className="setting-subtitle">🧠 Thinking UI (实验性)</h4>
+                
+                <div className="setting-item">
+                  <label>
+                    启用 Thinking UI
+                    <span className="setting-hint">Cursor 风格的思考过程可视化</span>
+                  </label>
+                  <input 
+                    type="checkbox" 
+                    checked={settings.ai.enableThinkingUI} 
+                    onChange={e => updateSetting('ai', 'enableThinkingUI', e.target.checked)} 
+                  />
+                </div>
+                <p className="setting-description">
+                  启用后，AI 回复将显示结构化的思考摘要、动作轨迹 Timeline 和最终回答。
+                  需要模型支持严格 JSON 输出。
+                </p>
               </div>
             )}
 
@@ -157,11 +195,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
             {activeTab === 'appearance' && (
               <div className="settings-section">
                 <div className="setting-item">
-                  <label>主题</label>
-                  <select value={settings.appearance.theme} onChange={e => updateSetting('appearance', 'theme', e.target.value)}>
-                    <option value="dark-plus">Dark+</option>
-                    <option value="mindcode-dark">MindCode Dark</option>
-                    <option value="one-dark-pro">One Dark Pro</option>
+                  <label>主题 ({themes.length} 个可选)</label>
+                  <select value={settings.appearance.theme} onChange={e => { updateSetting('appearance', 'theme', e.target.value); applyTheme(e.target.value); }}>
+                    <optgroup label="🌙 暗色主题">
+                      {themes.filter(t => t.type === 'dark').map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                    </optgroup>
+                    <optgroup label="☀️ 亮色主题">
+                      {themes.filter(t => t.type === 'light').map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                    </optgroup>
+                    <optgroup label="🔲 高对比度">
+                      {themes.filter(t => t.type === 'hc').map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                    </optgroup>
                   </select>
                 </div>
                 <div className="setting-item">

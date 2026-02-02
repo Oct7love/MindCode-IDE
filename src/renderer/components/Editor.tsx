@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as monaco from 'monaco-editor';
+import { useCompletion } from '../hooks/useCompletion';
 import './Editor.css';
 
 // 获取文件语言类型
@@ -60,6 +61,10 @@ const Editor: React.FC<EditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const completionDisposableRef = useRef<monaco.IDisposable | null>(null);
+
+  // 代码补全 Hook
+  const { enabled: completionEnabled, registerProvider } = useCompletion();
 
   const [tabs, setTabs] = useState<TabInfo[]>(initialTabs || [{
     id: 'welcome',
@@ -153,8 +158,21 @@ hello();
         showClasses: true,
         showFunctions: true,
         showVariables: true
+      },
+      // 启用 Inline Suggestions (代码补全)
+      inlineSuggest: {
+        enabled: true,
+        mode: 'prefix',
+        showToolbar: 'onHover'
+      },
+      quickSuggestions: {
+        other: true,
+        comments: false,
+        strings: false
       }
     });
+    
+    console.log('[Editor] Monaco editor created, inlineSuggest enabled');
 
     editorRef.current = editor;
 
@@ -203,6 +221,26 @@ hello();
       window.removeEventListener('theme-changed', handleThemeChange as EventListener);
     };
   }, []);
+
+  // 单独的 useEffect 来注册补全 Provider
+  useEffect(() => {
+    if (editorRef.current) {
+      // 清理旧的 provider
+      if (completionDisposableRef.current) {
+        completionDisposableRef.current.dispose();
+      }
+      // 注册新的 provider
+      completionDisposableRef.current = registerProvider(monaco);
+      console.log('[Editor] Completion provider registered');
+    }
+
+    return () => {
+      if (completionDisposableRef.current) {
+        completionDisposableRef.current.dispose();
+        completionDisposableRef.current = null;
+      }
+    };
+  }, [registerProvider]);
 
   // 切换标签时更新编辑器内容
   useEffect(() => {

@@ -36,7 +36,7 @@ interface MessageActionsProps {
   /** 复制失败回调 */
   onCopyError?: (error: string) => void;
   /** 位置 */
-  position?: 'top-right' | 'left' | 'bottom';
+  position?: 'top-right' | 'left' | 'bottom' | 'inline';
   /** 紧凑模式 */
   compact?: boolean;
   /** 是否显示 Copy Menu */

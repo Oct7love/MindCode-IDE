@@ -1,0 +1,226 @@
+/**
+ * DiffEditorPanel - Monaco Diff Editor 面板样式
+ * Cursor 风格的代码差异对比面板
+ */
+
+.diff-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg-base, #0d0d0d);
+  border-top: 1px solid var(--color-border-default, #262626);
+}
+
+/* === 头部工具栏 === */
+.diff-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-bg-surface, #141414);
+  border-bottom: 1px solid var(--color-border-subtle, #1f1f1f);
+  min-height: 40px;
+}
+
+.diff-editor-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.diff-icon {
+  display: flex;
+  align-items: center;
+  color: #9966cc;
+}
+
+.diff-filename {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #e5e5e5);
+  white-space: nowrap;
+}
+
+.diff-path {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #6e6e6e);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* === 操作按钮 === */
+.diff-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diff-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: none;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+  color: var(--color-text-secondary, #a3a3a3);
+}
+
+.diff-action-btn:hover {
+  background: var(--color-bg-hover, #262626);
+  color: var(--color-text-primary, #e5e5e5);
+}
+
+.diff-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.diff-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 拒绝按钮 */
+.diff-reject-btn {
+  color: var(--color-error, #f87171);
+}
+
+.diff-reject-btn:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--color-error, #f87171);
+}
+
+/* 应用按钮 */
+.diff-apply-btn {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--color-success, #34d399);
+}
+
+.diff-apply-btn:hover {
+  background: rgba(52, 211, 153, 0.25);
+}
+
+.diff-apply-btn:disabled {
+  background: rgba(52, 211, 153, 0.1);
+}
+
+/* 关闭按钮 */
+.diff-close-btn {
+  padding: 5px;
+  margin-left: 4px;
+}
+
+.diff-close-btn:hover {
+  background: var(--color-bg-active, #333);
+}
+
+/* 加载动画 */
+.loading-spinner-small {
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === Diff Editor 容器 === */
+.diff-editor-container {
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+/* === 底部状态栏 === */
+.diff-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--color-bg-surface, #141414);
+  border-top: 1px solid var(--color-border-subtle, #1f1f1f);
+  font-size: 11px;
+}
+
+.diff-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.diff-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.diff-stat.additions {
+  color: var(--color-success, #34d399);
+}
+
+.diff-stat.deletions {
+  color: var(--color-error, #f87171);
+}
+
+.diff-shortcuts {
+  color: var(--color-text-tertiary, #6e6e6e);
+}
+
+.diff-shortcuts kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  font-size: 10px;
+  font-family: var(--font-family-code, monospace);
+  background: var(--color-bg-elevated, #1a1a1a);
+  border: 1px solid var(--color-border-default, #262626);
+  border-radius: 3px;
+  margin: 0 2px;
+}
+
+/* === Monaco Diff Editor 覆盖样式 === */
+.diff-editor-panel .monaco-diff-editor {
+  background: var(--color-bg-base, #0d0d0d) !important;
+}
+
+.diff-editor-panel .monaco-diff-editor .diffOverview {
+  background: var(--color-bg-surface, #141414) !important;
+}
+
+.diff-editor-panel .monaco-diff-editor .diffViewport {
+  background: rgba(139, 92, 246, 0.2) !important;
+}
+
+/* 新增行高亮 */
+.diff-editor-panel .monaco-editor .line-insert {
+  background: rgba(52, 211, 153, 0.12) !important;
+}
+
+.diff-editor-panel .monaco-editor .char-insert {
+  background: rgba(52, 211, 153, 0.25) !important;
+}
+
+/* 删除行高亮 */
+.diff-editor-panel .monaco-editor .line-delete {
+  background: rgba(248, 113, 113, 0.12) !important;
+}
+
+.diff-editor-panel .monaco-editor .char-delete {
+  background: rgba(248, 113, 113, 0.25) !important;
+}
+
+/* 分栏分隔线 */
+.diff-editor-panel .monaco-diff-editor .editor.modified {
+  border-left: 1px solid var(--color-border-default, #262626);
+}

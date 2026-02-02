@@ -57,8 +57,23 @@ export {
 export type { CopyFormat, CopyResult, ParsedContent } from './utils/copyService';
 
 // Hooks 导出
-export { useChatEngine, useComposerState, useScrollAnchor, useCopyWithFeedback } from './hooks';
-export type { CopyState, CopyFeedback as CopyFeedbackState, UseCopyWithFeedbackReturn } from './hooks';
+export { useChatEngine, useComposerState, useScrollAnchor, useCopyWithFeedback, useApplyCode, useMultiFileChanges } from './hooks';
+export type { CopyState, CopyFeedback as CopyFeedbackState, UseCopyWithFeedbackReturn, PendingChange } from './hooks';
+
+// Thinking UI 组件导出
+export { ThinkingUI, ThinkingHeader, ThoughtSummary, TraceTimeline } from './ThinkingUI';
+export type { ThinkingUIOutput, TraceEvent as ThinkingTraceEvent } from './ThinkingUI';
+
+// Diff Preview 组件导出
+export { DiffPreview } from './DiffPreview';
+export type { DiffPreviewProps } from './DiffPreview';
+
+// Multi File Changes 组件导出
+export { MultiFileChanges } from './MultiFileChanges';
+export type { FileChange } from './MultiFileChanges';
+
+// Apply Service 导出
+export { detectFilePath, cleanCodeForApply, getExtensionForLanguage } from './utils/applyService';
 
 export type { AIMode, ContextItem, ToolCallStatus, QueuedMessage } from '../../stores';
 export type { ModelInfo } from './ModelPicker';

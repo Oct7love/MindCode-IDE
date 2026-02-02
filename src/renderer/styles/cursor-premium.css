@@ -1,0 +1,1371 @@
+/**
+ * MindCode - Cursor Premium Theme
+ * 超越 Cursor 的专业级暗色主题
+ * 
+ * 设计理念：
+ * - 深邃的黑色背景，减少视觉疲劳
+ * - 精致的渐变和光效
+ * - 流畅的微动效
+ * - 清晰的层次结构
+ */
+
+/* ============================================
+ * 全局升级
+ * ============================================ */
+
+:root {
+  /* 核心暗色 - 比 Cursor 更深邃 */
+  --premium-bg-deepest: #07070a;
+  --premium-bg-deep: #0a0a0d;
+  --premium-bg-base: #0d0d10;
+  --premium-bg-surface: #111114;
+  --premium-bg-elevated: #161619;
+  --premium-bg-hover: rgba(255, 255, 255, 0.03);
+  --premium-bg-active: rgba(255, 255, 255, 0.05);
+  
+  /* 边框 - 极细腻 */
+  --premium-border: rgba(255, 255, 255, 0.06);
+  --premium-border-hover: rgba(255, 255, 255, 0.10);
+  --premium-border-focus: #6366f1;
+  
+  /* 文本 */
+  --premium-text-primary: #f5f5f7;
+  --premium-text-secondary: #a1a1a6;
+  --premium-text-tertiary: #6e6e73;
+  --premium-text-muted: #48484a;
+  
+  /* 强调色 - 紫蓝渐变 */
+  --premium-accent: #8b5cf6;
+  --premium-accent-secondary: #6366f1;
+  --premium-accent-glow: rgba(139, 92, 246, 0.35);
+  
+  /* 渐变 */
+  --premium-gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  --premium-gradient-subtle: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  --premium-gradient-glow: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  
+  /* 紧凑字体 - Cursor 风格 */
+  --compact-font-ui: 12px;
+  --compact-font-code: 12px;
+  --compact-font-small: 11px;
+  --compact-font-tiny: 10px;
+  --compact-line-height: 1.4;
+  --compact-line-height-code: 1.45;
+}
+
+/* ============================================
+ * 应用基础
+ * ============================================ */
+
+body {
+  background: var(--premium-bg-deepest) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "ss02", "cv01";
+}
+
+/* ============================================
+ * Activity Bar - 左侧图标栏
+ * ============================================ */
+
+.activitybar {
+  background: var(--premium-bg-deep) !important;
+  border-right: 1px solid var(--premium-border) !important;
+}
+
+.activity-action {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.activity-action::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 8px;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.activity-action:hover::after {
+  background: var(--premium-bg-hover);
+}
+
+.activity-action.active::after {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.activity-action.active::before {
+  background: var(--premium-gradient-accent) !important;
+  width: 3px !important;
+  border-radius: 0 2px 2px 0;
+}
+
+.activity-action svg {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s !important;
+}
+
+.activity-action:hover svg {
+  transform: scale(1.05);
+}
+
+/* ============================================
+ * Sidebar - 侧边栏
+ * ============================================ */
+
+.sidebar {
+  background: var(--premium-bg-base) !important;
+  border-right: 1px solid var(--premium-border) !important;
+}
+
+.sidebar-title {
+  color: var(--premium-text-tertiary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* 树形视图头部 */
+.tree-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--premium-border);
+}
+
+.tree-header-label {
+  color: var(--premium-text-secondary) !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+}
+
+/* 树形行 */
+.tree-row {
+  border-radius: 6px;
+  margin: 1px 6px;
+  transition: all 0.15s !important;
+}
+
+.tree-row:hover {
+  background: var(--premium-bg-hover) !important;
+}
+
+.tree-row.selected {
+  background: rgba(139, 92, 246, 0.12) !important;
+  color: var(--premium-text-primary) !important;
+}
+
+.tree-row.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--premium-accent);
+  border-radius: 1px;
+}
+
+.tree-label {
+  color: var(--premium-text-secondary) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+}
+
+.tree-row:hover .tree-label,
+.tree-row.selected .tree-label {
+  color: var(--premium-text-primary) !important;
+}
+
+/* 文件图标颜色增强 */
+.tree-icon svg {
+  opacity: 0.9;
+}
+
+/* ============================================
+ * Editor Tabs - 标签栏
+ * ============================================ */
+
+.tabs-wrapper {
+  background: var(--premium-bg-base) !important;
+  border-bottom: 1px solid var(--premium-border) !important;
+}
+
+.tab {
+  background: transparent !important;
+  border: none !important;
+  border-right: 1px solid var(--premium-border) !important;
+  transition: all 0.15s !important;
+}
+
+.tab:hover {
+  background: var(--premium-bg-hover) !important;
+}
+
+.tab.active {
+  background: var(--premium-bg-surface) !important;
+  position: relative;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--premium-gradient-accent);
+}
+
+.tab-label {
+  color: var(--premium-text-tertiary) !important;
+  font-size: 13px !important;
+}
+
+.tab.active .tab-label {
+  color: var(--premium-text-primary) !important;
+}
+
+/* ============================================
+ * Editor Area - 编辑器区域
+ * ============================================ */
+
+.editor-area {
+  background: var(--premium-bg-deepest) !important;
+}
+
+.editor-content {
+  background: var(--premium-bg-deepest) !important;
+}
+
+/* Monaco 编辑器背景 */
+.monaco-editor,
+.monaco-editor .margin,
+.monaco-editor-background {
+  background: var(--premium-bg-deepest) !important;
+}
+
+/* ============================================
+ * Welcome Page - 欢迎页面（现代化设计）
+ * ============================================ */
+
+.welcome {
+  background: var(--premium-bg-deepest) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景网格 */
+.welcome::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 100%);
+  pointer-events: none;
+}
+
+/* 背景光晕 */
+.welcome::after {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: 700px;
+  height: 500px;
+  background: radial-gradient(
+    ellipse,
+    rgba(139, 92, 246, 0.12) 0%,
+    rgba(99, 102, 241, 0.06) 30%,
+    transparent 60%
+  );
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: bgPulse 6s ease-in-out infinite;
+}
+
+@keyframes bgPulse {
+  0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+}
+
+/* Logo 容器 */
+.welcome-logo-container {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 28px;
+}
+
+.welcome-logo-svg {
+  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+  animation: logoFloat 4s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* 兼容旧的 welcome-logo */
+.welcome-logo {
+  font-size: 64px !important;
+  margin-bottom: 24px !important;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 30px rgba(139, 92, 246, 0.5));
+  animation: logoFloat 4s ease-in-out infinite;
+}
+
+.welcome h1 {
+  font-size: 36px !important;
+  font-weight: 600 !important;
+  letter-spacing: -1px !important;
+  color: var(--premium-text-primary) !important;
+  margin-bottom: 12px !important;
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-subtitle {
+  font-size: 13px !important;
+  color: var(--premium-text-tertiary) !important;
+  font-weight: 500 !important;
+  margin-bottom: 48px !important;
+  letter-spacing: 2px !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* 快捷键卡片 - 现代设计 */
+.welcome-shortcuts {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 340px !important;
+  position: relative;
+  z-index: 1;
+}
+
+.shortcut {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 14px 18px !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.shortcut:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  transform: translateY(-2px) translateX(2px);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(139, 92, 246, 0.1);
+}
+
+.shortcut:active {
+  transform: translateY(0) translateX(0);
+}
+
+.shortcut-keys {
+  display: flex !important;
+  gap: 4px !important;
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 8px !important;
+  background: var(--premium-bg-deep) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 6px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--premium-text-tertiary) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s;
+}
+
+.shortcut:hover .shortcut-keys kbd {
+  border-color: rgba(139, 92, 246, 0.3);
+  color: var(--premium-text-secondary);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.shortcut-text {
+  font-size: 14px !important;
+  color: var(--premium-text-secondary) !important;
+  font-weight: 500 !important;
+  transition: color 0.15s;
+}
+
+.shortcut:hover .shortcut-text {
+  color: var(--premium-text-primary) !important;
+}
+
+/* 版本标签 */
+.welcome-version {
+  position: absolute;
+  bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--premium-text-muted);
+  z-index: 1;
+}
+
+.welcome-dot {
+  opacity: 0.5;
+}
+
+/* ============================================
+ * AI Panel - AI 面板（Cursor 风格）
+ * ============================================ */
+
+.ai-panel {
+  background: linear-gradient(180deg, var(--premium-bg-surface) 0%, var(--premium-bg-base) 100%) !important;
+  border-left: 1px solid var(--premium-border) !important;
+}
+
+/* 顶部微光线 */
+.ai-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%);
+  z-index: 10;
+}
+
+/* AI 面板顶部 */
+.ai-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--premium-border) !important;
+  padding: 0 16px !important;
+  height: 52px !important;
+}
+
+.ai-header-icon {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+  background: var(--premium-gradient-accent) !important;
+  box-shadow: 0 2px 8px var(--premium-accent-glow) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-header-icon svg {
+  width: 16px;
+  height: 16px;
+  color: white;
+}
+
+.ai-header-title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--premium-text-primary) !important;
+  letter-spacing: -0.2px;
+}
+
+/* 新对话按钮 */
+.ai-header-btn {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--premium-text-muted) !important;
+  transition: all 0.15s !important;
+}
+
+.ai-header-btn:hover {
+  background: var(--premium-bg-hover) !important;
+  color: var(--premium-text-secondary) !important;
+}
+
+/* 消息区域 */
+.ai-messages,
+.chat-messages,
+.message-list {
+  background: var(--premium-bg-deepest) !important;
+  padding: 16px !important;
+}
+
+/* 消息通用样式 */
+.message-item,
+.ai-msg {
+  animation: msgSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes msgSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* AI 消息头部 */
+.message-header,
+.ai-msg-header {
+  margin-bottom: 8px;
+}
+
+/* Avatar 增强 */
+.message-avatar,
+.ai-msg-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+
+.message-avatar.assistant,
+.ai-msg.assistant .ai-msg-avatar {
+  background: var(--premium-gradient-accent) !important;
+  color: white !important;
+  box-shadow: 0 2px 6px var(--premium-accent-glow) !important;
+}
+
+.message-avatar.user,
+.ai-msg.user .ai-msg-avatar {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
+  color: var(--premium-text-primary) !important;
+}
+
+/* 消息名称 */
+.message-name,
+.ai-msg-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--premium-text-primary) !important;
+}
+
+/* 消息内容 - Assistant */
+.message-content,
+.ai-msg-body {
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+  color: var(--premium-text-secondary) !important;
+}
+
+.message-item.assistant .message-content,
+.ai-msg.assistant .ai-msg-body {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+}
+
+/* 消息内容 - User */
+.message-item.user .message-content,
+.ai-msg.user .ai-msg-body {
+  background: rgba(139, 92, 246, 0.06) !important;
+  border: 1px solid rgba(139, 92, 246, 0.12) !important;
+  border-radius: 12px 12px 4px 12px !important;
+  padding: 12px 16px !important;
+}
+
+/* 输入区域 - 增强版 */
+.ai-input-area,
+.chat-composer,
+.composer-container {
+  background: var(--premium-bg-surface) !important;
+  border-top: 1px solid var(--premium-border) !important;
+  padding: 12px 16px !important;
+}
+
+/* 输入框容器 */
+.ai-input-box,
+.composer-input-wrapper {
+  background: var(--premium-bg-deep) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--premium-border) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 输入框渐变边框 */
+.ai-input-box::before,
+.composer-input-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, 
+    rgba(139, 92, 246, 0.2) 0%, 
+    rgba(99, 102, 241, 0.1) 50%, 
+    rgba(139, 92, 246, 0.05) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ai-input-box:focus-within::before,
+.composer-input-wrapper:focus-within::before {
+  opacity: 1;
+}
+
+.ai-input-box:focus-within,
+.composer-input-wrapper:focus-within {
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* 输入框文本 */
+.ai-input-box textarea,
+.composer-textarea {
+  color: var(--premium-text-primary) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  padding: 12px 14px !important;
+  background: transparent !important;
+  border: none !important;
+  resize: none !important;
+}
+
+.ai-input-box textarea::placeholder,
+.composer-textarea::placeholder {
+  color: var(--premium-text-muted) !important;
+}
+
+/* 发送按钮 */
+.ai-send-btn,
+.send-button {
+  width: 42px !important;
+  height: 100% !important;
+  min-height: 40px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 12px 12px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s !important;
+}
+
+.ai-send-btn svg,
+.send-button svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: var(--premium-accent) !important;
+  transition: all 0.15s !important;
+}
+
+.ai-send-btn:hover:not(:disabled) svg,
+.send-button:hover:not(:disabled) svg {
+  color: #a78bfa !important;
+  transform: translateX(2px);
+}
+
+.ai-send-btn:disabled svg,
+.send-button:disabled svg {
+  color: var(--premium-text-muted) !important;
+}
+
+/* 模式选择按钮 */
+.ai-ctx-btn,
+.mode-button,
+.context-button {
+  height: 28px !important;
+  padding: 0 10px !important;
+  background: var(--premium-bg-deep) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 6px !important;
+  color: var(--premium-text-tertiary) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.15s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.ai-ctx-btn:hover,
+.mode-button:hover,
+.context-button:hover {
+  background: var(--premium-bg-elevated) !important;
+  border-color: var(--premium-border-hover) !important;
+  color: var(--premium-text-secondary) !important;
+}
+
+.ai-ctx-btn.active,
+.mode-button.active,
+.context-button.active {
+  background: rgba(139, 92, 246, 0.1) !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+  color: #a78bfa !important;
+}
+
+/* 模型选择器 */
+.model-picker,
+.ai-model-select {
+  height: 28px !important;
+  padding: 0 10px !important;
+  background: var(--premium-bg-deep) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 6px !important;
+  color: var(--premium-text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+
+.model-picker:hover,
+.ai-model-select:hover {
+  border-color: var(--premium-border-hover) !important;
+  background: var(--premium-bg-elevated) !important;
+}
+
+.model-picker:focus,
+.ai-model-select:focus {
+  border-color: var(--premium-accent) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1) !important;
+  outline: none !important;
+}
+
+/* ============================================
+ * Code Block - 代码块
+ * ============================================ */
+
+.code-block {
+  background: var(--premium-bg-deep) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.code-block-header {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-bottom: 1px solid var(--premium-border) !important;
+  padding: 8px 14px !important;
+}
+
+.code-block-lang {
+  color: var(--premium-text-tertiary) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.code-block-content {
+  padding: 14px !important;
+}
+
+.code-block-content pre {
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.code-block-content code {
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: var(--premium-text-primary) !important;
+}
+
+/* 代码块按钮 */
+.code-block-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 6px !important;
+  padding: 5px 10px !important;
+  font-size: 12px !important;
+  color: var(--premium-text-tertiary) !important;
+  transition: all 0.15s !important;
+}
+
+.code-block-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--premium-text-secondary) !important;
+}
+
+.code-block-btn--accept {
+  background: rgba(34, 197, 94, 0.1) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+  color: #4ade80 !important;
+}
+
+.code-block-btn--accept:hover {
+  background: rgba(34, 197, 94, 0.18) !important;
+}
+
+/* ============================================
+ * Status Bar - 状态栏
+ * ============================================ */
+
+.statusbar {
+  background: var(--premium-bg-surface) !important;
+  border-top: 1px solid var(--premium-border) !important;
+  height: 24px !important;
+}
+
+.status-item {
+  color: var(--premium-text-tertiary) !important;
+  font-size: 12px !important;
+  transition: all 0.15s !important;
+}
+
+.status-item:hover {
+  background: var(--premium-bg-hover) !important;
+  color: var(--premium-text-secondary) !important;
+}
+
+/* ============================================
+ * 滚动条 - 超窄极简风格
+ * ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* 侧边栏和AI面板使用更窄的滚动条 */
+.sidebar ::-webkit-scrollbar,
+.ai-panel ::-webkit-scrollbar,
+.ai-messages ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar ::-webkit-scrollbar-thumb,
+.ai-panel ::-webkit-scrollbar-thumb,
+.ai-messages ::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+/* ============================================
+ * 动效增强
+ * ============================================ */
+
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 平滑的焦点过渡 */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  box-shadow: 0 0 0 2px var(--premium-bg-deepest), 0 0 0 4px var(--premium-accent);
+}
+
+/* ============================================
+ * Thinking Block - 思考块
+ * ============================================ */
+
+.thinking-block {
+  background: rgba(139, 92, 246, 0.06) !important;
+  border: 1px solid rgba(139, 92, 246, 0.15) !important;
+  border-radius: 12px !important;
+}
+
+.thinking-header {
+  color: #a78bfa !important;
+}
+
+.thinking-content {
+  color: var(--premium-text-secondary) !important;
+}
+
+/* ============================================
+ * Toast / 通知
+ * ============================================ */
+
+.toast {
+  background: var(--premium-bg-elevated) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ============================================
+ * 对话框 / 模态框
+ * ============================================ */
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(8px);
+}
+
+.modal-content {
+  background: var(--premium-bg-surface) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ============================================
+ * 按钮样式
+ * ============================================ */
+
+.btn-primary {
+  background: var(--premium-gradient-accent) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: white !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 8px var(--premium-accent-glow) !important;
+  transition: all 0.2s !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--premium-accent-glow) !important;
+}
+
+.btn-secondary {
+  background: var(--premium-bg-elevated) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 8px !important;
+  color: var(--premium-text-secondary) !important;
+  transition: all 0.15s !important;
+}
+
+.btn-secondary:hover {
+  background: var(--premium-bg-hover) !important;
+  color: var(--premium-text-primary) !important;
+}
+
+/* ============================================
+ * 输入框通用样式
+ * ============================================ */
+
+input[type="text"],
+input[type="search"],
+textarea {
+  background: var(--premium-bg-deep) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 8px !important;
+  color: var(--premium-text-primary) !important;
+  transition: all 0.15s !important;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  border-color: var(--premium-accent) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--premium-text-muted) !important;
+}
+
+/* ============================================
+ * 选择下拉框
+ * ============================================ */
+
+select {
+  background: var(--premium-bg-elevated) !important;
+  border: 1px solid var(--premium-border) !important;
+  border-radius: 8px !important;
+  color: var(--premium-text-secondary) !important;
+  padding: 6px 12px !important;
+  transition: all 0.15s !important;
+}
+
+select:hover {
+  border-color: var(--premium-border-hover) !important;
+}
+
+select:focus {
+  border-color: var(--premium-accent) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.12) !important;
+}
+
+/* ============================================
+ * 紧凑模式 - 更多内容可见
+ * ============================================ */
+
+/* 全局字体紧凑 */
+body {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+/* 侧边栏紧凑 */
+.sidebar-title {
+  height: 30px !important;
+  font-size: 10px !important;
+  padding: 0 12px !important;
+}
+
+.tree-header {
+  height: 24px !important;
+  padding: 0 6px 0 8px !important;
+}
+
+.tree-header-label {
+  font-size: 11px !important;
+}
+
+.tree-row {
+  height: 22px !important;
+}
+
+.tree-label {
+  font-size: 12px !important;
+  line-height: 22px !important;
+}
+
+.tree-icon {
+  width: 14px !important;
+  height: 14px !important;
+  margin-right: 4px !important;
+}
+
+.tree-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.tree-toggle svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Activity Bar 紧凑 */
+.activitybar {
+  width: 44px !important;
+  min-width: 44px !important;
+}
+
+.activity-action {
+  width: 44px !important;
+  height: 38px !important;
+}
+
+.activity-action svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* 标签栏紧凑 */
+.tabs-wrapper {
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+.tab {
+  height: 32px !important;
+  padding: 0 10px !important;
+  min-width: 80px !important;
+}
+
+.tab-icon {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.tab-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.tab-label {
+  font-size: 12px !important;
+}
+
+.tab-close {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.tab-close svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* 状态栏紧凑 */
+.statusbar {
+  height: 20px !important;
+  min-height: 20px !important;
+  font-size: 11px !important;
+}
+
+.status-item {
+  height: 20px !important;
+  padding: 0 5px !important;
+  gap: 3px !important;
+}
+
+.status-item svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+/* AI 面板紧凑 */
+.ai-header {
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 12px !important;
+}
+
+.ai-header-icon {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+}
+
+.ai-header-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.ai-header-title {
+  font-size: 13px !important;
+}
+
+.ai-header-btn {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+.ai-header-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* AI 消息紧凑 */
+.ai-messages,
+.chat-messages,
+.message-list {
+  padding: 12px !important;
+  gap: 14px !important;
+}
+
+.message-avatar,
+.ai-msg-avatar {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  font-size: 10px !important;
+}
+
+.message-name,
+.ai-msg-name {
+  font-size: 12px !important;
+}
+
+.message-content,
+.ai-msg-body {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  margin-left: 32px !important;
+}
+
+.message-item.assistant .message-content,
+.ai-msg.assistant .ai-msg-body {
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+}
+
+.message-item.user .message-content,
+.ai-msg.user .ai-msg-body {
+  padding: 10px 12px !important;
+  border-radius: 10px 10px 4px 10px !important;
+}
+
+/* AI 输入区紧凑 */
+.ai-input-area,
+.chat-composer,
+.composer-container {
+  padding: 10px 12px !important;
+}
+
+.ai-input-box,
+.composer-input-wrapper {
+  border-radius: 10px !important;
+}
+
+.ai-input-box textarea,
+.composer-textarea {
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  min-height: 20px !important;
+}
+
+.ai-send-btn,
+.send-button {
+  width: 36px !important;
+  border-radius: 0 10px 10px 0 !important;
+}
+
+.ai-send-btn svg,
+.send-button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* 模式按钮紧凑 */
+.ai-ctx-btn,
+.mode-button,
+.context-button {
+  height: 24px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  border-radius: 5px !important;
+}
+
+.model-picker,
+.ai-model-select {
+  height: 24px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  border-radius: 5px !important;
+}
+
+/* 代码块紧凑 */
+.code-block {
+  border-radius: 8px !important;
+}
+
+.code-block-header {
+  padding: 6px 10px !important;
+}
+
+.code-block-lang {
+  font-size: 10px !important;
+}
+
+.code-block-content {
+  padding: 10px !important;
+}
+
+.code-block-content code {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.code-block-btn {
+  padding: 3px 8px !important;
+  font-size: 10px !important;
+  border-radius: 4px !important;
+}
+
+/* 欢迎页面紧凑 */
+.welcome h1 {
+  font-size: 28px !important;
+  margin-bottom: 8px !important;
+}
+
+.welcome-subtitle {
+  font-size: 11px !important;
+  margin-bottom: 36px !important;
+}
+
+.welcome-shortcuts {
+  width: 300px !important;
+  gap: 8px !important;
+}
+
+.shortcut {
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+}
+
+.shortcut-text {
+  font-size: 12px !important;
+}
+
+.shortcut-keys kbd {
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px !important;
+  font-size: 10px !important;
+  border-radius: 4px !important;
+}
+
+.welcome-version {
+  bottom: 24px;
+  font-size: 11px;
+}
+
+/* Thinking Block 紧凑 */
+.thinking-block {
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+}
+
+.thinking-header {
+  font-size: 11px !important;
+}
+
+.thinking-content {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+/* 标题栏紧凑 */
+.titlebar {
+  height: 28px !important;
+  min-height: 28px !important;
+}
+
+.titlebar-title {
+  font-size: 11px !important;
+}
+
+/* Monaco 编辑器字体优化 */
+.monaco-editor .view-line,
+.monaco-editor .lines-content {
+  font-size: 12px !important;
+  line-height: 18px !important;
+}
+
+.monaco-editor .margin-view-overlays {
+  font-size: 11px !important;
+}

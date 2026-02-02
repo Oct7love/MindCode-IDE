@@ -196,9 +196,16 @@ export const ToolBlock: React.FC<ToolBlockProps> = memo(({
           {status === 'success' && result && (
             <div className="tool-block-section">
               <div className="tool-block-section-title tool-block-section-success">Result</div>
-              <pre className="tool-block-json">
-                {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
-              </pre>
+              {/* 对于 readFile 结果，特殊处理 content 字段 */}
+              {name === 'workspace_readFile' && result.content ? (
+                <div className="tool-block-code-preview">
+                  <code>{highlightCode(result.content, args.path ? getLanguageFromPath(args.path) : 'text')}</code>
+                </div>
+              ) : (
+                <pre className="tool-block-json">
+                  {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
+                </pre>
+              )}
             </div>
           )}
 

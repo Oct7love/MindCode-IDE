@@ -10,14 +10,22 @@
  * - 流式输出时末尾闪烁光标
  * - 工具调用块渲染
  * - Plan 卡片渲染
+ * - Thinking UI 支持
  */
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { MarkdownRenderer } from '../MarkdownRenderer';
+import { MarkdownRenderer, getLanguageFromPath } from '../MarkdownRenderer';
 import { ToolBlock, ToolStatus } from './ToolBlock';
+import { ThinkingBlock } from './ThinkingBlock';
+import { ThinkingUI } from './ThinkingUI';
 import { MessageActions } from './MessageActions';
 import { MessageContextMenu, ContextMenuPosition } from './MessageContextMenu';
 import { CopyFeedback } from './CopyFeedback';
-import { AIMode } from '../../stores';
+import { useFileStore, ThinkingUIData, AIMode } from '../../stores';
+import { 
+  cleanCodeForApply,
+  detectFilePath,
+  getExtensionForLanguage 
+} from './utils/applyService';
 import './AssistantMessage.css';
 import './MessageContextMenu.css';
 
@@ -29,11 +37,20 @@ interface Message {
   toolCalls?: any[];
   plan?: any;
   isStreaming?: boolean;
+  thinkingUI?: ThinkingUIData; // Thinking UI 结构化数据
 }
 
 interface AssistantMessageProps {
   message: Message;
   isLast: boolean;
+  /** 思考过程文本（仅流式时传入） */
+  thinkingText?: string;
+  /** 是否正在思考 */
+  isThinking?: boolean;
+  /** 流式 Thinking UI 数据（仅流式时传入） */
+  streamingThinkingUI?: Partial<ThinkingUIData>;
+  /** Thinking UI 开始时间 */
+  thinkingUIStartTime?: number | null;
   onCopy?: (content: string) => void;
   onCopyTool?: (content: string) => void;
   onRetry?: (messageId: string) => void;
@@ -46,12 +63,17 @@ interface AssistantMessageProps {
 export const AssistantMessage: React.FC<AssistantMessageProps> = memo(({
   message,
   isLast,
+  thinkingText,
+  isThinking = false,
+  streamingThinkingUI,
+  thinkingUIStartTime,
   onCopy,
   onCopyTool,
   onRetry,
   onCopySuccess,
   onCopyError
 }) => {
+  // 所有 useState 放在最前面，顺序固定
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -60,11 +82,127 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(({
   }>({ isOpen: false, position: { x: 0, y: 0 } });
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
   
   const messageRef = useRef<HTMLDivElement>(null);
   
+  // useFileStore 只调用一次，获取所有需要的方法
+  const { workspaceRoot, openFile, updateFileContent, getActiveFile, openFiles, openPreviewFile } = useFileStore();
+  
   const hasError = message.content.startsWith('错误:') || message.content.startsWith('Error:');
   const wasInterrupted = message.content.includes('[已停止]');
+
+  // Apply 代码回调 - 直接应用（内联实现，避免 hook 顺序问题）
+  const handleApplyCode = useCallback(async (code: string, language: string) => {
+    // 流式输出时不允许应用
+    if (message.isStreaming) {
+      console.log('[ApplyCode] Blocked during streaming');
+      return;
+    }
+    
+    console.log('[ApplyCode] Starting apply, language:', language);
+    setIsApplying(true);
+    
+    try {
+      // 1. 清理代码
+      const cleanedCode = cleanCodeForApply(code);
+      
+      // 2. 检测文件路径
+      let targetPath = detectFilePath(code, language, message.content);
+      console.log('[ApplyCode] Detected path:', targetPath);
+      
+      // 3. 如果没有路径，尝试使用当前活动文件
+      if (!targetPath) {
+        const activeFile = getActiveFile();
+        if (activeFile && !activeFile.path.includes('[Preview]')) {
+          targetPath = activeFile.path;
+          console.log('[ApplyCode] Using active file:', targetPath);
+        }
+      }
+      
+      // 4. 如果还是没有，生成新文件路径
+      if (!targetPath) {
+        const ext = getExtensionForLanguage(language);
+        targetPath = `untitled-${Date.now()}.${ext}`;
+        console.log('[ApplyCode] Generated new path:', targetPath);
+      }
+      
+      const fileName = targetPath.split(/[/\\]/).pop() || 'untitled';
+      
+      // 5. 如果有工作区，尝试写入文件
+      if (workspaceRoot && window.mindcode?.fs?.writeFile) {
+        // 构建完整路径
+        const fullPath = targetPath.startsWith('/') || targetPath.match(/^[a-zA-Z]:/)
+          ? targetPath
+          : `${workspaceRoot}/${targetPath}`;
+        
+        console.log('[ApplyCode] Writing to:', fullPath);
+        const result = await window.mindcode.fs.writeFile(fullPath, cleanedCode);
+        
+        if (result.success) {
+          // 检查文件是否已打开
+          const existingFile = openFiles.find(f => f.path === fullPath);
+          if (existingFile) {
+            updateFileContent(existingFile.id, cleanedCode);
+          }
+          
+          openFile({
+            id: existingFile?.id || `file_${Date.now()}`,
+            path: fullPath,
+            name: fileName,
+            content: cleanedCode,
+            language: language,
+            isDirty: false,
+          });
+          
+          setFeedbackMessage(`已应用到 ${fileName}`);
+          setShowFeedback(true);
+          console.log('[ApplyCode] Applied to file:', fullPath);
+          return;
+        } else {
+          console.warn('[ApplyCode] Write failed:', result.error);
+        }
+      }
+      
+      // 6. 没有工作区或写入失败，使用预览模式打开
+      console.log('[ApplyCode] Using preview mode');
+      openPreviewFile(targetPath, cleanedCode, 'ai', language);
+      
+      setFeedbackMessage(`已在编辑器中打开`);
+      setShowFeedback(true);
+      
+    } catch (err: any) {
+      console.error('[ApplyCode] Error:', err);
+      setFeedbackMessage('应用失败: ' + (err.message || '未知错误'));
+      setShowFeedback(true);
+    } finally {
+      setIsApplying(false);
+    }
+  }, [message.isStreaming, message.content, workspaceRoot, getActiveFile, openFile, openFiles, updateFileContent, openPreviewFile]);
+
+  // 点击代码预览 - 在编辑器中显示代码（不写入文件）
+  const handlePreviewCode = useCallback((code: string, language: string) => {
+    // 流式输出时不允许预览
+    if (message.isStreaming) {
+      console.log('[PreviewCode] Blocked during streaming');
+      return;
+    }
+    
+    console.log('[PreviewCode] Opening preview, language:', language);
+    
+    // 清理代码
+    const cleanedCode = cleanCodeForApply(code);
+    
+    // 生成预览文件名
+    const ext = getExtensionForLanguage(language);
+    const previewPath = `preview-${Date.now()}.${ext}`;
+    
+    // 使用预览模式打开
+    openPreviewFile(previewPath, cleanedCode, 'ai', language);
+    
+    setFeedbackMessage('已在编辑器中预览');
+    setShowFeedback(true);
+  }, [message.isStreaming, openPreviewFile]);
 
   // 右键菜单处理
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -105,6 +243,19 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(({
   const handleHideFeedback = useCallback(() => {
     setShowFeedback(false);
   }, []);
+
+  // Phase 2: 在编辑器中打开代码预览
+  const handleOpenInEditor = useCallback((code: string, language: string, filename?: string) => {
+    // 根据语言推断文件扩展名
+    const extMap: Record<string, string> = {
+      typescript: 'ts', javascript: 'js', python: 'py', java: 'java',
+      go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', css: 'css', html: 'html',
+      json: 'json', yaml: 'yml', bash: 'sh', sql: 'sql', text: 'txt'
+    };
+    const ext = extMap[language.toLowerCase()] || 'txt';
+    const path = filename || `untitled-${Date.now()}.${ext}`;
+    openPreviewFile(path, code, 'ai', language);
+  }, [openPreviewFile]);
 
   // 快捷键处理
   useEffect(() => {
@@ -170,13 +321,40 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(({
 
       {/* 消息体 */}
       <div className="message-body">
-        {/* 内容卡片 */}
-        <div className="message-card">
-          <div className="message-content">
-            <MarkdownRenderer content={message.content} />
-            {message.isStreaming && <span className="streaming-cursor" />}
-          </div>
-        </div>
+        {/* Thinking UI 模式：使用结构化 UI */}
+        {(message.thinkingUI || streamingThinkingUI) ? (
+          <ThinkingUI
+            data={message.thinkingUI || streamingThinkingUI || {}}
+            isStreaming={message.isStreaming}
+            startTime={thinkingUIStartTime || undefined}
+            renderMarkdown={(content) => (
+              <MarkdownRenderer content={content} onOpenInEditor={handleOpenInEditor} />
+            )}
+          />
+        ) : (
+          <>
+            {/* 传统模式：思考过程块 */}
+            {(thinkingText || isThinking) && (
+              <ThinkingBlock
+                content={thinkingText || ''}
+                isThinking={isThinking}
+              />
+            )}
+
+            {/* 内容卡片 */}
+            <div className="message-card">
+              <div className="message-content">
+                <MarkdownRenderer 
+                  content={message.content} 
+                  onOpenInEditor={handleOpenInEditor}
+                  onApplyCode={!message.isStreaming ? handleApplyCode : undefined}
+                  onPreviewCode={!message.isStreaming ? handlePreviewCode : undefined}
+                />
+                {message.isStreaming && <span className="streaming-cursor" />}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 操作栏 - 文本下方，hover 显示 */}
         {(isHovered || isFocused) && !message.isStreaming && (
@@ -243,7 +421,7 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(({
         onCopyError={handleCopyError}
       />
 
-      {/* 本地复制反馈 (可选，也可以用全局 Toast) */}
+      {/* 本地反馈 (复制/应用成功) */}
       <CopyFeedback
         show={showFeedback}
         message={feedbackMessage}

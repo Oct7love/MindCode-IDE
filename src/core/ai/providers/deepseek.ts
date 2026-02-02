@@ -7,6 +7,7 @@ export class DeepSeekProvider extends BaseAIProvider {
   displayName = 'DeepSeek';
   models: ModelInfo[] = [
     { id: 'deepseek-chat', name: 'DeepSeek V3', contextWindow: 128000, inputPrice: 0.14, outputPrice: 0.28 },
+    { id: 'deepseek-coder', name: 'DeepSeek Coder', contextWindow: 128000, inputPrice: 0.14, outputPrice: 0.28 },
     { id: 'deepseek-reasoner', name: 'DeepSeek R2', contextWindow: 128000, inputPrice: 0.55, outputPrice: 2.19 },
   ];
   private client: OpenAI;
@@ -30,6 +31,16 @@ export class DeepSeekProvider extends BaseAIProvider {
 
   async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void> {
     let fullText = '';
+    const STREAM_TIMEOUT = 30000; // 30秒无响应则超时
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const resetTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        callbacks.onError(new Error('流式响应超时，请重试'));
+      }, STREAM_TIMEOUT);
+    };
+
     try {
       // DeepSeek Reasoner 模型要求 assistant 消息包含 reasoning_content 字段
       const openaiMsgs = messages.filter(m => m.role !== 'tool').map(m => {
@@ -38,15 +49,37 @@ export class DeepSeekProvider extends BaseAIProvider {
         }
         return { role: m.role as 'system' | 'user', content: m.content };
       });
+
+      resetTimeout(); // 开始计时
       const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: openaiMsgs });
-      for await (const chunk of stream) { const token = chunk.choices[0]?.delta?.content || ''; if (token) { fullText += token; callbacks.onToken(token); } }
+
+      for await (const chunk of stream) {
+        resetTimeout(); // 每收到一个 chunk 重置超时
+        const token = chunk.choices[0]?.delta?.content || '';
+        if (token) { fullText += token; callbacks.onToken(token); }
+      }
+
+      if (timeoutId) clearTimeout(timeoutId);
       callbacks.onComplete(fullText);
-    } catch (error) { callbacks.onError(error as Error); }
+    } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId);
+      callbacks.onError(error as Error);
+    }
   }
 
   async chatWithTools(messages: ChatMessage[], tools: ToolSchema[], callbacks: ToolCallbacks): Promise<void> { // 支持工具调用
     let fullText = '';
     const toolCalls: ToolCallInfo[] = [];
+    const STREAM_TIMEOUT = 30000; // 30秒无响应则超时
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const resetTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        callbacks.onError(new Error('流式响应超时，请重试'));
+      }, STREAM_TIMEOUT);
+    };
+
     try {
       const openaiTools = tools.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } }));
       const openaiMsgs: any[] = [];
@@ -68,9 +101,13 @@ export class DeepSeekProvider extends BaseAIProvider {
           openaiMsgs.push({ role: m.role, content: m.content });
         }
       }
+
+      resetTimeout(); // 开始计时
       const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: openaiMsgs, tools: openaiTools });
       const toolCallMap = new Map<number, { id: string; name: string; args: string }>();
+
       for await (const chunk of stream) {
+        resetTimeout(); // 每收到一个 chunk 重置超时
         const delta = chunk.choices[0]?.delta;
         if (delta?.content) { fullText += delta.content; callbacks.onToken(delta.content); }
         if (delta?.tool_calls) {
@@ -83,9 +120,14 @@ export class DeepSeekProvider extends BaseAIProvider {
           }
         }
       }
+
+      if (timeoutId) clearTimeout(timeoutId);
       for (const [, tc] of toolCallMap) { try { toolCalls.push({ id: tc.id, name: tc.name, arguments: JSON.parse(tc.args || '{}') }); } catch {} }
       if (toolCalls.length > 0 && callbacks.onToolCall) callbacks.onToolCall(toolCalls);
       callbacks.onComplete(fullText);
-    } catch (error) { callbacks.onError(error as Error); }
+    } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId);
+      callbacks.onError(error as Error);
+    }
   }
 }

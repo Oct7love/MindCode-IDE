@@ -6,25 +6,25 @@
   --chat-panel-min-width: 320px;
   --chat-panel-max-width: 600px;
   
-  /* === 字体 === */
+  /* === 字体 - 紧凑版 === */
   --chat-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --chat-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
-  --chat-font-size-xs: 11px;
-  --chat-font-size-sm: 12px;
-  --chat-font-size-base: 13px;
-  --chat-font-size-lg: 14px;
-  --chat-font-size-code: 12px;
-  --chat-line-height: 1.6;
-  --chat-line-height-code: 1.5;
+  --chat-font-size-xs: 10px;
+  --chat-font-size-sm: 11px;
+  --chat-font-size-base: 12px;
+  --chat-font-size-lg: 13px;
+  --chat-font-size-code: 11px;
+  --chat-line-height: 1.45;
+  --chat-line-height-code: 1.4;
   
-  /* === 间距 === */
-  --chat-spacing-xs: 4px;
-  --chat-spacing-sm: 8px;
-  --chat-spacing-md: 12px;
-  --chat-spacing-lg: 16px;
-  --chat-spacing-xl: 24px;
-  --chat-message-gap: 16px;
-  --chat-block-gap: 12px;
+  /* === 间距 - 紧凑版 === */
+  --chat-spacing-xs: 3px;
+  --chat-spacing-sm: 6px;
+  --chat-spacing-md: 10px;
+  --chat-spacing-lg: 14px;
+  --chat-spacing-xl: 20px;
+  --chat-message-gap: 12px;
+  --chat-block-gap: 10px;
   
   /* === 圆角 === */
   --chat-radius-sm: 4px;

@@ -48,7 +48,12 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
   const currentModeOption = MODE_OPTIONS.find(m => m.mode === mode) || MODE_OPTIONS[0];
 
   // 核心引擎
-  const { handleSend: engineSend, handleStop, isLoading, streamingText, messageQueue, clearMessageQueue } = useChatEngine({
+  const { 
+    handleSend: engineSend, handleStop, isLoading, streamingText, thinkingText, isThinking, 
+    messageQueue, clearMessageQueue,
+    // Thinking UI 相关
+    thinkingUIData, thinkingUIStartTime, useThinkingUIMode
+  } = useChatEngine({
     onPendingConfirm: setPendingConfirm
   });
 
@@ -60,8 +65,11 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
     isLoading
   });
 
-  // 滚动锚定
-  const { messagesEndRef } = useScrollAnchor({ dependencies: [messages, streamingText] });
+  // 滚动锚定（智能版：用户滚动时不强制回底部）
+  const { messagesEndRef, containerRef, showScrollToBottom, scrollToBottom } = useScrollAnchor({ 
+    dependencies: [messages, streamingText, thinkingText],
+    threshold: 150
+  });
 
   // 复制功能
   const { copy, FeedbackComponent } = useCopyFeedback();
@@ -88,14 +96,15 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
   const displayMessages = messages.map((msg, idx) => ({
     ...msg,
     content: (idx === messages.length - 1 && msg.role === 'assistant' && isLoading && streamingText) ? streamingText : msg.content,
-    isStreaming: idx === messages.length - 1 && msg.role === 'assistant' && isLoading && !!streamingText
+    // isStreaming 需要考虑 thinkingText 和 thinkingUIData，因为思考阶段 streamingText 可能为空
+    isStreaming: idx === messages.length - 1 && msg.role === 'assistant' && isLoading && (!!streamingText || !!thinkingText || !!thinkingUIData)
   }));
 
   return (
     <div className="unified-chat-view">
       <ChatHeader onNewChat={createConversation} onShowHistory={() => setShowConvList(true)} />
 
-      <div className="unified-messages" role="log">
+      <div className="unified-messages" role="log" ref={containerRef}>
         {displayMessages.length <= 1 && <EmptyState mode={mode} icon={currentModeOption.icon} label={currentModeOption.label} />}
         {displayMessages.slice(1).map((msg, idx) => (
           msg.role === 'assistant' ? (
@@ -103,6 +112,10 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
               key={msg.id}
               message={msg}
               isLast={idx === displayMessages.length - 2}
+              thinkingText={msg.isStreaming ? thinkingText : undefined}
+              isThinking={msg.isStreaming ? isThinking : false}
+              streamingThinkingUI={msg.isStreaming && useThinkingUIMode ? thinkingUIData || undefined : undefined}
+              thinkingUIStartTime={msg.isStreaming && useThinkingUIMode ? thinkingUIStartTime : undefined}
               onCopy={(content) => copy(content, '消息已复制')}
               onCopyTool={handleCopyTool}
               onCopySuccess={(format) => copy(msg.content, `${format} 已复制`)}
@@ -125,13 +138,25 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
             </div>
           )
         ))}
-        {isLoading && !streamingText && (
+        {isLoading && !streamingText && !thinkingText && (
           <div className="unified-loading-wrapper">
             <div className="unified-msg-avatar">✦</div>
             <TypingIndicator variant="dots" size="md" />
           </div>
         )}
         <div ref={messagesEndRef} />
+        
+        {/* 回到底部按钮 */}
+        {showScrollToBottom && (
+          <button 
+            className="scroll-to-bottom-btn"
+            onClick={() => scrollToBottom()}
+            aria-label="回到底部"
+          >
+            <span className="scroll-arrow">↓</span>
+            {isLoading && <span className="scroll-hint">AI 正在输出...</span>}
+          </button>
+        )}
       </div>
 
       <div className="unified-composer">

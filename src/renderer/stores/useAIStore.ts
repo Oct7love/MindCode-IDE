@@ -14,6 +14,26 @@ export interface ContextItem {
 
 export interface ToolCallStatus { id: string; name: string; args: any; status: 'pending' | 'running' | 'success' | 'failed'; result?: any; error?: string; }
 
+// Thinking UI 相关类型
+export interface ThinkingUIData {
+  ui: {
+    title: string;
+    mode: 'thinking' | 'answering' | 'done';
+    model: string;
+    language: string;
+    time_ms: number;
+  };
+  thought_summary: string[];
+  trace: TraceEvent[];
+  final_answer: string;
+}
+
+export interface TraceEvent {
+  stage: 'read' | 'analyze' | 'search' | 'plan' | 'edit' | 'test' | 'answer';
+  label: string;
+  status: 'running' | 'ok' | 'warn' | 'fail';
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system' | 'tool';
@@ -24,6 +44,7 @@ export interface Message {
   toolCalls?: ToolCallStatus[]; // 工具调用及状态
   toolCallId?: string; // tool 消息的调用 ID
   plan?: Plan; // Plan 模式生成的计划
+  thinkingUI?: ThinkingUIData; // Thinking UI 结构化数据
 }
 
 export interface Conversation {
@@ -61,6 +82,17 @@ export interface QueuedMessage {
   timestamp: Date;
 }
 
+// Phase 4: 待处理的代码变更
+export interface PendingChange {
+  id: string;
+  path: string;
+  oldContent: string;
+  newContent: string;
+  status: 'pending' | 'applied' | 'rejected';
+  messageId?: string; // 关联的消息 ID
+  timestamp: Date;
+}
+
 interface AIState {
   mode: AIMode; // 当前模式
   model: string; // 当前模型（effectiveModel）
@@ -70,12 +102,19 @@ interface AIState {
   contexts: ContextItem[]; // 当前上下文
   isLoading: boolean; // 是否正在加载
   streamingText: string; // 流式输出文本
+  thinkingText: string; // 思考过程文本
+  isThinking: boolean; // 是否正在思考
   isPinned: boolean; // 面板是否固定
   currentPlan: Plan | null; // 当前 Plan
   agentSteps: AgentStep[]; // Agent 执行步骤
   debugInfo: { title: string; description: string; observations: string[] } | null; // 调试信息
   messageQueue: QueuedMessage[]; // 消息队列（AI 输出时用户发送的消息）
   isProcessingQueue: boolean; // 是否正在处理队列
+  pendingChanges: PendingChange[]; // Phase 4: 待处理的代码变更
+  // Thinking UI 相关
+  thinkingUIData: Partial<ThinkingUIData> | null; // 当前流式 Thinking UI 数据
+  thinkingUIStartTime: number | null; // Thinking UI 开始时间
+  useThinkingUIMode: boolean; // 是否启用 Thinking UI 模式
 }
 
 interface AIActions {
@@ -87,6 +126,9 @@ interface AIActions {
   setLoading: (loading: boolean) => void;
   setStreamingText: (text: string) => void;
   appendStreamingText: (text: string) => void;
+  setThinkingText: (text: string) => void;
+  appendThinkingText: (text: string) => void;
+  setIsThinking: (thinking: boolean) => void;
   setPinned: (pinned: boolean) => void;
   createConversation: () => string;
   switchConversation: (id: string) => void;
@@ -109,6 +151,17 @@ interface AIActions {
   clearMessageQueue: () => void;
   setProcessingQueue: (processing: boolean) => void;
   getNextQueuedMessage: () => QueuedMessage | undefined;
+  // Phase 4: 待处理变更相关
+  addPendingChange: (change: Omit<PendingChange, 'id' | 'timestamp' | 'status'>) => string;
+  updatePendingChangeStatus: (id: string, status: PendingChange['status']) => void;
+  removePendingChange: (id: string) => void;
+  clearPendingChanges: () => void;
+  getPendingChangeByPath: (path: string) => PendingChange | undefined;
+  // Thinking UI 相关
+  setThinkingUIData: (data: Partial<ThinkingUIData> | null) => void;
+  setThinkingUIStartTime: (time: number | null) => void;
+  setUseThinkingUIMode: (use: boolean) => void;
+  updateLastMessageThinkingUI: (data: ThinkingUIData) => void;
 }
 
 const DEFAULT_MODEL = 'claude-opus-4-5-thinking';
@@ -157,12 +210,18 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     contexts: [],
     isLoading: false,
     streamingText: '',
+    thinkingText: '',
+    isThinking: false,
     isPinned: false,
     currentPlan: null,
     agentSteps: [],
     debugInfo: null,
     messageQueue: [],
     isProcessingQueue: false,
+    pendingChanges: [],
+    thinkingUIData: null,
+    thinkingUIStartTime: null,
+    useThinkingUIMode: false, // 默认关闭，可通过设置开启
 
     setMode: (mode) => set((state) => ({ mode, model: state.modelByMode[mode] })),
     setModel: (model) => set((state) => ({ model, modelByMode: { ...state.modelByMode, [state.mode]: model } })),
@@ -174,6 +233,9 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     setLoading: (isLoading) => set({ isLoading }),
     setStreamingText: (streamingText) => set({ streamingText }),
     appendStreamingText: (text) => set((state) => ({ streamingText: state.streamingText + text })),
+    setThinkingText: (thinkingText) => set({ thinkingText }),
+    appendThinkingText: (text) => set((state) => ({ thinkingText: state.thinkingText + text })),
+    setIsThinking: (isThinking) => set({ isThinking }),
     setPinned: (isPinned) => set({ isPinned }),
 
     createConversation: () => {
@@ -188,12 +250,31 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
       set((state) => {
         const newConversations = [newConv, ...state.conversations];
         saveConversations(newConversations);
-        return { conversations: newConversations, activeConversationId: id, streamingText: '', isLoading: false };
+        return { 
+          conversations: newConversations, 
+          activeConversationId: id, 
+          // 清理所有流式状态，防止渲染污染
+          streamingText: '', 
+          thinkingText: '',
+          isThinking: false,
+          isLoading: false,
+          thinkingUIData: null,
+          thinkingUIStartTime: null,
+        };
       });
       return id;
     },
 
-    switchConversation: (id) => set({ activeConversationId: id, streamingText: '', isLoading: false }),
+    switchConversation: (id) => set({ 
+      activeConversationId: id, 
+      // 清理所有流式状态，防止渲染污染
+      streamingText: '', 
+      thinkingText: '',
+      isThinking: false,
+      isLoading: false,
+      thinkingUIData: null,
+      thinkingUIStartTime: null,
+    }),
 
     deleteConversation: (id) => set((state) => {
       const filtered = state.conversations.filter(c => c.id !== id);
@@ -317,5 +398,59 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
       const state = get();
       return state.messageQueue[0];
     },
+
+    // Phase 4: 待处理变更相关
+    addPendingChange: (change) => {
+      const id = `pc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      set((state) => ({
+        pendingChanges: [...state.pendingChanges, {
+          ...change,
+          id,
+          status: 'pending',
+          timestamp: new Date()
+        }]
+      }));
+      return id;
+    },
+
+    updatePendingChangeStatus: (id, status) => set((state) => ({
+      pendingChanges: state.pendingChanges.map(pc =>
+        pc.id === id ? { ...pc, status } : pc
+      )
+    })),
+
+    removePendingChange: (id) => set((state) => ({
+      pendingChanges: state.pendingChanges.filter(pc => pc.id !== id)
+    })),
+
+    clearPendingChanges: () => set({ pendingChanges: [] }),
+
+    getPendingChangeByPath: (path) => {
+      const state = get();
+      return state.pendingChanges.find(pc => pc.path === path && pc.status === 'pending');
+    },
+
+    // Thinking UI 相关
+    setThinkingUIData: (thinkingUIData) => set({ thinkingUIData }),
+
+    setThinkingUIStartTime: (thinkingUIStartTime) => set({ thinkingUIStartTime }),
+
+    setUseThinkingUIMode: (useThinkingUIMode) => set({ useThinkingUIMode }),
+
+    updateLastMessageThinkingUI: (data) => set((state) => {
+      const convId = state.activeConversationId;
+      if (!convId) return state;
+      const updatedConversations = state.conversations.map(c => {
+        if (c.id !== convId) return c;
+        const msgs = [...c.messages];
+        const lastIdx = msgs.length - 1;
+        if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant') {
+          msgs[lastIdx] = { ...msgs[lastIdx], thinkingUI: data, content: data.final_answer };
+        }
+        return { ...c, messages: msgs };
+      });
+      saveConversations(updatedConversations);
+      return { conversations: updatedConversations };
+    }),
   };
 });

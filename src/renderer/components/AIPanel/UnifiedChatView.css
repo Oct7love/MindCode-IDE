@@ -724,3 +724,57 @@
   background: var(--color-accent-secondary, #60a5fa);
   transform: translateY(-1px);
 }
+
+/* ============================================
+ * 回到底部按钮
+ * ============================================ */
+
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--color-bg-elevated, #18181b);
+  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
+  color: var(--color-text-secondary, #a1a1aa);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 150ms ease;
+  z-index: 10;
+  animation: slideUp 200ms ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.scroll-to-bottom-btn:hover {
+  background: var(--color-bg-hover, #27272a);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.15));
+  color: var(--color-text-primary, #fafafa);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.scroll-arrow {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.scroll-hint {
+  color: var(--color-accent-primary, #3b82f6);
+  font-size: 11px;
+}

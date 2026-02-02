@@ -236,3 +236,40 @@
  * [data-theme-type="light"] 和 [data-theme-type="hc"]
  * 已在 design-tokens.css 中定义 --codeblock-* 变量
  */
+
+/* Apply 按钮样式 */
+.code-block-apply {
+  background: var(--color-accent-primary, #3b82f6) !important;
+  border: none !important;
+  color: white !important;
+}
+
+.code-block-apply:hover {
+  background: var(--color-accent-secondary, #60a5fa) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.code-block-apply.applying {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.code-block-apply .spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 按钮分隔 */
+.code-block-header-right {
+  gap: var(--space-1-5, 6px);
+}
+
+/* 按钮组样式优化 */
+.code-block-btn + .code-block-apply {
+  margin-left: var(--space-1, 4px);
+}

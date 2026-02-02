@@ -9,6 +9,12 @@ interface CodeBlockProps {
   maxHeight?: number;
   collapsible?: boolean;
   defaultCollapsed?: boolean;
+  /** 是否显示 Apply 按钮 */
+  showApply?: boolean;
+  /** 检测到的文件路径 */
+  detectedFilePath?: string | null;
+  /** Apply 按钮点击回调 */
+  onApply?: (code: string, filePath: string | null, language: string) => void;
 }
 
 export const CodeBlock: React.FC<CodeBlockProps> = memo(({
@@ -18,10 +24,14 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({
   showLineNumbers = true,
   maxHeight = 400,
   collapsible = true,
-  defaultCollapsed = false
+  defaultCollapsed = false,
+  showApply = false,
+  detectedFilePath,
+  onApply,
 }) => {
   const [copied, setCopied] = useState(false);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [applying, setApplying] = useState(false);
 
   const lines = code.split('\n');
   const lineCount = lines.length;
@@ -40,6 +50,16 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({
   const toggleCollapse = useCallback(() => {
     setCollapsed(prev => !prev);
   }, []);
+
+  // Apply 处理
+  const handleApply = useCallback(() => {
+    if (!onApply) return;
+    setApplying(true);
+    // 调用 Apply 回调
+    onApply(code, detectedFilePath || filename || null, language);
+    // 短暂显示状态后重置
+    setTimeout(() => setApplying(false), 1000);
+  }, [code, detectedFilePath, filename, language, onApply]);
 
   const displayedCode = collapsed ? lines.slice(0, 10).join('\n') : code;
   const displayedLines = collapsed ? lines.slice(0, 10) : lines;
@@ -103,6 +123,32 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({
               </>
             )}
           </button>
+          {/* Apply 按钮 */}
+          {showApply && onApply && (
+            <button
+              className={`code-block-btn code-block-apply ${applying ? 'applying' : ''}`}
+              onClick={handleApply}
+              title={detectedFilePath ? `Apply to ${detectedFilePath}` : 'Apply code'}
+              disabled={applying}
+            >
+              {applying ? (
+                <>
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" className="spin">
+                    <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11z" opacity="0.3"/>
+                    <path d="M8 1v1.5a5.5 5.5 0 015.5 5.5H15A7 7 0 008 1z"/>
+                  </svg>
+                  <span>Applying...</span>
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                    <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 111.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+                  </svg>
+                  <span>Apply</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

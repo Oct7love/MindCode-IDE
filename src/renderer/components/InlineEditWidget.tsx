@@ -1,9 +1,15 @@
 /**
- * MindCode - 内联编辑组件
+ * MindCode - 内联编辑组件 (增强版)
  * 实现 Cursor 风格的 Ctrl+K 内联编辑功能
+ * 
+ * 特性:
+ * - 选中代码后触发 Ctrl+K
+ * - AI 生成修改建议
+ * - Inline Diff 预览（红色/绿色高亮）
+ * - Tab 接受 / Escape 拒绝
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 interface InlineEditWidgetProps {
   isOpen: boolean;
@@ -17,6 +23,51 @@ interface InlineEditWidgetProps {
     onComplete: (result: string) => void;
     onError: (error: string) => void;
   }) => void;
+}
+
+// 简单的 Diff 计算
+interface DiffLine {
+  type: 'unchanged' | 'added' | 'removed';
+  content: string;
+  lineNumber?: number;
+}
+
+function computeSimpleDiff(original: string, modified: string): DiffLine[] {
+  const originalLines = original.split('\n');
+  const modifiedLines = modified.split('\n');
+  const result: DiffLine[] = [];
+  
+  const maxLen = Math.max(originalLines.length, modifiedLines.length);
+  let originalIdx = 0;
+  let modifiedIdx = 0;
+  
+  while (originalIdx < originalLines.length || modifiedIdx < modifiedLines.length) {
+    const origLine = originalLines[originalIdx];
+    const modLine = modifiedLines[modifiedIdx];
+    
+    if (originalIdx >= originalLines.length) {
+      // 只有新增的行
+      result.push({ type: 'added', content: modLine, lineNumber: modifiedIdx + 1 });
+      modifiedIdx++;
+    } else if (modifiedIdx >= modifiedLines.length) {
+      // 只有删除的行
+      result.push({ type: 'removed', content: origLine });
+      originalIdx++;
+    } else if (origLine === modLine) {
+      // 相同的行
+      result.push({ type: 'unchanged', content: origLine, lineNumber: modifiedIdx + 1 });
+      originalIdx++;
+      modifiedIdx++;
+    } else {
+      // 不同的行 - 标记为删除+新增
+      result.push({ type: 'removed', content: origLine });
+      result.push({ type: 'added', content: modLine, lineNumber: modifiedIdx + 1 });
+      originalIdx++;
+      modifiedIdx++;
+    }
+  }
+  
+  return result;
 }
 
 export const InlineEditWidget: React.FC<InlineEditWidgetProps> = ({
@@ -35,6 +86,20 @@ export const InlineEditWidget: React.FC<InlineEditWidgetProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 计算 Diff
+  const diffLines = useMemo(() => {
+    if (!showDiff || !generatedCode) return [];
+    return computeSimpleDiff(selectedCode, generatedCode);
+  }, [showDiff, selectedCode, generatedCode]);
+
+  // 统计
+  const stats = useMemo(() => {
+    const added = diffLines.filter(l => l.type === 'added').length;
+    const removed = diffLines.filter(l => l.type === 'removed').length;
+    return { added, removed };
+  }, [diffLines]);
 
   // 聚焦输入框
   useEffect(() => {
@@ -47,6 +112,21 @@ export const InlineEditWidget: React.FC<InlineEditWidgetProps> = ({
       setShowDiff(false);
     }
   }, [isOpen]);
+
+  // 全局键盘事件（Tab 接受）
+  useEffect(() => {
+    if (!showDiff || !generatedCode) return;
+    
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        handleApply();
+      }
+    };
+    
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [showDiff, generatedCode]);
 
   // 提交编辑请求
   const handleSubmit = useCallback(() => {
@@ -122,6 +202,7 @@ ${selectedCode}
 
   return (
     <div
+      ref={containerRef}
       className="inline-edit-widget"
       style={{
         position: 'absolute',
@@ -133,24 +214,43 @@ ${selectedCode}
       <div className="inline-edit-container">
         {/* 头部 */}
         <div className="inline-edit-header">
-          <span className="inline-edit-icon">✦</span>
-          <span className="inline-edit-title">AI 编辑</span>
+          <div className="inline-edit-header-left">
+            <span className="inline-edit-icon">✦</span>
+            <span className="inline-edit-title">AI 编辑</span>
+            {showDiff && (
+              <span className="inline-edit-stats">
+                {stats.added > 0 && <span className="stat-added">+{stats.added}</span>}
+                {stats.removed > 0 && <span className="stat-removed">-{stats.removed}</span>}
+              </span>
+            )}
+          </div>
           <button className="inline-edit-close" onClick={onClose}>×</button>
         </div>
 
         {/* 输入区域 */}
-        <div className="inline-edit-input-area">
-          <textarea
-            ref={inputRef}
-            className="inline-edit-input"
-            placeholder="描述你想要的修改..."
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={2}
-            disabled={isLoading}
-          />
-        </div>
+        {!showDiff && (
+          <div className="inline-edit-input-area">
+            <textarea
+              ref={inputRef}
+              className="inline-edit-input"
+              placeholder="描述你想要的修改..."
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={2}
+              disabled={isLoading}
+            />
+            {!isLoading && (
+              <button 
+                className="inline-edit-submit"
+                onClick={handleSubmit}
+                disabled={!prompt.trim()}
+              >
+                生成
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 加载状态 */}
         {isLoading && (
@@ -164,23 +264,41 @@ ${selectedCode}
         {error && (
           <div className="inline-edit-error">
             <span>错误: {error}</span>
+            <button onClick={() => setError(null)}>重试</button>
           </div>
         )}
 
-        {/* 生成的代码预览 */}
-        {displayCode && (
+        {/* Diff 预览 */}
+        {showDiff && diffLines.length > 0 && (
+          <div className="inline-edit-diff">
+            <div className="inline-edit-diff-header">
+              <span>修改预览</span>
+            </div>
+            <div className="inline-edit-diff-content">
+              {diffLines.map((line, i) => (
+                <div 
+                  key={i} 
+                  className={`diff-line diff-line--${line.type}`}
+                >
+                  <span className="diff-line-indicator">
+                    {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
+                  </span>
+                  <span className="diff-line-content">{line.content || ' '}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 流式预览（未完成时） */}
+        {streamingCode && !showDiff && (
           <div className="inline-edit-preview">
             <div className="inline-edit-preview-header">
-              <span>修改预览</span>
-              {showDiff && (
-                <span className="inline-edit-diff-label">
-                  {generatedCode.length > selectedCode.length ? '+' : ''}
-                  {generatedCode.length - selectedCode.length} 字符
-                </span>
-              )}
+              <span>生成中...</span>
             </div>
             <pre className="inline-edit-code">
-              <code>{displayCode}</code>
+              <code>{streamingCode}</code>
+              <span className="streaming-cursor" />
             </pre>
           </div>
         )}
@@ -192,23 +310,25 @@ ${selectedCode}
               className="inline-edit-btn inline-edit-btn-secondary"
               onClick={onClose}
             >
-              取消
+              <kbd>Esc</kbd> 拒绝
             </button>
             <button
               className="inline-edit-btn inline-edit-btn-primary"
               onClick={handleApply}
             >
-              应用修改 (Enter)
+              <kbd>Tab</kbd> 接受
             </button>
           </div>
         )}
 
         {/* 快捷键提示 */}
-        <div className="inline-edit-hints">
-          <span><kbd>Enter</kbd> {showDiff ? '应用' : '生成'}</span>
-          <span><kbd>Esc</kbd> 取消</span>
-          <span><kbd>Shift+Enter</kbd> 换行</span>
-        </div>
+        {!showDiff && (
+          <div className="inline-edit-hints">
+            <span><kbd>Enter</kbd> 生成</span>
+            <span><kbd>Esc</kbd> 取消</span>
+            <span><kbd>Shift+Enter</kbd> 换行</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -23,11 +23,14 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
     "@google/generative-ai": "^0.21.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "@typescript-eslint/typescript-estree": "^8.54.0",
     "@vscode/vscode-languagedetection": "^1.0.22",
     "electron-store": "^10.0.0",
     "keytar": "^7.9.0",
     "monaco-editor": "^0.52.0",
     "openai": "^4.70.0",
+    "sql.js": "^1.13.0",
     "tiktoken": "^1.0.17",
     "zustand": "^5.0.10"
   },

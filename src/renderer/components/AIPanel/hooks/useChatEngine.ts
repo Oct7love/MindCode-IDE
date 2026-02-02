@@ -1,11 +1,13 @@
 /**
  * useChatEngine - AI 对话核心引擎
  * 提取自 UnifiedChatView，负责 API 调用、工具执行、消息队列处理
+ * 支持 Thinking UI 模式（Cursor 风格）
  */
-import { useCallback, useRef } from 'react';
-import { useAIStore, AIMode, Plan, ToolCallStatus } from '../../../stores';
+import { useCallback, useRef, useEffect } from 'react';
+import { useAIStore, AIMode, Plan, ToolCallStatus, ThinkingUIData } from '../../../stores';
 import { useFileStore } from '../../../stores';
 import { MODELS, TOOL_CAPABLE_MODELS } from '../ModelPicker';
+import { THINKING_UI_SYSTEM_PROMPT, buildThinkingUserPrompt, parseThinkingOutput } from '../../../../core/ai/thinking-prompt';
 
 // 模式工具权限映射 - 对标 Cursor 的模式差异化设计
 const MODE_TOOLS: Record<AIMode, string[]> = {
@@ -71,13 +73,222 @@ export function useChatEngine(options: ChatEngineOptions) {
   const {
     mode, model, getCurrentConversation, addMessage, isLoading, setLoading,
     streamingText, setStreamingText, appendStreamingText, contexts,
+    thinkingText, setThinkingText, appendThinkingText, isThinking, setIsThinking,
     updateLastMessage, updateLastMessageToolCall, setPlan,
-    enqueueMessage, dequeueMessage, clearMessageQueue, messageQueue
+    enqueueMessage, dequeueMessage, clearMessageQueue, messageQueue,
+    // Thinking UI 相关
+    useThinkingUIMode, thinkingUIData, thinkingUIStartTime,
+    setThinkingUIData, setThinkingUIStartTime, updateLastMessageThinkingUI,
+    // 对话切换相关
+    activeConversationId
   } = useAIStore();
   const { workspaceRoot, getActiveFile } = useFileStore();
 
   const stopStreamRef = useRef<(() => void) | null>(null);
   const abortRef = useRef(false);
+  const lastConversationIdRef = useRef<string | null>(null);
+
+  // 监听对话切换，自动停止当前流式请求
+  useEffect(() => {
+    if (lastConversationIdRef.current !== null && 
+        lastConversationIdRef.current !== activeConversationId &&
+        stopStreamRef.current) {
+      console.log('[ChatEngine] 对话切换，停止当前流式请求');
+      stopStreamRef.current();
+      stopStreamRef.current = null;
+      abortRef.current = true;
+    }
+    lastConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  // Thinking 标签解析状态（传统模式）
+  const thinkingStateRef = useRef({ isInThinking: false, buffer: '' });
+
+  // Thinking UI 流式解析状态（新模式）
+  const thinkingUIBufferRef = useRef('');
+
+  // 处理流式 token，解析 <thinking> 标签
+  // 核心原则：尽可能快速输出内容，只缓冲可能是标签的部分
+  const handleStreamToken = useCallback((token: string) => {
+    const state = thinkingStateRef.current;
+    state.buffer += token;
+
+    // 调试日志
+    console.log('[ThinkingParser] token:', JSON.stringify(token.slice(0, 50)), 'isInThinking:', state.isInThinking, 'bufferLen:', state.buffer.length);
+
+    // 循环处理 buffer 直到无法继续
+    let processing = true;
+    while (processing) {
+      processing = false;
+
+      if (!state.isInThinking) {
+        // === 未在思考模式 ===
+        const startIdx = state.buffer.indexOf('<thinking>');
+        if (startIdx !== -1) {
+          // 找到完整的开始标签
+          console.log('[ThinkingParser] >>> ENTER thinking mode');
+          const before = state.buffer.slice(0, startIdx);
+          if (before) appendStreamingText(before);
+          state.isInThinking = true;
+          setIsThinking(true);
+          state.buffer = state.buffer.slice(startIdx + 10);
+          processing = true;
+        } else {
+          // 检查是否有部分 <thinking> 标签
+          // 只需要保留最后可能是标签开头的部分
+          const partialMatch = state.buffer.match(/<(?:t(?:h(?:i(?:n(?:k(?:i(?:n(?:g)?)?)?)?)?)?)?)?$/);
+          if (partialMatch) {
+            // 有部分标签，输出前面的安全内容
+            const safeEnd = state.buffer.length - partialMatch[0].length;
+            if (safeEnd > 0) {
+              appendStreamingText(state.buffer.slice(0, safeEnd));
+              state.buffer = state.buffer.slice(safeEnd);
+            }
+            // 等待更多数据
+          } else {
+            // 没有部分标签，全部输出
+            appendStreamingText(state.buffer);
+            state.buffer = '';
+          }
+        }
+      } else {
+        // === 在思考模式中 ===
+        const endIdx = state.buffer.indexOf('</thinking>');
+        if (endIdx !== -1) {
+          // 找到完整的结束标签
+          console.log('[ThinkingParser] <<< EXIT thinking mode, content length:', endIdx);
+          const thinkContent = state.buffer.slice(0, endIdx);
+          if (thinkContent) {
+            console.log('[ThinkingParser] appendThinkingText:', thinkContent.slice(0, 100));
+            appendThinkingText(thinkContent);
+          }
+          state.isInThinking = false;
+          setIsThinking(false);
+          state.buffer = state.buffer.slice(endIdx + 11);
+          processing = true;
+        } else {
+          // 检查是否有部分 </thinking> 标签
+          const partialMatch = state.buffer.match(/<(?:\/(?:t(?:h(?:i(?:n(?:k(?:i(?:n(?:g)?)?)?)?)?)?)?)?)?$/);
+          if (partialMatch) {
+            // 有部分结束标签，输出前面的思考内容
+            const safeEnd = state.buffer.length - partialMatch[0].length;
+            if (safeEnd > 0) {
+              console.log('[ThinkingParser] streaming thinking (partial end):', state.buffer.slice(0, safeEnd).slice(0, 50));
+              appendThinkingText(state.buffer.slice(0, safeEnd));
+              state.buffer = state.buffer.slice(safeEnd);
+            }
+            // 等待更多数据
+          } else {
+            // 没有部分标签，全部输出为思考内容
+            console.log('[ThinkingParser] streaming thinking:', state.buffer.slice(0, 50));
+            appendThinkingText(state.buffer);
+            state.buffer = '';
+          }
+        }
+      }
+    }
+  }, [appendStreamingText, appendThinkingText, setIsThinking]);
+
+  // 重置思考状态
+  const resetThinkingState = useCallback(() => {
+    thinkingStateRef.current = { isInThinking: false, buffer: '' };
+    setThinkingText('');
+    setIsThinking(false);
+  }, [setThinkingText, setIsThinking]);
+
+  // 从文本中移除 <thinking> 标签及其内容
+  const stripThinkingTags = useCallback((text: string): string => {
+    return text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+  }, []);
+
+  // === Thinking UI 模式相关 ===
+  
+  // 处理 Thinking UI 流式 token
+  const handleThinkingUIToken = useCallback((token: string) => {
+    thinkingUIBufferRef.current += token;
+    const buffer = thinkingUIBufferRef.current;
+    
+    // 尝试增量解析 JSON
+    try {
+      const partialData: Partial<ThinkingUIData> = {
+        ui: { title: 'Thinking…', mode: 'thinking', model: '', language: '', time_ms: 0 },
+        thought_summary: [],
+        trace: [],
+        final_answer: '',
+      };
+      
+      // 检测 ui.mode
+      const modeMatch = buffer.match(/"mode"\s*:\s*"(\w+)"/);
+      if (modeMatch && partialData.ui) {
+        partialData.ui.mode = modeMatch[1] as any;
+        if (modeMatch[1] === 'done') {
+          partialData.ui.title = 'Done';
+        } else if (modeMatch[1] === 'answering') {
+          partialData.ui.title = 'Answering…';
+        }
+      }
+      
+      // 检测 ui.model
+      const modelMatch = buffer.match(/"model"\s*:\s*"([^"]+)"/);
+      if (modelMatch && partialData.ui) {
+        partialData.ui.model = modelMatch[1];
+      }
+      
+      // 检测 thought_summary 数组
+      const thoughtMatch = buffer.match(/"thought_summary"\s*:\s*\[([\s\S]*?)\]/);
+      if (thoughtMatch) {
+        try {
+          partialData.thought_summary = JSON.parse(`[${thoughtMatch[1]}]`);
+        } catch {}
+      }
+      
+      // 检测 trace 数组
+      const traceMatch = buffer.match(/"trace"\s*:\s*\[([\s\S]*?)\]/);
+      if (traceMatch) {
+        try {
+          partialData.trace = JSON.parse(`[${traceMatch[1]}]`);
+        } catch {}
+      }
+      
+      // 检测 final_answer（可能不完整）
+      const answerMatch = buffer.match(/"final_answer"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/);
+      if (answerMatch) {
+        partialData.final_answer = answerMatch[1]
+          .replace(/\\n/g, '\n')
+          .replace(/\\t/g, '\t')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
+      }
+      
+      setThinkingUIData(partialData);
+    } catch {}
+  }, [setThinkingUIData]);
+
+  // 完成 Thinking UI 解析
+  const finishThinkingUI = useCallback((): ThinkingUIData | null => {
+    const buffer = thinkingUIBufferRef.current;
+    const parsed = parseThinkingOutput(buffer);
+    
+    if (parsed) {
+      // 设置耗时
+      if (thinkingUIStartTime) {
+        parsed.ui.time_ms = Date.now() - thinkingUIStartTime;
+      }
+      parsed.ui.mode = 'done';
+      setThinkingUIData(parsed);
+      updateLastMessageThinkingUI(parsed);
+      return parsed;
+    }
+    
+    return null;
+  }, [thinkingUIStartTime, setThinkingUIData, updateLastMessageThinkingUI]);
+
+  // 重置 Thinking UI 状态
+  const resetThinkingUI = useCallback(() => {
+    thinkingUIBufferRef.current = '';
+    setThinkingUIData(null);
+    setThinkingUIStartTime(null);
+  }, [setThinkingUIData, setThinkingUIStartTime]);
 
   // 路径解析
   const resolvePath = useCallback((p: string) => {
@@ -167,12 +378,12 @@ export function useChatEngine(options: ChatEngineOptions) {
     }
   }, []);
 
-  // 生成系统提示词
+  // 生成系统提示词 - 带可见推理协议
   const getSystemPrompt = useCallback(() => {
     const activeFile = getActiveFile();
     const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
 
-    // 获取实际模型名称（用于特价渠道等）
+    // 获取实际模型名称
     const actualModelMap: Record<string, string> = {
       'codesuc-opus': 'claude-opus-4-5-20251101',
       'codesuc-sonnet': 'claude-sonnet-4-5-20250929',
@@ -180,104 +391,82 @@ export function useChatEngine(options: ChatEngineOptions) {
     };
     const actualModel = actualModelMap[model] || model;
 
-    const identityInfo = `
-【模型身份】
-你的底层模型是 ${modelInfo.name}（${actualModel}），由 ${modelInfo.provider} 开发。
-当用户询问你是什么模型、谁开发的、你叫什么名字时，请如实告知这些真实信息。
+    // 上下文信息
+    const context = workspaceRoot
+      ? `[工作区: ${workspaceRoot}${activeFile ? `, 当前文件: ${activeFile.path}` : ''}]`
+      : '[未打开工作区]';
+
+    // 身份信息
+    const identityNote = `(你是 ${modelInfo.name}，由 ${modelInfo.provider} 开发。仅在被问到时才说明身份。)`;
+
+    // 可见推理协议 - 让模型输出思考过程
+    const thinkingProtocol = `
+### 可见推理协议
+回答前，用 <thinking> 标签展示分析过程。
+
+**格式要求：**
+- 使用短句和列表（不用 Markdown 标题）
+- 内容：上下文分析、边界情况、方案规划
+- 不要说"让我思考"，直接开始
+
+**示例：**
+<thinking>
+- 用户需求：验证邮箱的正则表达式
+- 边界情况：子域名、特殊字符、TLD长度
+- 方案：提供标准版和严格版两种实现
+</thinking>
+
+[正式回答]
 `;
-    const base = `你正在作为 MindCode IDE 的 AI 编程助手工作。${identityInfo}
-工作区: ${workspaceRoot || '未打开'}，当前文件: ${activeFile?.path || '无'}。`;
 
-    // 根据模式返回专业级系统提示词
+    // 根据模式返回系统提示词
     switch (mode) {
-      case 'chat': return `${base}
+      case 'chat': return `编程助手。${context} ${identityNote}
+${thinkingProtocol}
+直接简洁回答，不自我介绍。${workspaceRoot ? '可用工具读取文件。' : ''}`;
 
-【Ask 模式 - 编程顾问】
-你是专业的编程顾问，专注于解答问题和代码分析。
+      case 'plan': return `项目架构师。${context} ${identityNote}
+${thinkingProtocol}
+分析需求，输出 JSON 计划：
+\`\`\`json
+{"title":"","goal":"","tasks":[{"id":"t1","label":"","files":[]}],"risks":[]}
+\`\`\``;
 
-行为准则：
-${workspaceRoot ? `1. 当用户提到文件/目录时，使用 workspace_listDir、workspace_readFile 查看真实内容
-2. 不要猜测代码内容，优先使用工具获取
-3. 不要主动修改文件，如需修改请建议用户切换到 Agent 模式` : `注意：当前没有打开工作区，无法读取文件。请直接回答用户的编程问题。`}
+      case 'agent': return `自主编程代理。${context} ${identityNote}
+${thinkingProtocol}
+${workspaceRoot ? `可读写文件、执行命令。流程：读取 → 规划 → 执行 → 反馈。` : '需要先打开工作区。'}`;
 
-${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspace_search, editor_getActiveFile, git_status, git_diff` : ``}`;
+      case 'debug': return `调试专家。${context} ${identityNote}
+${thinkingProtocol}
+分析错误根因，给出修复方案。${workspaceRoot ? '可查看源码和 git diff。' : ''}`;
 
-      case 'plan': return `${base}
-
-【Plan 模式 - 项目架构师】
-你是专业的软件架构师，负责制定开发计划。
-
-工作流程：
-${workspaceRoot ? `1. 如需了解现有代码，可使用 workspace_listDir 探索项目结构
-2. 使用 workspace_readFile 分析关键代码
-3. 理解现有架构后，输出结构化的 JSON 计划` : `注意：当前没有打开工作区，请直接根据用户需求制定计划，无需探索文件。`}
-
-输出格式（必须用 \`\`\`json 包裹）：
-{
-  "title": "计划标题",
-  "goal": "目标描述",
-  "assumptions": ["假设条件"],
-  "milestones": [{ "id": "m1", "label": "里程碑名称", "estimated": "预估时间" }],
-  "tasks": [{ "id": "t1", "label": "任务描述", "files": ["涉及文件"], "milestone": "m1" }],
-  "risks": ["潜在风险"]
-}
-
-${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspace_search, editor_getActiveFile, git_status, git_diff` : `当前无工作区，请直接输出计划，不要调用工具。`}`;
-
-      case 'agent': return `${base}
-
-【Agent 模式 - 自主编程代理】
-${workspaceRoot ? `你是具有完整文件系统权限的自主编程代理。
-
-执行原则（Cursor 风格）：
-1. 探索 - 先用 workspace_listDir/workspace_search 了解项目结构
-2. 阅读 - 修改前必须用 workspace_readFile 读取原文件
-3. 思考 - 分析代码，规划最小改动方案
-4. 执行 - 使用 workspace_writeFile 修改，terminal_execute 运行命令
-5. 验证 - 执行后说明改动内容和验证方法
-
-安全机制：
-- workspace_writeFile 和 terminal_execute 会要求用户确认
-- 避免删除重要文件
-- 命令执行前解释意图
-
-可用工具：workspace_listDir, workspace_readFile, workspace_writeFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff` : `⚠️ 注意：当前没有打开工作区！
-Agent 模式需要工作区才能操作文件。请先使用 "文件 → 打开文件夹" 打开一个项目目录。
-
-在此之前，我只能回答你的编程问题，无法执行文件操作。`}`;
-
-      case 'debug': return `${base}
-
-【Debug 模式 - 调试专家】
-你是专业的调试专家，专注于错误分析和问题诊断。
-
-诊断流程：
-1. 分析错误信息，识别错误类型（语法/运行时/逻辑/配置）
-${workspaceRoot ? `2. 使用 workspace_readFile 查看相关源码
-3. 使用 git_diff 查看最近改动
-4. 提出假设并验证` : `2. 根据错误信息分析可能的原因
-3. 提出修复建议`}
-
-输出格式：
-## 错误分析
-- 错误类型：[类型]
-- 根本原因：[分析]
-${workspaceRoot ? `- 相关文件：[文件列表]` : ``}
-
-## 修复方案
-\`\`\`[语言]
-// 修复代码
-\`\`\`
-
-## 预防建议
-- [建议]
-
-${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspace_search, editor_getActiveFile, terminal_execute, git_status, git_diff
-注意：不直接修改文件，建议用户切换到 Agent 模式执行修复` : `当前无工作区，请直接分析用户提供的错误信息。`}`;
-
-      default: return base;
+      default: return `助手。${context} ${identityNote}
+${thinkingProtocol}`;
     }
   }, [mode, model, workspaceRoot, getActiveFile]);
+
+  // 获取 Thinking UI 模式的系统提示词（返回严格 JSON）
+  const getThinkingUISystemPrompt = useCallback(() => {
+    return THINKING_UI_SYSTEM_PROMPT;
+  }, []);
+
+  // 构建 Thinking UI 模式的用户消息
+  const buildThinkingUIUserMessage = useCallback((userRequest: string) => {
+    const activeFile = getActiveFile();
+    const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
+    
+    return buildThinkingUserPrompt({
+      model: modelInfo.name,
+      language: activeFile?.path?.split('.').pop() || 'unknown',
+      userRequest,
+      styleHints: '遵循项目代码风格',
+      diagnostics: '',
+      prefix: activeFile?.content?.slice(0, 2000) || '',
+      suffix: '',
+      relatedSnippets: '',
+      toolResults: '',
+    });
+  }, [model, getActiveFile]);
 
   // 获取工具定义 - 根据模式和工作区状态过滤可用工具
   const getTools = useCallback(() => {
@@ -403,17 +592,20 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
           const queueApiMessages: any[] = [{ role: 'system', content: newSystemPrompt }, ...newChatHistory, { role: 'user', content: queueFinalContent }];
 
           addMessage({ role: 'assistant', content: '', mode: nextMsg.mode });
+          resetThinkingState();
           const cleanup = window.mindcode?.ai?.chatStream?.(model, queueApiMessages, {
-            onToken: (token: string) => appendStreamingText(token),
+            onToken: (token: string) => handleStreamToken(token),
             onComplete: (fullText: string) => {
-              updateLastMessage(fullText);
+              updateLastMessage(stripThinkingTags(fullText));
               setStreamingText('');
+              resetThinkingState();
               setLoading(false);
               processQueue();
             },
             onError: (error: string) => {
               updateLastMessage(error);
               setStreamingText('');
+              resetThinkingState();
               setLoading(false);
               processQueue();
             },
@@ -446,10 +638,11 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
               return;
             }
             console.log('[ChatEngine] 调用 chatStreamWithTools, 工具数:', tools.length, ', 工具名:', tools.map(t => t.name).join(', '));
+            resetThinkingState();
             window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
               onToken: (token) => {
                 responseText += token;
-                appendStreamingText(token);
+                handleStreamToken(token);
               },
               onToolCall: (calls) => {
                 console.log('[ChatEngine] 收到工具调用:', calls);
@@ -484,7 +677,9 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
           if (askingModelIdentity) {
             finalSuffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
           }
-          updateLastMessage(responseText + finalSuffix);
+          // 清理 thinking 标签后保存
+          updateLastMessage(stripThinkingTags(responseText) + finalSuffix);
+          resetThinkingState();
           break;
         }
 
@@ -525,20 +720,70 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
       setStreamingText('');
       setLoading(false);
       processQueue();
-    } else {
+    } else if (useThinkingUIMode) {
+      // === Thinking UI 模式：使用结构化 JSON 输出 ===
       addMessage({ role: 'assistant', content: '', mode });
+      resetThinkingUI();
+      setThinkingUIStartTime(Date.now());
+      
+      // 使用 Thinking UI 专用提示词
+      const thinkingUIMessages = [
+        { role: 'system', content: getThinkingUISystemPrompt() },
+        ...chatHistory,
+        { role: 'user', content: buildThinkingUIUserMessage(finalContent) }
+      ];
+      
+      const cleanup = window.mindcode?.ai?.chatStream?.(model, thinkingUIMessages, {
+        onToken: (token: string) => handleThinkingUIToken(token),
+        onComplete: (_fullText: string, meta?: { model: string; usedFallback: boolean }) => {
+          const parsed = finishThinkingUI();
+          if (parsed) {
+            // Thinking UI 模式下，final_answer 作为消息内容
+            let suffix = meta?.usedFallback ? `\n\n*已自动切换到 ${meta.model}*` : '';
+            if (askingModelIdentity) {
+              suffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
+            }
+            updateLastMessage(parsed.final_answer + suffix, { thinkingUI: parsed });
+          } else {
+            // 解析失败，使用原始文本
+            updateLastMessage(thinkingUIBufferRef.current);
+          }
+          resetThinkingUI();
+          setLoading(false);
+          stopStreamRef.current = null;
+          processQueue();
+        },
+        onError: (error: string) => {
+          updateLastMessage(error);
+          resetThinkingUI();
+          setLoading(false);
+          stopStreamRef.current = null;
+          processQueue();
+        },
+        onFallback: (from: string, to: string) => {
+          console.log(`[ChatEngine] Thinking UI fallback: ${from} -> ${to}`);
+        }
+      });
+      stopStreamRef.current = cleanup || null;
+    } else {
+      // === 传统模式：使用 <thinking> 标签 ===
+      addMessage({ role: 'assistant', content: '', mode });
+      resetThinkingState();
       const cleanup = window.mindcode?.ai?.chatStream?.(model, apiMessages, {
-        onToken: (token: string) => appendStreamingText(token),
+        onToken: (token: string) => handleStreamToken(token),
         onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => {
-          const plan = mode === 'plan' ? parsePlan(fullText) : null;
+          // 清理 thinking 标签后的文本
+          const cleanedText = stripThinkingTags(fullText);
+          const plan = mode === 'plan' ? parsePlan(cleanedText) : null;
           let suffix = meta?.usedFallback ? `\n\n*已自动切换到 ${meta.model}*` : '';
           // 如果是询问模型身份的问题，追加实际模型信息
           if (askingModelIdentity) {
             suffix += getModelInfoSuffix(model, modelInfo.name, modelInfo.provider);
           }
-          updateLastMessage(fullText + suffix, plan ? { plan } : undefined);
+          updateLastMessage(cleanedText + suffix, plan ? { plan } : undefined);
           if (plan) setPlan(plan);
           setStreamingText('');
+          resetThinkingState();
           setLoading(false);
           stopStreamRef.current = null;
           processQueue();
@@ -546,6 +791,7 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
         onError: (error: string) => {
           updateLastMessage(error);
           setStreamingText('');
+          resetThinkingState();
           setLoading(false);
           stopStreamRef.current = null;
           processQueue();
@@ -561,7 +807,10 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
     model, mode, isLoading, contexts, getSystemPrompt, getTools, addMessage,
     setLoading, setStreamingText, appendStreamingText, updateLastMessage,
     updateLastMessageToolCall, executeTool, confirmTool, parsePlan, setPlan,
-    enqueueMessage, dequeueMessage, getCurrentConversation
+    enqueueMessage, dequeueMessage, getCurrentConversation,
+    // Thinking UI 相关依赖
+    useThinkingUIMode, handleThinkingUIToken, finishThinkingUI, resetThinkingUI,
+    getThinkingUISystemPrompt, buildThinkingUIUserMessage, setThinkingUIStartTime
   ]);
 
   // 停止生成
@@ -580,7 +829,13 @@ ${workspaceRoot ? `可用工具：workspace_listDir, workspace_readFile, workspa
     handleStop,
     isLoading,
     streamingText,
+    thinkingText,
+    isThinking,
     messageQueue,
-    clearMessageQueue
+    clearMessageQueue,
+    // Thinking UI 相关
+    thinkingUIData,
+    thinkingUIStartTime,
+    useThinkingUIMode
   };
 }

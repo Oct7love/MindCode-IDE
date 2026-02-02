@@ -43,10 +43,26 @@ const createDesignTokens = (base: { bg0: string; bg1: string; bg2: string; textP
 
 // 主题定义
 export const themes: Theme[] = [
-  // Dark Themes
+  // ==================== Dark Themes ====================
+  
+  // MindCode Premium (默认)
+  {
+    id: 'mindcode-dark',
+    name: 'MindCode Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#07070a', '--bg-1': '#0d0d10', '--bg-2': '#111114',
+      '--text-primary': '#f5f5f7', '--text-secondary': '#a1a1a6', '--border-default': 'rgba(255, 255, 255, 0.06)',
+      ...getVSCodeTokens({ editorBg: '#07070a', editorFg: '#f5f5f7', sidebarBg: '#0d0d10', sidebarFg: '#a1a1a6', activityBarBg: '#0a0a0d', activityBarFg: '#a1a1a6', tabActiveBg: '#07070a', tabInactiveBg: '#0d0d10', statusBarBg: '#111114', statusBarFg: '#6e6e73', inputBg: '#0d0d10', inputFg: '#f5f5f7', focusBorder: '#8b5cf6', selectionBg: 'rgba(139, 92, 246, 0.25)', hoverBg: 'rgba(255, 255, 255, 0.03)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#07070a', bg1: '#0d0d10', bg2: '#111114', textPrimary: '#f5f5f7', textSecondary: '#a1a1a6', textTertiary: '#6e6e73', border: 'rgba(255, 255, 255, 0.06)', accent: '#8b5cf6', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Dark+ (VSCode 默认)
   {
     id: 'dark-plus',
-    name: 'Dark+ (default dark)',
+    name: 'Dark+ (VS Code)',
     type: 'dark',
     uiTokens: {
       '--bg-0': '#1e1e1e', '--bg-1': '#252526', '--bg-2': '#2d2d30',
@@ -96,16 +112,17 @@ export const themes: Theme[] = [
     designTokens: createDesignTokens({ bg0: '#0d1117', bg1: '#161b22', bg2: '#21262d', textPrimary: '#c9d1d9', textSecondary: '#8b949e', textTertiary: '#6e7681', border: 'rgba(255, 255, 255, 0.1)', accent: '#58a6ff', type: 'dark' }),
     editorThemeRef: 'vs-dark'
   },
+  // Dracula Official - 基于官方GitHub配色
   {
     id: 'dracula',
     name: 'Dracula',
     type: 'dark',
     uiTokens: {
-      '--bg-0': '#282a36', '--bg-1': '#343746', '--bg-2': '#44475a',
-      '--text-primary': '#f8f8f2', '--text-secondary': '#6272a4', '--border-default': 'rgba(255, 255, 255, 0.1)',
-      ...getVSCodeTokens({ editorBg: '#282a36', editorFg: '#f8f8f2', sidebarBg: '#343746', sidebarFg: '#f8f8f2', activityBarBg: '#282a36', activityBarFg: '#bd93f9', tabActiveBg: '#282a36', tabInactiveBg: '#343746', statusBarBg: '#282a36', statusBarFg: '#f8f8f2', inputBg: '#44475a', inputFg: '#f8f8f2', focusBorder: '#bd93f9', selectionBg: 'rgba(189, 147, 249, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+      '--bg-0': '#282a36', '--bg-1': '#21222c', '--bg-2': '#44475a',
+      '--text-primary': '#f8f8f2', '--text-secondary': '#6272a4', '--border-default': 'rgba(189, 147, 249, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#282a36', editorFg: '#f8f8f2', sidebarBg: '#21222c', sidebarFg: '#f8f8f2', activityBarBg: '#343746', activityBarFg: '#f8f8f2', tabActiveBg: '#282a36', tabInactiveBg: '#21222c', statusBarBg: '#191a21', statusBarFg: '#f8f8f2', inputBg: '#282a36', inputFg: '#f8f8f2', focusBorder: '#bd93f9', selectionBg: 'rgba(68, 71, 90, 0.5)', hoverBg: 'rgba(68, 71, 90, 0.5)' }),
     },
-    designTokens: createDesignTokens({ bg0: '#282a36', bg1: '#343746', bg2: '#44475a', textPrimary: '#f8f8f2', textSecondary: '#bd93f9', textTertiary: '#6272a4', border: 'rgba(255, 255, 255, 0.1)', accent: '#bd93f9', type: 'dark' }),
+    designTokens: createDesignTokens({ bg0: '#282a36', bg1: '#21222c', bg2: '#44475a', textPrimary: '#f8f8f2', textSecondary: '#bd93f9', textTertiary: '#6272a4', border: 'rgba(189, 147, 249, 0.15)', accent: '#bd93f9', type: 'dark' }),
     editorThemeRef: 'vs-dark'
   },
   {
@@ -120,7 +137,512 @@ export const themes: Theme[] = [
     designTokens: createDesignTokens({ bg0: '#282c34', bg1: '#2c313c', bg2: '#353b45', textPrimary: '#abb2bf', textSecondary: '#828997', textTertiary: '#5c6370', border: 'rgba(255, 255, 255, 0.1)', accent: '#61afef', type: 'dark' }),
     editorThemeRef: 'vs-dark'
   },
-  // Light Themes
+  
+  // Tokyo Night - 基于官方GitHub配色
+  {
+    id: 'tokyo-night',
+    name: 'Tokyo Night',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1a1b26', '--bg-1': '#16161e', '--bg-2': '#24283b',
+      '--text-primary': '#a9b1d6', '--text-secondary': '#787c99', '--border-default': 'rgba(41, 53, 90, 0.5)',
+      ...getVSCodeTokens({ editorBg: '#1a1b26', editorFg: '#a9b1d6', sidebarBg: '#16161e', sidebarFg: '#787c99', activityBarBg: '#16161e', activityBarFg: '#787c99', tabActiveBg: '#16161e', tabInactiveBg: '#16161e', statusBarBg: '#16161e', statusBarFg: '#787c99', inputBg: '#14141b', inputFg: '#a9b1d6', focusBorder: '#3d59a1', selectionBg: 'rgba(81, 92, 126, 0.3)', hoverBg: 'rgba(19, 19, 26, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1a1b26', bg1: '#16161e', bg2: '#24283b', textPrimary: '#a9b1d6', textSecondary: '#787c99', textTertiary: '#515670', border: 'rgba(41, 53, 90, 0.5)', accent: '#7aa2f7', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Tokyo Night Storm - 更高对比度
+  {
+    id: 'tokyo-night-storm',
+    name: 'Tokyo Night Storm',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#24283b', '--bg-1': '#1f2335', '--bg-2': '#292e42',
+      '--text-primary': '#c0caf5', '--text-secondary': '#9aa5ce', '--border-default': 'rgba(41, 53, 90, 0.6)',
+      ...getVSCodeTokens({ editorBg: '#24283b', editorFg: '#c0caf5', sidebarBg: '#1f2335', sidebarFg: '#9aa5ce', activityBarBg: '#1f2335', activityBarFg: '#7aa2f7', tabActiveBg: '#24283b', tabInactiveBg: '#1f2335', statusBarBg: '#1f2335', statusBarFg: '#9aa5ce', inputBg: '#1f2335', inputFg: '#c0caf5', focusBorder: '#7aa2f7', selectionBg: 'rgba(81, 92, 126, 0.4)', hoverBg: 'rgba(30, 35, 53, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#24283b', bg1: '#1f2335', bg2: '#292e42', textPrimary: '#c0caf5', textSecondary: '#9aa5ce', textTertiary: '#565f89', border: 'rgba(41, 53, 90, 0.6)', accent: '#7aa2f7', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Nord
+  {
+    id: 'nord',
+    name: 'Nord',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#2e3440', '--bg-1': '#3b4252', '--bg-2': '#434c5e',
+      '--text-primary': '#eceff4', '--text-secondary': '#d8dee9', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#2e3440', editorFg: '#eceff4', sidebarBg: '#3b4252', sidebarFg: '#d8dee9', activityBarBg: '#2e3440', activityBarFg: '#88c0d0', tabActiveBg: '#2e3440', tabInactiveBg: '#3b4252', statusBarBg: '#3b4252', statusBarFg: '#d8dee9', inputBg: '#434c5e', inputFg: '#eceff4', focusBorder: '#88c0d0', selectionBg: 'rgba(136, 192, 208, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#2e3440', bg1: '#3b4252', bg2: '#434c5e', textPrimary: '#eceff4', textSecondary: '#d8dee9', textTertiary: '#81a1c1', border: 'rgba(255, 255, 255, 0.08)', accent: '#88c0d0', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Catppuccin Mocha
+  {
+    id: 'catppuccin-mocha',
+    name: 'Catppuccin Mocha',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1e1e2e', '--bg-1': '#181825', '--bg-2': '#313244',
+      '--text-primary': '#cdd6f4', '--text-secondary': '#bac2de', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#1e1e2e', editorFg: '#cdd6f4', sidebarBg: '#181825', sidebarFg: '#bac2de', activityBarBg: '#11111b', activityBarFg: '#cba6f7', tabActiveBg: '#1e1e2e', tabInactiveBg: '#181825', statusBarBg: '#181825', statusBarFg: '#bac2de', inputBg: '#313244', inputFg: '#cdd6f4', focusBorder: '#cba6f7', selectionBg: 'rgba(203, 166, 247, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1e1e2e', bg1: '#181825', bg2: '#313244', textPrimary: '#cdd6f4', textSecondary: '#bac2de', textTertiary: '#6c7086', border: 'rgba(255, 255, 255, 0.08)', accent: '#cba6f7', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Synthwave '84
+  {
+    id: 'synthwave-84',
+    name: "Synthwave '84",
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#262335', '--bg-1': '#2a2139', '--bg-2': '#34294f',
+      '--text-primary': '#ffffff', '--text-secondary': '#b4a6ce', '--border-default': 'rgba(255, 255, 255, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#262335', editorFg: '#ffffff', sidebarBg: '#2a2139', sidebarFg: '#b4a6ce', activityBarBg: '#1e1a2e', activityBarFg: '#ff7edb', tabActiveBg: '#262335', tabInactiveBg: '#2a2139', statusBarBg: '#34294f', statusBarFg: '#ffffff', inputBg: '#34294f', inputFg: '#ffffff', focusBorder: '#ff7edb', selectionBg: 'rgba(255, 126, 219, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#262335', bg1: '#2a2139', bg2: '#34294f', textPrimary: '#ffffff', textSecondary: '#b4a6ce', textTertiary: '#7a6f94', border: 'rgba(255, 255, 255, 0.1)', accent: '#ff7edb', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Ayu Dark
+  {
+    id: 'ayu-dark',
+    name: 'Ayu Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#0a0e14', '--bg-1': '#0d1016', '--bg-2': '#151a21',
+      '--text-primary': '#b3b1ad', '--text-secondary': '#6c6f72', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#0a0e14', editorFg: '#b3b1ad', sidebarBg: '#0d1016', sidebarFg: '#6c6f72', activityBarBg: '#0a0e14', activityBarFg: '#ffb454', tabActiveBg: '#0a0e14', tabInactiveBg: '#0d1016', statusBarBg: '#0d1016', statusBarFg: '#6c6f72', inputBg: '#151a21', inputFg: '#b3b1ad', focusBorder: '#ffb454', selectionBg: 'rgba(255, 180, 84, 0.15)', hoverBg: 'rgba(255, 255, 255, 0.04)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#0a0e14', bg1: '#0d1016', bg2: '#151a21', textPrimary: '#b3b1ad', textSecondary: '#6c6f72', textTertiary: '#475258', border: 'rgba(255, 255, 255, 0.08)', accent: '#ffb454', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Palenight
+  {
+    id: 'palenight',
+    name: 'Palenight',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#292d3e', '--bg-1': '#2e3248', '--bg-2': '#343852',
+      '--text-primary': '#a6accd', '--text-secondary': '#676e95', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#292d3e', editorFg: '#a6accd', sidebarBg: '#2e3248', sidebarFg: '#676e95', activityBarBg: '#232738', activityBarFg: '#82aaff', tabActiveBg: '#292d3e', tabInactiveBg: '#2e3248', statusBarBg: '#232738', statusBarFg: '#82aaff', inputBg: '#343852', inputFg: '#a6accd', focusBorder: '#82aaff', selectionBg: 'rgba(130, 170, 255, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#292d3e', bg1: '#2e3248', bg2: '#343852', textPrimary: '#a6accd', textSecondary: '#676e95', textTertiary: '#4e5579', border: 'rgba(255, 255, 255, 0.08)', accent: '#82aaff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Gruvbox Dark
+  {
+    id: 'gruvbox-dark',
+    name: 'Gruvbox Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#282828', '--bg-1': '#32302f', '--bg-2': '#3c3836',
+      '--text-primary': '#ebdbb2', '--text-secondary': '#a89984', '--border-default': 'rgba(255, 255, 255, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#282828', editorFg: '#ebdbb2', sidebarBg: '#32302f', sidebarFg: '#a89984', activityBarBg: '#282828', activityBarFg: '#fe8019', tabActiveBg: '#282828', tabInactiveBg: '#32302f', statusBarBg: '#3c3836', statusBarFg: '#ebdbb2', inputBg: '#3c3836', inputFg: '#ebdbb2', focusBorder: '#fe8019', selectionBg: 'rgba(254, 128, 25, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#282828', bg1: '#32302f', bg2: '#3c3836', textPrimary: '#ebdbb2', textSecondary: '#a89984', textTertiary: '#7c6f64', border: 'rgba(255, 255, 255, 0.1)', accent: '#fe8019', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Cobalt2
+  {
+    id: 'cobalt2',
+    name: 'Cobalt2',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#193549', '--bg-1': '#1f4662', '--bg-2': '#234d6d',
+      '--text-primary': '#ffffff', '--text-secondary': '#aaccff', '--border-default': 'rgba(255, 255, 255, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#193549', editorFg: '#ffffff', sidebarBg: '#1f4662', sidebarFg: '#aaccff', activityBarBg: '#15232d', activityBarFg: '#ffc600', tabActiveBg: '#193549', tabInactiveBg: '#1f4662', statusBarBg: '#15232d', statusBarFg: '#ffc600', inputBg: '#234d6d', inputFg: '#ffffff', focusBorder: '#ffc600', selectionBg: 'rgba(255, 198, 0, 0.2)', hoverBg: 'rgba(255, 255, 255, 0.05)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#193549', bg1: '#1f4662', bg2: '#234d6d', textPrimary: '#ffffff', textSecondary: '#aaccff', textTertiary: '#6688aa', border: 'rgba(255, 255, 255, 0.1)', accent: '#ffc600', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Night Owl - 护眼深蓝主题
+  {
+    id: 'night-owl',
+    name: 'Night Owl',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#011627', '--bg-1': '#0b2942', '--bg-2': '#1d3b53',
+      '--text-primary': '#d6deeb', '--text-secondary': '#7fdbca', '--border-default': 'rgba(95, 126, 151, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#011627', editorFg: '#d6deeb', sidebarBg: '#0b2942', sidebarFg: '#7fdbca', activityBarBg: '#011627', activityBarFg: '#82aaff', tabActiveBg: '#0b2942', tabInactiveBg: '#01111d', statusBarBg: '#011627', statusBarFg: '#7fdbca', inputBg: '#0b2942', inputFg: '#d6deeb', focusBorder: '#82aaff', selectionBg: 'rgba(29, 59, 83, 0.8)', hoverBg: 'rgba(11, 41, 66, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#011627', bg1: '#0b2942', bg2: '#1d3b53', textPrimary: '#d6deeb', textSecondary: '#7fdbca', textTertiary: '#5f7e97', border: 'rgba(95, 126, 151, 0.2)', accent: '#82aaff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Panda Syntax - 清新暗色
+  {
+    id: 'panda',
+    name: 'Panda Syntax',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#292a2b', '--bg-1': '#242526', '--bg-2': '#31353a',
+      '--text-primary': '#e6e6e6', '--text-secondary': '#b4b4b4', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#292a2b', editorFg: '#e6e6e6', sidebarBg: '#242526', sidebarFg: '#b4b4b4', activityBarBg: '#1f2021', activityBarFg: '#19f9d8', tabActiveBg: '#292a2b', tabInactiveBg: '#242526', statusBarBg: '#1f2021', statusBarFg: '#19f9d8', inputBg: '#31353a', inputFg: '#e6e6e6', focusBorder: '#19f9d8', selectionBg: 'rgba(69, 161, 255, 0.25)', hoverBg: 'rgba(49, 53, 58, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#292a2b', bg1: '#242526', bg2: '#31353a', textPrimary: '#e6e6e6', textSecondary: '#b4b4b4', textTertiary: '#757575', border: 'rgba(255, 255, 255, 0.08)', accent: '#19f9d8', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Rosé Pine - 柔和优雅
+  {
+    id: 'rose-pine',
+    name: 'Rosé Pine',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#191724', '--bg-1': '#1f1d2e', '--bg-2': '#26233a',
+      '--text-primary': '#e0def4', '--text-secondary': '#908caa', '--border-default': 'rgba(110, 106, 134, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#191724', editorFg: '#e0def4', sidebarBg: '#1f1d2e', sidebarFg: '#908caa', activityBarBg: '#191724', activityBarFg: '#ebbcba', tabActiveBg: '#1f1d2e', tabInactiveBg: '#191724', statusBarBg: '#191724', statusBarFg: '#ebbcba', inputBg: '#26233a', inputFg: '#e0def4', focusBorder: '#c4a7e7', selectionBg: 'rgba(110, 106, 134, 0.3)', hoverBg: 'rgba(31, 29, 46, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#191724', bg1: '#1f1d2e', bg2: '#26233a', textPrimary: '#e0def4', textSecondary: '#908caa', textTertiary: '#6e6a86', border: 'rgba(110, 106, 134, 0.15)', accent: '#c4a7e7', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Rosé Pine Moon - 更深沉
+  {
+    id: 'rose-pine-moon',
+    name: 'Rosé Pine Moon',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#232136', '--bg-1': '#2a273f', '--bg-2': '#393552',
+      '--text-primary': '#e0def4', '--text-secondary': '#908caa', '--border-default': 'rgba(110, 106, 134, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#232136', editorFg: '#e0def4', sidebarBg: '#2a273f', sidebarFg: '#908caa', activityBarBg: '#232136', activityBarFg: '#ea9a97', tabActiveBg: '#2a273f', tabInactiveBg: '#232136', statusBarBg: '#232136', statusBarFg: '#ea9a97', inputBg: '#393552', inputFg: '#e0def4', focusBorder: '#c4a7e7', selectionBg: 'rgba(57, 53, 82, 0.6)', hoverBg: 'rgba(42, 39, 63, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#232136', bg1: '#2a273f', bg2: '#393552', textPrimary: '#e0def4', textSecondary: '#908caa', textTertiary: '#6e6a86', border: 'rgba(110, 106, 134, 0.2)', accent: '#c4a7e7', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Vitesse Dark - 极简高效
+  {
+    id: 'vitesse-dark',
+    name: 'Vitesse Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#121212', '--bg-1': '#181818', '--bg-2': '#222222',
+      '--text-primary': '#dbd7ca', '--text-secondary': '#a6a6a6', '--border-default': 'rgba(255, 255, 255, 0.06)',
+      ...getVSCodeTokens({ editorBg: '#121212', editorFg: '#dbd7ca', sidebarBg: '#181818', sidebarFg: '#a6a6a6', activityBarBg: '#121212', activityBarFg: '#4d9375', tabActiveBg: '#181818', tabInactiveBg: '#121212', statusBarBg: '#121212', statusBarFg: '#4d9375', inputBg: '#222222', inputFg: '#dbd7ca', focusBorder: '#4d9375', selectionBg: 'rgba(77, 147, 117, 0.15)', hoverBg: 'rgba(34, 34, 34, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#121212', bg1: '#181818', bg2: '#222222', textPrimary: '#dbd7ca', textSecondary: '#a6a6a6', textTertiary: '#666666', border: 'rgba(255, 255, 255, 0.06)', accent: '#4d9375', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // GitHub Dark Dimmed - 柔和暗色
+  {
+    id: 'github-dark-dimmed',
+    name: 'GitHub Dark Dimmed',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#22272e', '--bg-1': '#2d333b', '--bg-2': '#373e47',
+      '--text-primary': '#adbac7', '--text-secondary': '#768390', '--border-default': 'rgba(68, 76, 86, 0.5)',
+      ...getVSCodeTokens({ editorBg: '#22272e', editorFg: '#adbac7', sidebarBg: '#2d333b', sidebarFg: '#768390', activityBarBg: '#22272e', activityBarFg: '#539bf5', tabActiveBg: '#22272e', tabInactiveBg: '#2d333b', statusBarBg: '#2d333b', statusBarFg: '#768390', inputBg: '#22272e', inputFg: '#adbac7', focusBorder: '#539bf5', selectionBg: 'rgba(83, 155, 245, 0.2)', hoverBg: 'rgba(55, 62, 71, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#22272e', bg1: '#2d333b', bg2: '#373e47', textPrimary: '#adbac7', textSecondary: '#768390', textTertiary: '#636e7b', border: 'rgba(68, 76, 86, 0.5)', accent: '#539bf5', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Solarized Dark - 经典护眼
+  {
+    id: 'solarized-dark',
+    name: 'Solarized Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#002b36', '--bg-1': '#073642', '--bg-2': '#094553',
+      '--text-primary': '#839496', '--text-secondary': '#657b83', '--border-default': 'rgba(101, 123, 131, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#002b36', editorFg: '#839496', sidebarBg: '#073642', sidebarFg: '#657b83', activityBarBg: '#002b36', activityBarFg: '#268bd2', tabActiveBg: '#002b36', tabInactiveBg: '#073642', statusBarBg: '#073642', statusBarFg: '#839496', inputBg: '#073642', inputFg: '#839496', focusBorder: '#268bd2', selectionBg: 'rgba(7, 54, 66, 0.8)', hoverBg: 'rgba(9, 69, 83, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#002b36', bg1: '#073642', bg2: '#094553', textPrimary: '#839496', textSecondary: '#657b83', textTertiary: '#586e75', border: 'rgba(101, 123, 131, 0.2)', accent: '#268bd2', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Atom One Dark - 经典Atom风格
+  {
+    id: 'atom-one-dark',
+    name: 'Atom One Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#282c34', '--bg-1': '#21252b', '--bg-2': '#2c313a',
+      '--text-primary': '#abb2bf', '--text-secondary': '#5c6370', '--border-default': 'rgba(255, 255, 255, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#282c34', editorFg: '#abb2bf', sidebarBg: '#21252b', sidebarFg: '#abb2bf', activityBarBg: '#21252b', activityBarFg: '#61afef', tabActiveBg: '#282c34', tabInactiveBg: '#21252b', statusBarBg: '#21252b', statusBarFg: '#9da5b4', inputBg: '#1d1f23', inputFg: '#abb2bf', focusBorder: '#528bff', selectionBg: 'rgba(62, 68, 81, 0.8)', hoverBg: 'rgba(44, 49, 58, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#282c34', bg1: '#21252b', bg2: '#2c313a', textPrimary: '#abb2bf', textSecondary: '#9da5b4', textTertiary: '#5c6370', border: 'rgba(255, 255, 255, 0.1)', accent: '#61afef', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Material Theme Darker
+  {
+    id: 'material-darker',
+    name: 'Material Darker',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#212121', '--bg-1': '#292929', '--bg-2': '#323232',
+      '--text-primary': '#eeffff', '--text-secondary': '#b0bec5', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#212121', editorFg: '#eeffff', sidebarBg: '#292929', sidebarFg: '#b0bec5', activityBarBg: '#1a1a1a', activityBarFg: '#82aaff', tabActiveBg: '#212121', tabInactiveBg: '#292929', statusBarBg: '#1a1a1a', statusBarFg: '#82aaff', inputBg: '#323232', inputFg: '#eeffff', focusBorder: '#82aaff', selectionBg: 'rgba(97, 97, 97, 0.4)', hoverBg: 'rgba(50, 50, 50, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#212121', bg1: '#292929', bg2: '#323232', textPrimary: '#eeffff', textSecondary: '#b0bec5', textTertiary: '#616161', border: 'rgba(255, 255, 255, 0.08)', accent: '#82aaff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Andromeda - 紫色渐变
+  {
+    id: 'andromeda',
+    name: 'Andromeda',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#23262e', '--bg-1': '#1e2025', '--bg-2': '#2b2f38',
+      '--text-primary': '#d5ced9', '--text-secondary': '#8c838c', '--border-default': 'rgba(255, 255, 255, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#23262e', editorFg: '#d5ced9', sidebarBg: '#1e2025', sidebarFg: '#8c838c', activityBarBg: '#1e2025', activityBarFg: '#ee5d43', tabActiveBg: '#23262e', tabInactiveBg: '#1e2025', statusBarBg: '#1e2025', statusBarFg: '#ee5d43', inputBg: '#2b2f38', inputFg: '#d5ced9', focusBorder: '#ee5d43', selectionBg: 'rgba(238, 93, 67, 0.15)', hoverBg: 'rgba(43, 47, 56, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#23262e', bg1: '#1e2025', bg2: '#2b2f38', textPrimary: '#d5ced9', textSecondary: '#8c838c', textTertiary: '#5c5c5c', border: 'rgba(255, 255, 255, 0.08)', accent: '#ee5d43', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Moonlight II - 柔和紫蓝
+  {
+    id: 'moonlight',
+    name: 'Moonlight II',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#222436', '--bg-1': '#1e2030', '--bg-2': '#2f334d',
+      '--text-primary': '#c8d3f5', '--text-secondary': '#828bb8', '--border-default': 'rgba(130, 139, 184, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#222436', editorFg: '#c8d3f5', sidebarBg: '#1e2030', sidebarFg: '#828bb8', activityBarBg: '#1e2030', activityBarFg: '#82aaff', tabActiveBg: '#222436', tabInactiveBg: '#1e2030', statusBarBg: '#1e2030', statusBarFg: '#82aaff', inputBg: '#2f334d', inputFg: '#c8d3f5', focusBorder: '#82aaff', selectionBg: 'rgba(47, 51, 77, 0.8)', hoverBg: 'rgba(30, 32, 48, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#222436', bg1: '#1e2030', bg2: '#2f334d', textPrimary: '#c8d3f5', textSecondary: '#828bb8', textTertiary: '#636da6', border: 'rgba(130, 139, 184, 0.15)', accent: '#82aaff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Catppuccin Frappé - 温暖中深
+  {
+    id: 'catppuccin-frappe',
+    name: 'Catppuccin Frappé',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#303446', '--bg-1': '#292c3c', '--bg-2': '#414559',
+      '--text-primary': '#c6d0f5', '--text-secondary': '#b5bfe2', '--border-default': 'rgba(115, 121, 148, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#303446', editorFg: '#c6d0f5', sidebarBg: '#292c3c', sidebarFg: '#b5bfe2', activityBarBg: '#232634', activityBarFg: '#ca9ee6', tabActiveBg: '#303446', tabInactiveBg: '#292c3c', statusBarBg: '#232634', statusBarFg: '#ca9ee6', inputBg: '#414559', inputFg: '#c6d0f5', focusBorder: '#ca9ee6', selectionBg: 'rgba(202, 158, 230, 0.2)', hoverBg: 'rgba(65, 69, 89, 0.5)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#303446', bg1: '#292c3c', bg2: '#414559', textPrimary: '#c6d0f5', textSecondary: '#b5bfe2', textTertiary: '#737994', border: 'rgba(115, 121, 148, 0.2)', accent: '#ca9ee6', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Catppuccin Macchiato - 优雅深沉
+  {
+    id: 'catppuccin-macchiato',
+    name: 'Catppuccin Macchiato',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#24273a', '--bg-1': '#1e2030', '--bg-2': '#363a4f',
+      '--text-primary': '#cad3f5', '--text-secondary': '#b8c0e0', '--border-default': 'rgba(110, 115, 141, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#24273a', editorFg: '#cad3f5', sidebarBg: '#1e2030', sidebarFg: '#b8c0e0', activityBarBg: '#181926', activityBarFg: '#c6a0f6', tabActiveBg: '#24273a', tabInactiveBg: '#1e2030', statusBarBg: '#181926', statusBarFg: '#c6a0f6', inputBg: '#363a4f', inputFg: '#cad3f5', focusBorder: '#c6a0f6', selectionBg: 'rgba(198, 160, 246, 0.2)', hoverBg: 'rgba(54, 58, 79, 0.5)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#24273a', bg1: '#1e2030', bg2: '#363a4f', textPrimary: '#cad3f5', textSecondary: '#b8c0e0', textTertiary: '#6e738d', border: 'rgba(110, 115, 141, 0.2)', accent: '#c6a0f6', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Everforest Dark - 护眼绿色
+  {
+    id: 'everforest-dark',
+    name: 'Everforest Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#2d353b', '--bg-1': '#343f44', '--bg-2': '#3d484d',
+      '--text-primary': '#d3c6aa', '--text-secondary': '#9da9a0', '--border-default': 'rgba(122, 132, 120, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#2d353b', editorFg: '#d3c6aa', sidebarBg: '#343f44', sidebarFg: '#9da9a0', activityBarBg: '#232a2e', activityBarFg: '#a7c080', tabActiveBg: '#2d353b', tabInactiveBg: '#343f44', statusBarBg: '#232a2e', statusBarFg: '#a7c080', inputBg: '#3d484d', inputFg: '#d3c6aa', focusBorder: '#a7c080', selectionBg: 'rgba(167, 192, 128, 0.2)', hoverBg: 'rgba(61, 72, 77, 0.5)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#2d353b', bg1: '#343f44', bg2: '#3d484d', textPrimary: '#d3c6aa', textSecondary: '#9da9a0', textTertiary: '#859289', border: 'rgba(122, 132, 120, 0.2)', accent: '#a7c080', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Everforest Dark Hard - 更高对比度
+  {
+    id: 'everforest-dark-hard',
+    name: 'Everforest Dark Hard',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#272e33', '--bg-1': '#2e383c', '--bg-2': '#374145',
+      '--text-primary': '#d3c6aa', '--text-secondary': '#9da9a0', '--border-default': 'rgba(122, 132, 120, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#272e33', editorFg: '#d3c6aa', sidebarBg: '#2e383c', sidebarFg: '#9da9a0', activityBarBg: '#1e2326', activityBarFg: '#a7c080', tabActiveBg: '#272e33', tabInactiveBg: '#2e383c', statusBarBg: '#1e2326', statusBarFg: '#a7c080', inputBg: '#374145', inputFg: '#d3c6aa', focusBorder: '#a7c080', selectionBg: 'rgba(167, 192, 128, 0.2)', hoverBg: 'rgba(55, 65, 69, 0.5)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#272e33', bg1: '#2e383c', bg2: '#374145', textPrimary: '#d3c6aa', textSecondary: '#9da9a0', textTertiary: '#859289', border: 'rgba(122, 132, 120, 0.2)', accent: '#a7c080', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Kanagawa Wave - 日式经典
+  {
+    id: 'kanagawa-wave',
+    name: 'Kanagawa Wave',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1f1f28', '--bg-1': '#16161d', '--bg-2': '#2a2a37',
+      '--text-primary': '#dcd7ba', '--text-secondary': '#c8c093', '--border-default': 'rgba(84, 84, 109, 0.3)',
+      ...getVSCodeTokens({ editorBg: '#1f1f28', editorFg: '#dcd7ba', sidebarBg: '#16161d', sidebarFg: '#c8c093', activityBarBg: '#16161d', activityBarFg: '#7e9cd8', tabActiveBg: '#1f1f28', tabInactiveBg: '#16161d', statusBarBg: '#16161d', statusBarFg: '#7e9cd8', inputBg: '#2a2a37', inputFg: '#dcd7ba', focusBorder: '#7e9cd8', selectionBg: 'rgba(34, 50, 73, 0.6)', hoverBg: 'rgba(42, 42, 55, 0.5)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1f1f28', bg1: '#16161d', bg2: '#2a2a37', textPrimary: '#dcd7ba', textSecondary: '#c8c093', textTertiary: '#727169', border: 'rgba(84, 84, 109, 0.3)', accent: '#7e9cd8', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Kanagawa Dragon - 深邃暗色
+  {
+    id: 'kanagawa-dragon',
+    name: 'Kanagawa Dragon',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#181616', '--bg-1': '#0d0c0c', '--bg-2': '#282727',
+      '--text-primary': '#c5c9c5', '--text-secondary': '#a6a69c', '--border-default': 'rgba(84, 84, 109, 0.25)',
+      ...getVSCodeTokens({ editorBg: '#181616', editorFg: '#c5c9c5', sidebarBg: '#0d0c0c', sidebarFg: '#a6a69c', activityBarBg: '#0d0c0c', activityBarFg: '#8ba4b0', tabActiveBg: '#181616', tabInactiveBg: '#0d0c0c', statusBarBg: '#0d0c0c', statusBarFg: '#8ba4b0', inputBg: '#282727', inputFg: '#c5c9c5', focusBorder: '#8ba4b0', selectionBg: 'rgba(45, 68, 103, 0.5)', hoverBg: 'rgba(40, 39, 39, 0.5)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#181616', bg1: '#0d0c0c', bg2: '#282727', textPrimary: '#c5c9c5', textSecondary: '#a6a69c', textTertiary: '#625e5a', border: 'rgba(84, 84, 109, 0.25)', accent: '#8ba4b0', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Material Ocean - 深海蓝
+  {
+    id: 'material-ocean',
+    name: 'Material Ocean',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#0f111a', '--bg-1': '#181a1f', '--bg-2': '#1f2233',
+      '--text-primary': '#8f93a2', '--text-secondary': '#717cb4', '--border-default': 'rgba(143, 147, 162, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#0f111a', editorFg: '#8f93a2', sidebarBg: '#181a1f', sidebarFg: '#717cb4', activityBarBg: '#0f111a', activityBarFg: '#82aaff', tabActiveBg: '#0f111a', tabInactiveBg: '#181a1f', statusBarBg: '#0f111a', statusBarFg: '#82aaff', inputBg: '#1f2233', inputFg: '#8f93a2', focusBorder: '#82aaff', selectionBg: 'rgba(113, 124, 180, 0.2)', hoverBg: 'rgba(31, 34, 51, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#0f111a', bg1: '#181a1f', bg2: '#1f2233', textPrimary: '#8f93a2', textSecondary: '#717cb4', textTertiary: '#464b5d', border: 'rgba(143, 147, 162, 0.1)', accent: '#82aaff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Material Palenight - 材料紫夜
+  {
+    id: 'material-palenight',
+    name: 'Material Palenight',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#292d3e', '--bg-1': '#242837', '--bg-2': '#32374d',
+      '--text-primary': '#a6accd', '--text-secondary': '#959dcb', '--border-default': 'rgba(166, 172, 205, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#292d3e', editorFg: '#a6accd', sidebarBg: '#242837', sidebarFg: '#959dcb', activityBarBg: '#1e212e', activityBarFg: '#c792ea', tabActiveBg: '#292d3e', tabInactiveBg: '#242837', statusBarBg: '#1e212e', statusBarFg: '#c792ea', inputBg: '#32374d', inputFg: '#a6accd', focusBorder: '#c792ea', selectionBg: 'rgba(199, 146, 234, 0.2)', hoverBg: 'rgba(50, 55, 77, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#292d3e', bg1: '#242837', bg2: '#32374d', textPrimary: '#a6accd', textSecondary: '#959dcb', textTertiary: '#676e95', border: 'rgba(166, 172, 205, 0.1)', accent: '#c792ea', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Horizon Dark - 橙红渐变
+  {
+    id: 'horizon-dark',
+    name: 'Horizon Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1c1e26', '--bg-1': '#232530', '--bg-2': '#2e303e',
+      '--text-primary': '#d5d8da', '--text-secondary': '#9da0a2', '--border-default': 'rgba(213, 216, 218, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#1c1e26', editorFg: '#d5d8da', sidebarBg: '#232530', sidebarFg: '#9da0a2', activityBarBg: '#1c1e26', activityBarFg: '#e95678', tabActiveBg: '#1c1e26', tabInactiveBg: '#232530', statusBarBg: '#232530', statusBarFg: '#e95678', inputBg: '#2e303e', inputFg: '#d5d8da', focusBorder: '#e95678', selectionBg: 'rgba(233, 86, 120, 0.15)', hoverBg: 'rgba(46, 48, 62, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1c1e26', bg1: '#232530', bg2: '#2e303e', textPrimary: '#d5d8da', textSecondary: '#9da0a2', textTertiary: '#6c6f93', border: 'rgba(213, 216, 218, 0.08)', accent: '#e95678', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Shades of Purple - 紫色魔幻
+  {
+    id: 'shades-of-purple',
+    name: 'Shades of Purple',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#2d2b55', '--bg-1': '#1e1e3f', '--bg-2': '#3a3878',
+      '--text-primary': '#ffffff', '--text-secondary': '#a599e9', '--border-default': 'rgba(165, 153, 233, 0.2)',
+      ...getVSCodeTokens({ editorBg: '#2d2b55', editorFg: '#ffffff', sidebarBg: '#1e1e3f', sidebarFg: '#a599e9', activityBarBg: '#1e1e3f', activityBarFg: '#fad000', tabActiveBg: '#2d2b55', tabInactiveBg: '#1e1e3f', statusBarBg: '#1e1e3f', statusBarFg: '#fad000', inputBg: '#3a3878', inputFg: '#ffffff', focusBorder: '#fad000', selectionBg: 'rgba(250, 208, 0, 0.2)', hoverBg: 'rgba(58, 56, 120, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#2d2b55', bg1: '#1e1e3f', bg2: '#3a3878', textPrimary: '#ffffff', textSecondary: '#a599e9', textTertiary: '#6943ff', border: 'rgba(165, 153, 233, 0.2)', accent: '#fad000', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Bluloco Dark - 蓝色调暗色
+  {
+    id: 'bluloco-dark',
+    name: 'Bluloco Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#282c34', '--bg-1': '#21252b', '--bg-2': '#2c313a',
+      '--text-primary': '#abb2bf', '--text-secondary': '#7c8695', '--border-default': 'rgba(171, 178, 191, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#282c34', editorFg: '#abb2bf', sidebarBg: '#21252b', sidebarFg: '#7c8695', activityBarBg: '#1b1e24', activityBarFg: '#3691ff', tabActiveBg: '#282c34', tabInactiveBg: '#21252b', statusBarBg: '#1b1e24', statusBarFg: '#3691ff', inputBg: '#2c313a', inputFg: '#abb2bf', focusBorder: '#3691ff', selectionBg: 'rgba(54, 145, 255, 0.2)', hoverBg: 'rgba(44, 49, 58, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#282c34', bg1: '#21252b', bg2: '#2c313a', textPrimary: '#abb2bf', textSecondary: '#7c8695', textTertiary: '#4a5363', border: 'rgba(171, 178, 191, 0.1)', accent: '#3691ff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Bearded Arc - 现代弧光
+  {
+    id: 'bearded-arc',
+    name: 'Bearded Arc',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1c2433', '--bg-1': '#262e3f', '--bg-2': '#303a4b',
+      '--text-primary': '#c3cfd9', '--text-secondary': '#8ca7c0', '--border-default': 'rgba(195, 207, 217, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#1c2433', editorFg: '#c3cfd9', sidebarBg: '#262e3f', sidebarFg: '#8ca7c0', activityBarBg: '#1c2433', activityBarFg: '#69c3ff', tabActiveBg: '#1c2433', tabInactiveBg: '#262e3f', statusBarBg: '#1c2433', statusBarFg: '#69c3ff', inputBg: '#303a4b', inputFg: '#c3cfd9', focusBorder: '#69c3ff', selectionBg: 'rgba(105, 195, 255, 0.2)', hoverBg: 'rgba(48, 58, 75, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1c2433', bg1: '#262e3f', bg2: '#303a4b', textPrimary: '#c3cfd9', textSecondary: '#8ca7c0', textTertiary: '#5a7a96', border: 'rgba(195, 207, 217, 0.1)', accent: '#69c3ff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Laserwave - 赛博霓虹
+  {
+    id: 'laserwave',
+    name: 'Laserwave',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#27212e', '--bg-1': '#1e1928', '--bg-2': '#332b3c',
+      '--text-primary': '#ffffff', '--text-secondary': '#b4a5cd', '--border-default': 'rgba(180, 165, 205, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#27212e', editorFg: '#ffffff', sidebarBg: '#1e1928', sidebarFg: '#b4a5cd', activityBarBg: '#1e1928', activityBarFg: '#ff52bf', tabActiveBg: '#27212e', tabInactiveBg: '#1e1928', statusBarBg: '#1e1928', statusBarFg: '#ff52bf', inputBg: '#332b3c', inputFg: '#ffffff', focusBorder: '#ff52bf', selectionBg: 'rgba(255, 82, 191, 0.2)', hoverBg: 'rgba(51, 43, 60, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#27212e', bg1: '#1e1928', bg2: '#332b3c', textPrimary: '#ffffff', textSecondary: '#b4a5cd', textTertiary: '#6b5c7c', border: 'rgba(180, 165, 205, 0.15)', accent: '#ff52bf', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Slack Dark - 深邃沉稳
+  {
+    id: 'slack-dark',
+    name: 'Slack Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1a1d21', '--bg-1': '#222529', '--bg-2': '#2c2f33',
+      '--text-primary': '#d1d2d3', '--text-secondary': '#ababad', '--border-default': 'rgba(209, 210, 211, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#1a1d21', editorFg: '#d1d2d3', sidebarBg: '#222529', sidebarFg: '#ababad', activityBarBg: '#1a1d21', activityBarFg: '#1264a3', tabActiveBg: '#1a1d21', tabInactiveBg: '#222529', statusBarBg: '#1a1d21', statusBarFg: '#1264a3', inputBg: '#2c2f33', inputFg: '#d1d2d3', focusBorder: '#1264a3', selectionBg: 'rgba(18, 100, 163, 0.25)', hoverBg: 'rgba(44, 47, 51, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1a1d21', bg1: '#222529', bg2: '#2c2f33', textPrimary: '#d1d2d3', textSecondary: '#ababad', textTertiary: '#616061', border: 'rgba(209, 210, 211, 0.1)', accent: '#1264a3', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Min Dark - 极简黑
+  {
+    id: 'min-dark',
+    name: 'Min Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#1f1f1f', '--bg-1': '#252525', '--bg-2': '#2d2d2d',
+      '--text-primary': '#e1e1e1', '--text-secondary': '#b4b4b4', '--border-default': 'rgba(225, 225, 225, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#1f1f1f', editorFg: '#e1e1e1', sidebarBg: '#252525', sidebarFg: '#b4b4b4', activityBarBg: '#1f1f1f', activityBarFg: '#e1e1e1', tabActiveBg: '#1f1f1f', tabInactiveBg: '#252525', statusBarBg: '#1f1f1f', statusBarFg: '#b4b4b4', inputBg: '#2d2d2d', inputFg: '#e1e1e1', focusBorder: '#6e6e6e', selectionBg: 'rgba(110, 110, 110, 0.3)', hoverBg: 'rgba(45, 45, 45, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#1f1f1f', bg1: '#252525', bg2: '#2d2d2d', textPrimary: '#e1e1e1', textSecondary: '#b4b4b4', textTertiary: '#6e6e6e', border: 'rgba(225, 225, 225, 0.08)', accent: '#e1e1e1', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+  
+  // Aura Dark - 神秘紫霞
+  {
+    id: 'aura-dark',
+    name: 'Aura Dark',
+    type: 'dark',
+    uiTokens: {
+      '--bg-0': '#15141b', '--bg-1': '#1c1b22', '--bg-2': '#2a2931',
+      '--text-primary': '#edecee', '--text-secondary': '#a277ff', '--border-default': 'rgba(162, 119, 255, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#15141b', editorFg: '#edecee', sidebarBg: '#1c1b22', sidebarFg: '#a277ff', activityBarBg: '#15141b', activityBarFg: '#a277ff', tabActiveBg: '#15141b', tabInactiveBg: '#1c1b22', statusBarBg: '#15141b', statusBarFg: '#a277ff', inputBg: '#2a2931', inputFg: '#edecee', focusBorder: '#a277ff', selectionBg: 'rgba(162, 119, 255, 0.25)', hoverBg: 'rgba(42, 41, 49, 0.6)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#15141b', bg1: '#1c1b22', bg2: '#2a2931', textPrimary: '#edecee', textSecondary: '#a277ff', textTertiary: '#6d6d6d', border: 'rgba(162, 119, 255, 0.15)', accent: '#a277ff', type: 'dark' }),
+    editorThemeRef: 'vs-dark'
+  },
+
+  // ==================== Light Themes ====================
   {
     id: 'light-plus',
     name: 'Light+ (default light)',
@@ -157,7 +679,246 @@ export const themes: Theme[] = [
     designTokens: createDesignTokens({ bg0: '#f5f5f5', bg1: '#ffffff', bg2: '#e8e8e8', textPrimary: '#333333', textSecondary: '#616161', textTertiary: '#888888', border: 'rgba(0, 0, 0, 0.1)', accent: '#007acc', type: 'light' }),
     editorThemeRef: 'vs'
   },
-  // High Contrast
+  
+  // Solarized Light
+  {
+    id: 'solarized-light',
+    name: 'Solarized Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fdf6e3', '--bg-1': '#eee8d5', '--bg-2': '#ddd6c3',
+      '--text-primary': '#657b83', '--text-secondary': '#839496', '--border-default': 'rgba(0, 0, 0, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#fdf6e3', editorFg: '#657b83', sidebarBg: '#eee8d5', sidebarFg: '#657b83', activityBarBg: '#ddd6c3', activityBarFg: '#268bd2', tabActiveBg: '#fdf6e3', tabInactiveBg: '#eee8d5', statusBarBg: '#eee8d5', statusBarFg: '#657b83', inputBg: '#fdf6e3', inputFg: '#657b83', focusBorder: '#268bd2', selectionBg: 'rgba(38, 139, 210, 0.15)', hoverBg: 'rgba(0, 0, 0, 0.04)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fdf6e3', bg1: '#eee8d5', bg2: '#ddd6c3', textPrimary: '#657b83', textSecondary: '#839496', textTertiary: '#93a1a1', border: 'rgba(0, 0, 0, 0.1)', accent: '#268bd2', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Catppuccin Latte
+  {
+    id: 'catppuccin-latte',
+    name: 'Catppuccin Latte',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#eff1f5', '--bg-1': '#e6e9ef', '--bg-2': '#dce0e8',
+      '--text-primary': '#4c4f69', '--text-secondary': '#5c5f77', '--border-default': 'rgba(0, 0, 0, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#eff1f5', editorFg: '#4c4f69', sidebarBg: '#e6e9ef', sidebarFg: '#5c5f77', activityBarBg: '#dce0e8', activityBarFg: '#8839ef', tabActiveBg: '#eff1f5', tabInactiveBg: '#e6e9ef', statusBarBg: '#e6e9ef', statusBarFg: '#5c5f77', inputBg: '#eff1f5', inputFg: '#4c4f69', focusBorder: '#8839ef', selectionBg: 'rgba(136, 57, 239, 0.15)', hoverBg: 'rgba(0, 0, 0, 0.04)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#eff1f5', bg1: '#e6e9ef', bg2: '#dce0e8', textPrimary: '#4c4f69', textSecondary: '#5c5f77', textTertiary: '#8c8fa1', border: 'rgba(0, 0, 0, 0.1)', accent: '#8839ef', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Ayu Light
+  {
+    id: 'ayu-light',
+    name: 'Ayu Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fafafa', '--bg-1': '#f3f4f5', '--bg-2': '#e7e8ea',
+      '--text-primary': '#5c6166', '--text-secondary': '#8a9199', '--border-default': 'rgba(0, 0, 0, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#fafafa', editorFg: '#5c6166', sidebarBg: '#f3f4f5', sidebarFg: '#8a9199', activityBarBg: '#e7e8ea', activityBarFg: '#ff9940', tabActiveBg: '#fafafa', tabInactiveBg: '#f3f4f5', statusBarBg: '#f3f4f5', statusBarFg: '#8a9199', inputBg: '#fafafa', inputFg: '#5c6166', focusBorder: '#ff9940', selectionBg: 'rgba(255, 153, 64, 0.15)', hoverBg: 'rgba(0, 0, 0, 0.04)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fafafa', bg1: '#f3f4f5', bg2: '#e7e8ea', textPrimary: '#5c6166', textSecondary: '#8a9199', textTertiary: '#abb0b6', border: 'rgba(0, 0, 0, 0.1)', accent: '#ff9940', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // One Light
+  {
+    id: 'one-light',
+    name: 'One Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fafafa', '--bg-1': '#f0f0f0', '--bg-2': '#e5e5e6',
+      '--text-primary': '#383a42', '--text-secondary': '#696c77', '--border-default': 'rgba(0, 0, 0, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#fafafa', editorFg: '#383a42', sidebarBg: '#f0f0f0', sidebarFg: '#696c77', activityBarBg: '#e5e5e6', activityBarFg: '#4078f2', tabActiveBg: '#fafafa', tabInactiveBg: '#f0f0f0', statusBarBg: '#e5e5e6', statusBarFg: '#383a42', inputBg: '#fafafa', inputFg: '#383a42', focusBorder: '#4078f2', selectionBg: 'rgba(64, 120, 242, 0.15)', hoverBg: 'rgba(0, 0, 0, 0.04)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fafafa', bg1: '#f0f0f0', bg2: '#e5e5e6', textPrimary: '#383a42', textSecondary: '#696c77', textTertiary: '#a0a1a7', border: 'rgba(0, 0, 0, 0.1)', accent: '#4078f2', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Rosé Pine Dawn - 温暖亮色
+  {
+    id: 'rose-pine-dawn',
+    name: 'Rosé Pine Dawn',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#faf4ed', '--bg-1': '#fffaf3', '--bg-2': '#f2e9de',
+      '--text-primary': '#575279', '--text-secondary': '#797593', '--border-default': 'rgba(87, 82, 121, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#faf4ed', editorFg: '#575279', sidebarBg: '#fffaf3', sidebarFg: '#797593', activityBarBg: '#f2e9de', activityBarFg: '#d7827e', tabActiveBg: '#faf4ed', tabInactiveBg: '#fffaf3', statusBarBg: '#fffaf3', statusBarFg: '#d7827e', inputBg: '#faf4ed', inputFg: '#575279', focusBorder: '#907aa9', selectionBg: 'rgba(215, 130, 126, 0.15)', hoverBg: 'rgba(242, 233, 222, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#faf4ed', bg1: '#fffaf3', bg2: '#f2e9de', textPrimary: '#575279', textSecondary: '#797593', textTertiary: '#9893a5', border: 'rgba(87, 82, 121, 0.15)', accent: '#907aa9', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Vitesse Light - 极简亮色
+  {
+    id: 'vitesse-light',
+    name: 'Vitesse Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#ffffff', '--bg-1': '#f7f7f7', '--bg-2': '#efefef',
+      '--text-primary': '#393a34', '--text-secondary': '#6e6e6e', '--border-default': 'rgba(0, 0, 0, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#ffffff', editorFg: '#393a34', sidebarBg: '#f7f7f7', sidebarFg: '#6e6e6e', activityBarBg: '#efefef', activityBarFg: '#1e754f', tabActiveBg: '#ffffff', tabInactiveBg: '#f7f7f7', statusBarBg: '#f7f7f7', statusBarFg: '#1e754f', inputBg: '#ffffff', inputFg: '#393a34', focusBorder: '#1e754f', selectionBg: 'rgba(30, 117, 79, 0.12)', hoverBg: 'rgba(239, 239, 239, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#ffffff', bg1: '#f7f7f7', bg2: '#efefef', textPrimary: '#393a34', textSecondary: '#6e6e6e', textTertiary: '#999999', border: 'rgba(0, 0, 0, 0.08)', accent: '#1e754f', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Night Owl Light
+  {
+    id: 'night-owl-light',
+    name: 'Night Owl Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fbfbfb', '--bg-1': '#f0f0f0', '--bg-2': '#e0e0e0',
+      '--text-primary': '#403f53', '--text-secondary': '#7a8181', '--border-default': 'rgba(64, 63, 83, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#fbfbfb', editorFg: '#403f53', sidebarBg: '#f0f0f0', sidebarFg: '#7a8181', activityBarBg: '#f0f0f0', activityBarFg: '#4876d6', tabActiveBg: '#fbfbfb', tabInactiveBg: '#f0f0f0', statusBarBg: '#f0f0f0', statusBarFg: '#4876d6', inputBg: '#fbfbfb', inputFg: '#403f53', focusBorder: '#4876d6', selectionBg: 'rgba(72, 118, 214, 0.12)', hoverBg: 'rgba(224, 224, 224, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fbfbfb', bg1: '#f0f0f0', bg2: '#e0e0e0', textPrimary: '#403f53', textSecondary: '#7a8181', textTertiary: '#989fb1', border: 'rgba(64, 63, 83, 0.1)', accent: '#4876d6', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Material Light
+  {
+    id: 'material-light',
+    name: 'Material Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fafafa', '--bg-1': '#ffffff', '--bg-2': '#eeeeee',
+      '--text-primary': '#90a4ae', '--text-secondary': '#7c8c92', '--border-default': 'rgba(0, 0, 0, 0.08)',
+      ...getVSCodeTokens({ editorBg: '#fafafa', editorFg: '#90a4ae', sidebarBg: '#ffffff', sidebarFg: '#7c8c92', activityBarBg: '#ffffff', activityBarFg: '#7c4dff', tabActiveBg: '#fafafa', tabInactiveBg: '#ffffff', statusBarBg: '#eeeeee', statusBarFg: '#7c4dff', inputBg: '#fafafa', inputFg: '#90a4ae', focusBorder: '#7c4dff', selectionBg: 'rgba(124, 77, 255, 0.1)', hoverBg: 'rgba(238, 238, 238, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fafafa', bg1: '#ffffff', bg2: '#eeeeee', textPrimary: '#90a4ae', textSecondary: '#7c8c92', textTertiary: '#b0bec5', border: 'rgba(0, 0, 0, 0.08)', accent: '#7c4dff', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Tokyo Night Day
+  {
+    id: 'tokyo-night-day',
+    name: 'Tokyo Night Day',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#e1e2e7', '--bg-1': '#d5d6db', '--bg-2': '#c8c9ce',
+      '--text-primary': '#3760bf', '--text-secondary': '#6172b0', '--border-default': 'rgba(55, 96, 191, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#e1e2e7', editorFg: '#3760bf', sidebarBg: '#d5d6db', sidebarFg: '#6172b0', activityBarBg: '#d5d6db', activityBarFg: '#2e7de9', tabActiveBg: '#e1e2e7', tabInactiveBg: '#d5d6db', statusBarBg: '#d5d6db', statusBarFg: '#2e7de9', inputBg: '#e1e2e7', inputFg: '#3760bf', focusBorder: '#2e7de9', selectionBg: 'rgba(46, 125, 233, 0.15)', hoverBg: 'rgba(200, 201, 206, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#e1e2e7', bg1: '#d5d6db', bg2: '#c8c9ce', textPrimary: '#3760bf', textSecondary: '#6172b0', textTertiary: '#8990b3', border: 'rgba(55, 96, 191, 0.15)', accent: '#2e7de9', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Everforest Light - 护眼绿色亮色
+  {
+    id: 'everforest-light',
+    name: 'Everforest Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fdf6e3', '--bg-1': '#f4f0d9', '--bg-2': '#efebd4',
+      '--text-primary': '#5c6a72', '--text-secondary': '#829181', '--border-default': 'rgba(92, 106, 114, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#fdf6e3', editorFg: '#5c6a72', sidebarBg: '#f4f0d9', sidebarFg: '#829181', activityBarBg: '#efebd4', activityBarFg: '#8da101', tabActiveBg: '#fdf6e3', tabInactiveBg: '#f4f0d9', statusBarBg: '#efebd4', statusBarFg: '#8da101', inputBg: '#fdf6e3', inputFg: '#5c6a72', focusBorder: '#8da101', selectionBg: 'rgba(141, 161, 1, 0.15)', hoverBg: 'rgba(239, 235, 212, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fdf6e3', bg1: '#f4f0d9', bg2: '#efebd4', textPrimary: '#5c6a72', textSecondary: '#829181', textTertiary: '#a6b0a0', border: 'rgba(92, 106, 114, 0.15)', accent: '#8da101', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Kanagawa Lotus - 日式亮色
+  {
+    id: 'kanagawa-lotus',
+    name: 'Kanagawa Lotus',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#f2ecbc', '--bg-1': '#e7dba0', '--bg-2': '#d5cea3',
+      '--text-primary': '#545464', '--text-secondary': '#766b90', '--border-default': 'rgba(84, 84, 100, 0.15)',
+      ...getVSCodeTokens({ editorBg: '#f2ecbc', editorFg: '#545464', sidebarBg: '#e7dba0', sidebarFg: '#766b90', activityBarBg: '#d5cea3', activityBarFg: '#624c83', tabActiveBg: '#f2ecbc', tabInactiveBg: '#e7dba0', statusBarBg: '#d5cea3', statusBarFg: '#624c83', inputBg: '#f2ecbc', inputFg: '#545464', focusBorder: '#624c83', selectionBg: 'rgba(98, 76, 131, 0.15)', hoverBg: 'rgba(213, 206, 163, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#f2ecbc', bg1: '#e7dba0', bg2: '#d5cea3', textPrimary: '#545464', textSecondary: '#766b90', textTertiary: '#8a8980', border: 'rgba(84, 84, 100, 0.15)', accent: '#624c83', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Material Lighter - 材料亮色
+  {
+    id: 'material-lighter',
+    name: 'Material Lighter',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fafafa', '--bg-1': '#ffffff', '--bg-2': '#f0f0f0',
+      '--text-primary': '#546e7a', '--text-secondary': '#80a4c2', '--border-default': 'rgba(84, 110, 122, 0.12)',
+      ...getVSCodeTokens({ editorBg: '#fafafa', editorFg: '#546e7a', sidebarBg: '#ffffff', sidebarFg: '#80a4c2', activityBarBg: '#f0f0f0', activityBarFg: '#6182b8', tabActiveBg: '#fafafa', tabInactiveBg: '#ffffff', statusBarBg: '#f0f0f0', statusBarFg: '#6182b8', inputBg: '#fafafa', inputFg: '#546e7a', focusBorder: '#6182b8', selectionBg: 'rgba(97, 130, 184, 0.12)', hoverBg: 'rgba(240, 240, 240, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fafafa', bg1: '#ffffff', bg2: '#f0f0f0', textPrimary: '#546e7a', textSecondary: '#80a4c2', textTertiary: '#b0bec5', border: 'rgba(84, 110, 122, 0.12)', accent: '#6182b8', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Bluloco Light - 蓝色调亮色
+  {
+    id: 'bluloco-light',
+    name: 'Bluloco Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#f9f9f9', '--bg-1': '#ffffff', '--bg-2': '#f0f0f0',
+      '--text-primary': '#373a41', '--text-secondary': '#8c8e94', '--border-default': 'rgba(55, 58, 65, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#f9f9f9', editorFg: '#373a41', sidebarBg: '#ffffff', sidebarFg: '#8c8e94', activityBarBg: '#f0f0f0', activityBarFg: '#275fe4', tabActiveBg: '#f9f9f9', tabInactiveBg: '#ffffff', statusBarBg: '#f0f0f0', statusBarFg: '#275fe4', inputBg: '#f9f9f9', inputFg: '#373a41', focusBorder: '#275fe4', selectionBg: 'rgba(39, 95, 228, 0.12)', hoverBg: 'rgba(240, 240, 240, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#f9f9f9', bg1: '#ffffff', bg2: '#f0f0f0', textPrimary: '#373a41', textSecondary: '#8c8e94', textTertiary: '#b8babe', border: 'rgba(55, 58, 65, 0.1)', accent: '#275fe4', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Min Light - 极简白
+  {
+    id: 'min-light',
+    name: 'Min Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#ffffff', '--bg-1': '#fafafa', '--bg-2': '#f0f0f0',
+      '--text-primary': '#1f1f1f', '--text-secondary': '#6e6e6e', '--border-default': 'rgba(31, 31, 31, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#ffffff', editorFg: '#1f1f1f', sidebarBg: '#fafafa', sidebarFg: '#6e6e6e', activityBarBg: '#f0f0f0', activityBarFg: '#1f1f1f', tabActiveBg: '#ffffff', tabInactiveBg: '#fafafa', statusBarBg: '#f0f0f0', statusBarFg: '#6e6e6e', inputBg: '#ffffff', inputFg: '#1f1f1f', focusBorder: '#6e6e6e', selectionBg: 'rgba(110, 110, 110, 0.15)', hoverBg: 'rgba(240, 240, 240, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#ffffff', bg1: '#fafafa', bg2: '#f0f0f0', textPrimary: '#1f1f1f', textSecondary: '#6e6e6e', textTertiary: '#b4b4b4', border: 'rgba(31, 31, 31, 0.1)', accent: '#1f1f1f', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Horizon Light - 柔和亮色
+  {
+    id: 'horizon-light',
+    name: 'Horizon Light',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#fdf0ed', '--bg-1': '#fadad1', '--bg-2': '#f5c6b8',
+      '--text-primary': '#1c1e26', '--text-secondary': '#6c6f93', '--border-default': 'rgba(28, 30, 38, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#fdf0ed', editorFg: '#1c1e26', sidebarBg: '#fadad1', sidebarFg: '#6c6f93', activityBarBg: '#f5c6b8', activityBarFg: '#da103f', tabActiveBg: '#fdf0ed', tabInactiveBg: '#fadad1', statusBarBg: '#fadad1', statusBarFg: '#da103f', inputBg: '#fdf0ed', inputFg: '#1c1e26', focusBorder: '#da103f', selectionBg: 'rgba(218, 16, 63, 0.12)', hoverBg: 'rgba(245, 198, 184, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#fdf0ed', bg1: '#fadad1', bg2: '#f5c6b8', textPrimary: '#1c1e26', textSecondary: '#6c6f93', textTertiary: '#9da0a2', border: 'rgba(28, 30, 38, 0.1)', accent: '#da103f', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Bearded Antique - 古典米白
+  {
+    id: 'bearded-antique',
+    name: 'Bearded Antique',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#f5f0e7', '--bg-1': '#ebe6dd', '--bg-2': '#e0dbd2',
+      '--text-primary': '#3d3b32', '--text-secondary': '#6d6a5c', '--border-default': 'rgba(61, 59, 50, 0.12)',
+      ...getVSCodeTokens({ editorBg: '#f5f0e7', editorFg: '#3d3b32', sidebarBg: '#ebe6dd', sidebarFg: '#6d6a5c', activityBarBg: '#e0dbd2', activityBarFg: '#c96e31', tabActiveBg: '#f5f0e7', tabInactiveBg: '#ebe6dd', statusBarBg: '#e0dbd2', statusBarFg: '#c96e31', inputBg: '#f5f0e7', inputFg: '#3d3b32', focusBorder: '#c96e31', selectionBg: 'rgba(201, 110, 49, 0.15)', hoverBg: 'rgba(224, 219, 210, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#f5f0e7', bg1: '#ebe6dd', bg2: '#e0dbd2', textPrimary: '#3d3b32', textSecondary: '#6d6a5c', textTertiary: '#9d9a8c', border: 'rgba(61, 59, 50, 0.12)', accent: '#c96e31', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // Slack Aubergine Light - 茄紫亮色
+  {
+    id: 'slack-ochin',
+    name: 'Slack Ochin',
+    type: 'light',
+    uiTokens: {
+      '--bg-0': '#f8f8fa', '--bg-1': '#f0f0f2', '--bg-2': '#e8e8ea',
+      '--text-primary': '#1d1c1d', '--text-secondary': '#616061', '--border-default': 'rgba(29, 28, 29, 0.1)',
+      ...getVSCodeTokens({ editorBg: '#f8f8fa', editorFg: '#1d1c1d', sidebarBg: '#f0f0f2', sidebarFg: '#616061', activityBarBg: '#e8e8ea', activityBarFg: '#1264a3', tabActiveBg: '#f8f8fa', tabInactiveBg: '#f0f0f2', statusBarBg: '#e8e8ea', statusBarFg: '#1264a3', inputBg: '#f8f8fa', inputFg: '#1d1c1d', focusBorder: '#1264a3', selectionBg: 'rgba(18, 100, 163, 0.12)', hoverBg: 'rgba(232, 232, 234, 0.8)' }),
+    },
+    designTokens: createDesignTokens({ bg0: '#f8f8fa', bg1: '#f0f0f2', bg2: '#e8e8ea', textPrimary: '#1d1c1d', textSecondary: '#616061', textTertiary: '#ababad', border: 'rgba(29, 28, 29, 0.1)', accent: '#1264a3', type: 'light' }),
+    editorThemeRef: 'vs'
+  },
+  
+  // ==================== High Contrast ====================
   {
     id: 'hc-black',
     name: 'Dark High Contrast',
@@ -185,7 +946,7 @@ export const themes: Theme[] = [
 ];
 
 // 默认主题
-export const defaultThemeId = 'dark-plus';
+export const defaultThemeId = 'mindcode-dark';
 
 // 获取主题
 export function getTheme(themeId: string): Theme | undefined {

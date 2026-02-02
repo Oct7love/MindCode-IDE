@@ -14,6 +14,7 @@ export const MODELS: ModelInfo[] = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', icon: '⚡', desc: '极速响应', provider: 'gemini', toolCapable: true },
   { id: 'gemini-2.5-flash-thinking', name: 'Gemini 2.5 Flash (Thinking)', icon: '🧠', desc: '思维链', provider: 'gemini', toolCapable: true },
   { id: 'deepseek-chat', name: 'DeepSeek V3', icon: '🐋', desc: '性价比高', provider: 'deepseek', toolCapable: true },
+  { id: 'deepseek-coder', name: 'DeepSeek Coder', icon: '💻', desc: '代码专家', provider: 'deepseek', toolCapable: true },
   { id: 'deepseek-reasoner', name: 'DeepSeek R2', icon: '🧠', desc: '深度推理', provider: 'deepseek', toolCapable: true },
   { id: 'glm-4.7', name: 'GLM-4.7', icon: '🔮', desc: '高智能旗舰', provider: 'glm', toolCapable: true },
   { id: 'glm-4.7-flashx', name: 'GLM-4.7 FlashX', icon: '⚡', desc: '轻量高速', provider: 'glm', toolCapable: true },

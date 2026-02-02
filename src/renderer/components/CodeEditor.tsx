@@ -6,6 +6,12 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import * as monaco from 'monaco-editor';
 import { InlineEditWidget } from './InlineEditWidget';
+import { completionService, CompletionRequest } from '../services/completionService';
+import {
+  triggerInlineCompletion,
+  acceptCompletionWord,
+  acceptCompletionLine,
+} from '../services/inlineCompletionProvider';
 
 // 配置 Monaco Worker - 使用 Vite 兼容的静态导入方式
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -61,40 +67,62 @@ monaco.editor.defineTheme('mindcode-dark', {
     { token: 'attribute.value', foreground: 'CE9178' },
   ],
   colors: {
-    'editor.background': '#0D0D0D',
+    // 背景 - 更深邃
+    'editor.background': '#07070a',
     'editor.foreground': '#E5E5E5',
-    'editor.lineHighlightBackground': '#1A1A1A',
-    'editor.lineHighlightBorder': '#1A1A1A',
-    'editor.selectionBackground': '#264F78',
-    'editor.selectionHighlightBackground': '#264F7855',
-    'editor.inactiveSelectionBackground': '#264F7855',
-    'editorCursor.foreground': '#AEAFAD',
-    'editorWhitespace.foreground': '#333333',
-    'editorIndentGuide.background': '#333333',
-    'editorIndentGuide.activeBackground': '#525252',
-    'editorLineNumber.foreground': '#525252',
-    'editorLineNumber.activeForeground': '#A3A3A3',
-    'editorGutter.background': '#0D0D0D',
-    'editor.findMatchBackground': '#515C6A',
-    'editor.findMatchHighlightBackground': '#314365',
-    'editorBracketMatch.background': '#0064001A',
-    'editorBracketMatch.border': '#888888',
-    'editorOverviewRuler.border': '#1A1A1A',
-    'editorWidget.background': '#1A1A1A',
-    'editorWidget.border': '#262626',
-    'editorSuggestWidget.background': '#1A1A1A',
-    'editorSuggestWidget.border': '#262626',
-    'editorSuggestWidget.selectedBackground': '#094771',
-    'editorHoverWidget.background': '#1A1A1A',
-    'editorHoverWidget.border': '#262626',
-    'peekView.border': '#6366F1',
-    'peekViewEditor.background': '#141414',
-    'peekViewResult.background': '#1A1A1A',
-    'peekViewTitle.background': '#1A1A1A',
+    'editor.lineHighlightBackground': '#12121580',
+    'editor.lineHighlightBorder': '#00000000',
+    // 选择 - 紫蓝色调
+    'editor.selectionBackground': '#3b82f640',
+    'editor.selectionHighlightBackground': '#3b82f625',
+    'editor.inactiveSelectionBackground': '#3b82f620',
+    // 光标
+    'editorCursor.foreground': '#8b5cf6',
+    'editorCursor.background': '#07070a',
+    // 空白和缩进
+    'editorWhitespace.foreground': '#2a2a2d',
+    'editorIndentGuide.background': '#1f1f23',
+    'editorIndentGuide.activeBackground': '#3f3f46',
+    // 行号
+    'editorLineNumber.foreground': '#3f3f46',
+    'editorLineNumber.activeForeground': '#a1a1aa',
+    'editorGutter.background': '#07070a',
+    // 查找
+    'editor.findMatchBackground': '#8b5cf640',
+    'editor.findMatchHighlightBackground': '#6366f130',
+    // 括号匹配
+    'editorBracketMatch.background': '#8b5cf620',
+    'editorBracketMatch.border': '#8b5cf6',
+    // 滚动条
+    'editorOverviewRuler.border': '#0f0f12',
+    // Widget
+    'editorWidget.background': '#111114',
+    'editorWidget.border': '#1f1f23',
+    'editorSuggestWidget.background': '#111114',
+    'editorSuggestWidget.border': '#1f1f23',
+    'editorSuggestWidget.selectedBackground': '#3b82f630',
+    'editorSuggestWidget.highlightForeground': '#8b5cf6',
+    'editorHoverWidget.background': '#111114',
+    'editorHoverWidget.border': '#1f1f23',
+    // Peek View
+    'peekView.border': '#8b5cf6',
+    'peekViewEditor.background': '#0d0d10',
+    'peekViewResult.background': '#111114',
+    'peekViewTitle.background': '#111114',
+    // 滚动条
     'scrollbar.shadow': '#00000000',
-    'scrollbarSlider.background': '#79797966',
-    'scrollbarSlider.hoverBackground': '#646464B3',
-    'scrollbarSlider.activeBackground': '#BFBFBF66',
+    'scrollbarSlider.background': '#ffffff12',
+    'scrollbarSlider.hoverBackground': '#ffffff20',
+    'scrollbarSlider.activeBackground': '#ffffff30',
+    // Ghost Text / Inline Completion
+    'editorGhostText.foreground': '#6366f180',
+    'editorGhostText.background': '#00000000',
+    'editorGhostText.border': '#00000000',
+    // Minimap
+    'minimap.background': '#07070a',
+    'minimapSlider.background': '#ffffff10',
+    'minimapSlider.hoverBackground': '#ffffff18',
+    'minimapSlider.activeBackground': '#ffffff25',
   },
 });
 
@@ -171,42 +199,105 @@ interface CodeEditorProps {
 
 // AI 代码补全提供者
 let inlineCompletionDisposable: monaco.IDisposable | null = null;
-let lastCompletionRequest: AbortController | null = null;
-const completionCache = new Map<string, string>();
+let currentFilePath = ''; // 当前文件路径
 
-const createInlineCompletionProvider = (model: string): monaco.languages.InlineCompletionsProvider => ({
-  provideInlineCompletions: async (monacoModel, position, context, token) => {
-    const textUntilPosition = monacoModel.getValueInRange({ startLineNumber: Math.max(1, position.lineNumber - 20), startColumn: 1, endLineNumber: position.lineNumber, endColumn: position.column });
-    const textAfterPosition = monacoModel.getValueInRange({ startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: Math.min(monacoModel.getLineCount(), position.lineNumber + 5), endColumn: 1000 });
-    
-    if (!textUntilPosition.trim() || textUntilPosition.endsWith(' ') && !textUntilPosition.trim().endsWith('.')) return { items: [] }; // 空行或只有空格不触发
-    
-    const cacheKey = `${monacoModel.uri.toString()}:${position.lineNumber}:${position.column}:${textUntilPosition.slice(-50)}`;
-    if (completionCache.has(cacheKey)) return { items: [{ insertText: completionCache.get(cacheKey)!, range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column) }] };
-    
-    if (lastCompletionRequest) lastCompletionRequest.abort();
-    lastCompletionRequest = new AbortController();
-    
-    if (!window.mindcode?.ai?.chat) return { items: [] };
-    
+// 注释模式检测
+const COMMENT_PATTERNS = ['//', '/*', '#', '"""', "'''", '<!--'];
+
+/**
+ * 判断是否应该使用 block 模式（复杂代码生成）
+ */
+const shouldUseBlockMode = (content: string, lineNumber: number): boolean => {
+  const lines = content.split('\n');
+  if (lineNumber < 1 || lineNumber > lines.length) return false;
+
+  const currentLine = lines[lineNumber - 1] || '';
+  const trimmed = currentLine.trimStart();
+
+  // 注释行使用 block 模式
+  if (COMMENT_PATTERNS.some(p => trimmed.startsWith(p))) {
+    return true;
+  }
+
+  // 空行且上一行是注释，使用 block 模式
+  if (trimmed === '' && lineNumber > 1) {
+    const prevLine = lines[lineNumber - 2].trimStart();
+    if (COMMENT_PATTERNS.some(p => prevLine.startsWith(p))) {
+      return true;
+    }
+  }
+
+  // 函数/类定义后的空行
+  if (trimmed === '' && lineNumber > 1) {
+    const prevLine = lines[lineNumber - 2].trimEnd();
+    if (prevLine.endsWith('{') || prevLine.endsWith(':') || prevLine.endsWith(')')) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * 创建基于本地补全服务的内联补全提供者 v2.0
+ * - 智能 block/inline 模式切换
+ * - 多行补全支持
+ */
+const createLocalCompletionProvider = (): monaco.languages.InlineCompletionsProvider => ({
+  provideInlineCompletions: async (monacoModel, position, _context, token) => {
+    const fullContent = monacoModel.getValue();
+
+    // 如果文件内容太少，不触发
+    if (fullContent.trim().length < 5) {
+      return { items: [] };
+    }
+
+    // 智能模式选择
+    const mode = shouldUseBlockMode(fullContent, position.lineNumber) ? 'block' : 'inline';
+
+    const request: CompletionRequest = {
+      file_path: currentFilePath || monacoModel.uri.path,
+      content: fullContent,
+      cursor_line: position.lineNumber - 1,
+      cursor_column: position.column - 1,
+      mode,
+    };
+
     try {
-      const prompt = `你是代码补全助手。只返回补全的代码，不要解释。补全以下代码：\n\n${textUntilPosition}`;
-      const response = await window.mindcode.ai.chat(model, [{ role: 'user', content: prompt }]);
-      if (token.isCancellationRequested || !response.success) return { items: [] };
-      
-      let completion = response.data || '';
-      completion = completion.replace(/^```\w*\n?/, '').replace(/\n?```$/, '').trim(); // 移除代码块标记
-      if (completion.startsWith(textUntilPosition.slice(-20))) completion = completion.slice(textUntilPosition.slice(-20).length); // 移除重复前缀
-      
-      if (completion && completion.length > 0 && completion.length < 500) {
-        completionCache.set(cacheKey, completion);
-        if (completionCache.size > 100) completionCache.delete(completionCache.keys().next().value); // LRU 清理
-        return { items: [{ insertText: completion, range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column) }] };
+      const response = await completionService.getCompletion(request);
+
+      if (token.isCancellationRequested || !response || !response.completion) {
+        return { items: [] };
       }
-    } catch (e) { /* 忽略错误 */ }
-    return { items: [] };
+
+      // 多行补全：计算结束位置
+      const completionLines = response.completion.split('\n');
+      const endLineNumber = position.lineNumber + completionLines.length - 1;
+      const lastLineLength = completionLines[completionLines.length - 1].length;
+      const endColumn = completionLines.length === 1
+        ? position.column + lastLineLength
+        : lastLineLength + 1;
+
+      return {
+        items: [{
+          insertText: response.completion,
+          range: new monaco.Range(
+            position.lineNumber,
+            position.column,
+            endLineNumber,
+            endColumn
+          ),
+        }],
+        enableForwardStability: true, // 启用部分接受
+      };
+    } catch (e) {
+      console.error('[CodeEditor] 补全请求失败:', e);
+      return { items: [] };
+    }
   },
-  freeInlineCompletions: () => {},
+  freeInlineCompletions: () => {
+    completionService.cancel();
+  },
 });
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -217,7 +308,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   minimap = true,
   lineNumbers = 'on',
   wordWrap = 'off',
-  fontSize = 14,
+  fontSize = 12, // 紧凑模式
   enableGhostText = true,
   completionModel = 'gemini-2.5-flash-lite', // 使用 Gemini 2.5 Flash Lite 做代码补全
   onAIEdit,
@@ -232,13 +323,29 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const [selectedCode, setSelectedCode] = useState('');
   const [selectionRange, setSelectionRange] = useState<monaco.Range | null>(null);
 
-  // 注册 Ghost Text 补全提供者
+  // 注册 Ghost Text 补全提供者（使用本地补全服务）
   useEffect(() => {
     if (!enableGhostText) return;
+
+    // 先检查补全服务是否可用
+    completionService.healthCheck().then((health) => {
+      if (health) {
+        console.log('[CodeEditor] 本地补全服务可用:', health);
+      } else {
+        console.warn('[CodeEditor] 本地补全服务不可用，请启动 completion-server');
+      }
+    });
+
     inlineCompletionDisposable?.dispose();
-    inlineCompletionDisposable = monaco.languages.registerInlineCompletionsProvider('*', createInlineCompletionProvider(completionModel));
-    return () => { inlineCompletionDisposable?.dispose(); inlineCompletionDisposable = null; };
-  }, [enableGhostText, completionModel]);
+    inlineCompletionDisposable = monaco.languages.registerInlineCompletionsProvider(
+      '*',
+      createLocalCompletionProvider()
+    );
+    return () => {
+      inlineCompletionDisposable?.dispose();
+      inlineCompletionDisposable = null;
+    };
+  }, [enableGhostText]);
 
   // 初始化编辑器
   useEffect(() => {
@@ -249,10 +356,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       language: file?.language || getLanguageFromPath(file?.path || ''),
       theme: 'mindcode-dark',
       readOnly,
-      minimap: { enabled: minimap },
+      minimap: { 
+        enabled: minimap,
+        scale: 1,
+        showSlider: 'mouseover',
+        renderCharacters: false, // 使用色块而非字符，更清晰
+        maxColumn: 80,
+        side: 'right',
+      },
       lineNumbers,
       wordWrap,
       fontSize,
+      lineHeight: 18, // 紧凑行高
       fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
       fontLigatures: true,
       renderWhitespace: 'selection',
@@ -261,7 +376,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       cursorBlinking: 'smooth',
       cursorSmoothCaretAnimation: 'on',
       automaticLayout: true,
-      padding: { top: 16, bottom: 16 },
+      padding: { top: 8, bottom: 8 }, // 紧凑 padding
       bracketPairColorization: { enabled: true },
       guides: {
         bracketPairs: true,
@@ -284,17 +399,47 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       inlineSuggest: { // Ghost Text 配置
         enabled: true,
         mode: 'subwordSmart',
+        showToolbar: 'onHover', // 悬停时显示工具栏
+        suppressSuggestions: false, // 不抑制普通建议
       },
       tabCompletion: 'on', // Tab 接受补全
+      acceptSuggestionOnEnter: 'smart', // 智能 Enter 接受
     });
 
     editorRef.current = editor;
     setIsReady(true);
 
-    // 监听主题变化
-    const handleThemeChange = (event: CustomEvent<{ themeId: string; editorTheme: string }>) => {
+    // 监听主题变化 - 动态更新编辑器颜色
+    const handleThemeChange = (event: CustomEvent<{ themeId: string; editorTheme: string; type: string }>) => {
       if (editorRef.current) {
-        monaco.editor.setTheme(event.detail.editorTheme);
+        // 获取当前主题的 CSS 变量值来更新编辑器
+        const root = document.documentElement;
+        const getColor = (name: string) => getComputedStyle(root).getPropertyValue(name).trim();
+        
+        const editorBg = getColor('--vscode-editor-background') || getColor('--color-bg-base');
+        const editorFg = getColor('--vscode-editor-foreground') || getColor('--color-text-primary');
+        const isDark = event.detail.type !== 'light';
+        
+        // 动态定义新主题
+        const themeId = `mindcode-${event.detail.themeId}`;
+        monaco.editor.defineTheme(themeId, {
+          base: isDark ? 'vs-dark' : 'vs',
+          inherit: true,
+          rules: [],
+          colors: {
+            'editor.background': editorBg,
+            'editor.foreground': editorFg,
+            'editor.lineHighlightBackground': isDark ? '#ffffff08' : '#00000008',
+            'editor.selectionBackground': getColor('--vscode-list-activeSelectionBackground') || (isDark ? '#264F78' : '#add6ff'),
+            'editorLineNumber.foreground': getColor('--color-text-muted') || (isDark ? '#525252' : '#858585'),
+            'editorLineNumber.activeForeground': getColor('--color-text-secondary') || (isDark ? '#A3A3A3' : '#333333'),
+            'editorCursor.foreground': getColor('--color-accent-primary') || '#8b5cf6',
+            'editorWidget.background': getColor('--color-bg-elevated') || (isDark ? '#1A1A1A' : '#f3f3f3'),
+            'editorWidget.border': getColor('--color-border') || (isDark ? '#262626' : '#c8c8c8'),
+          },
+        });
+        
+        monaco.editor.setTheme(themeId);
       }
     };
     window.addEventListener('theme-changed', handleThemeChange as EventListener);
@@ -311,6 +456,32 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       onSave?.(content);
     });
 
+    // ========== 补全快捷键 ==========
+    // Alt+\ - 手动触发补全（Cursor 风格）
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.Backslash, () => {
+      if (currentFilePath) {
+        triggerInlineCompletion(editor, currentFilePath);
+      }
+    });
+
+    // Ctrl+Shift+Space - 备选触发方式
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Space, () => {
+      if (currentFilePath) {
+        triggerInlineCompletion(editor, currentFilePath);
+      }
+    });
+
+    // Ctrl+Right - 按词接受补全
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.RightArrow, () => {
+      acceptCompletionWord(editor);
+    });
+
+    // Ctrl+Shift+Right - 按行接受补全
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.RightArrow, () => {
+      acceptCompletionLine(editor);
+    });
+
+    // ========== 编辑快捷键 ==========
     // Ctrl+K - 内联编辑
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
       const selection = editor.getSelection();
@@ -367,9 +538,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     };
   }, []);
 
-  // 更新文件内容
+  // 更新文件内容和路径
   useEffect(() => {
     if (!editorRef.current || !file) return;
+
+    // 更新当前文件路径（供补全服务使用）
+    currentFilePath = file.path;
 
     const currentModel = editorRef.current.getModel();
     const language = file.language || getLanguageFromPath(file.path);
@@ -389,7 +563,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     if (!editorRef.current) return;
     editorRef.current.updateOptions({
       readOnly,
-      minimap: { enabled: minimap },
+      minimap: { 
+        enabled: minimap,
+        scale: 1,
+        showSlider: 'mouseover',
+        renderCharacters: false,
+        maxColumn: 80,
+      },
       lineNumbers,
       wordWrap,
       fontSize,

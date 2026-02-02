@@ -31,6 +31,8 @@ export interface ToolCallbacks extends StreamCallbacks {
 
 export interface StreamCallbacks {
   onToken: (token: string) => void;
+  onThinking?: (token: string) => void;  // 思考过程回调
+  onThinkingComplete?: () => void;       // 思考完成回调
   onComplete: (fullText: string) => void;
   onError: (error: Error) => void;
 }

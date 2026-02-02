@@ -13,8 +13,10 @@ import { FileContextMenu, InputDialog, ConfirmDialog } from './components/FileCo
 import { Terminal } from './components/Terminal';
 import { GitPanel } from './components/GitPanel';
 import { AIPanel } from './components/AIPanel';
+import { DiffEditorPanel } from './components/DiffEditorPanel';
 import { applyTheme, loadTheme, saveTheme } from './utils/themes';
-import { useFileStore } from './stores';
+import { useFileStore, SUPPORTED_LANGUAGES } from './stores';
+import { MindCodeLogo } from './components/MindCodeLogo';
 
 // ==================== VSCode 风格 Codicon 图标 ====================
 const Icons = {
@@ -118,6 +120,10 @@ interface EditorFile {
   content: string;
   language?: string;
   isDirty?: boolean;
+  // Phase 2: 预览文件支持
+  isPreview?: boolean;
+  originalPath?: string;
+  previewSource?: 'ai' | 'diff';
 }
 
 // 模拟文件内容
@@ -535,8 +541,14 @@ const App: React.FC = () => {
   const [fileTree, setFileTree] = useState<TreeNode[]>(mockTree);
   const [workspaceName, setWorkspaceName] = useState('MindCode');
 
-  // 同步到 Store（供 AI 面板使用）
-  const { setWorkspace: setStoreWorkspace, setFileTree: setStoreFileTree } = useFileStore();
+  // 同步到 Store（供 AI 面板使用）+ 订阅预览文件
+  const {
+    setWorkspace: setStoreWorkspace,
+    setFileTree: setStoreFileTree,
+    openFiles: storeOpenFiles,
+    createNewFile: storeCreateNewFile,
+    saveFile: storeSaveFile,
+  } = useFileStore();
 
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<{
@@ -593,10 +605,99 @@ const App: React.FC = () => {
   const [terminalHeight, setTerminalHeight] = useState(250);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
 
+  // 侧边栏宽度状态 - 紧凑默认值
+  const [sidebarWidth, setSidebarWidth] = useState(200);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const sidebarMinWidth = 120;  // 最小可拖到 120px
+  const sidebarMaxWidth = 480;  // 最大可拖到 480px
+
+  // Phase 3: Diff Editor 面板状态
+  const [showDiffPanel, setShowDiffPanel] = useState(false);
+  const [diffPanelHeight, setDiffPanelHeight] = useState(300);
+  const [diffData, setDiffData] = useState<{
+    path: string;
+    originalContent: string;
+    modifiedContent: string;
+    language?: string;
+  } | null>(null);
+
   // 编辑器文件状态
   const [openFiles, setOpenFiles] = useState<EditorFile[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const editorRef = useRef<{ getValue: () => string; setValue: (v: string) => void } | null>(null);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const untitledCounterRef = useRef(0); // 新建文件计数器
+
+  // 语言选择器状态
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [languageSelectorTarget, setLanguageSelectorTarget] = useState<string | null>(null); // 目标文件 ID
+
+  // 标签栏滚轮事件处理：垂直滚动转水平滚动
+  const handleTabsWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (tabsScrollRef.current && e.deltaY !== 0) {
+      e.preventDefault();
+      tabsScrollRef.current.scrollLeft += e.deltaY;
+    }
+  }, []);
+
+  // 侧边栏拖动调整宽度
+  const handleSidebarResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingSidebar(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizingSidebar) return;
+
+    // 拖动时禁止文本选中并设置鼠标样式
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // 计算新宽度：鼠标位置 - activity bar 宽度 (48px)
+      const newWidth = e.clientX - 48;
+      setSidebarWidth(Math.max(sidebarMinWidth, Math.min(sidebarMaxWidth, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizingSidebar]);
+
+  // Phase 2: 同步 Store 中的预览文件到本地状态
+  useEffect(() => {
+    const previewFiles = storeOpenFiles.filter(f => f.isPreview);
+    if (previewFiles.length === 0) return;
+
+    setOpenFiles(prev => {
+      // 找出新的预览文件（本地没有的）
+      const existingIds = new Set(prev.map(f => f.id));
+      const newPreviewFiles = previewFiles.filter(f => !existingIds.has(f.id));
+
+      if (newPreviewFiles.length === 0) return prev;
+
+      // 合并新的预览文件
+      const merged = [...prev, ...newPreviewFiles];
+
+      // 激活最新的预览文件
+      const latestPreview = newPreviewFiles[newPreviewFiles.length - 1];
+      setTimeout(() => setActiveFileId(latestPreview.id), 0);
+
+      return merged;
+    });
+  }, [storeOpenFiles]);
 
   // 加载目录树
   const loadDirectory = useCallback(async (dirPath: string, isRoot = false): Promise<TreeNode[]> => {
@@ -1214,8 +1315,21 @@ const App: React.FC = () => {
         return;
       }
 
-      // Escape - 关闭命令面板
+      // Phase 4: Ctrl+Shift+D - 打开/关闭 Diff 面板
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowDiffPanel(prev => !prev);
+        return;
+      }
+
+      // Escape - 关闭命令面板 / Diff 面板
       if (e.key === 'Escape') {
+        if (showDiffPanel) {
+          e.preventDefault();
+          setShowDiffPanel(false);
+          setDiffData(null);
+          return;
+        }
         if (showCommandPalette) {
           e.preventDefault();
           setShowCommandPalette(false);
@@ -1226,7 +1340,7 @@ const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeFileId, activeFile, showCommandPalette, closeFile, saveFile, createNewConversation]);
+  }, [activeFileId, activeFile, showCommandPalette, showDiffPanel, closeFile, saveFile, createNewConversation]);
 
   // ==================== 命令列表 ====================
   const commands = useMemo(() => [
@@ -1338,15 +1452,23 @@ const App: React.FC = () => {
       switch (event) {
         case 'menu:newFile':
           // 创建新的未保存文件
+          untitledCounterRef.current++;
+          const newFileId = `untitled_${Date.now()}`;
+          const newFileName = `Untitled-${untitledCounterRef.current}.txt`;
           const newFile: EditorFile = {
-            id: Date.now().toString(),
-            path: `Untitled-${Date.now()}`,
-            name: 'Untitled',
+            id: newFileId,
+            path: newFileName,
+            name: newFileName,
             content: '',
-            isDirty: true,
+            language: 'plaintext',
+            isDirty: false,
+            isUntitled: true,
           };
           setOpenFiles(prev => [...prev, newFile]);
           setActiveFileId(newFile.id);
+          // 自动打开语言选择器
+          setLanguageSelectorTarget(newFileId);
+          setShowLanguageSelector(true);
           break;
         case 'menu:openFile':
           if (data) {
@@ -1371,7 +1493,36 @@ const App: React.FC = () => {
         case 'menu:save':
           if (activeFileRef.current && editorRefCurrent.current?.current) {
             const content = editorRefCurrent.current.current.getValue();
-            saveFileRef.current(content);
+            const currentFile = activeFileRef.current;
+
+            // 如果是未命名文件，需要弹出保存对话框
+            if (currentFile.isUntitled) {
+              const result = await window.mindcode?.dialog?.showSaveDialog?.({
+                defaultPath: currentFile.name,
+                filters: [{ name: 'All Files', extensions: ['*'] }],
+              });
+              if (result?.filePath) {
+                // 写入文件
+                const writeResult = await window.mindcode?.fs?.writeFile?.(result.filePath, content);
+                if (writeResult?.success) {
+                  const newName = result.filePath.split(/[/\\]/).pop() || currentFile.name;
+                  setOpenFiles(prev => prev.map(f =>
+                    f.id === currentFile.id
+                      ? { ...f, path: result.filePath!, name: newName, isDirty: false, isUntitled: false }
+                      : f
+                  ));
+                  // 刷新文件树
+                  if (workspaceRoot) {
+                    const tree = await loadDirectoryRef.current(workspaceRoot, true);
+                    setFileTree(tree);
+                    setStoreFileTree(tree);
+                  }
+                }
+              }
+            } else {
+              // 普通保存
+              saveFileRef.current(content);
+            }
           }
           break;
         case 'menu:closeEditor':
@@ -1410,6 +1561,73 @@ const App: React.FC = () => {
     return cleanup;
   }, []); // 依赖数组为空，只在组件挂载时注册一次
 
+  // 全局键盘快捷键 (Ctrl+N 新建, Ctrl+S 保存)
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      // Ctrl+N - 新建文件
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        untitledCounterRef.current++;
+        const newFileId = `untitled_${Date.now()}`;
+        const newFileName = `Untitled-${untitledCounterRef.current}.txt`;
+        const newFile: EditorFile = {
+          id: newFileId,
+          path: newFileName,
+          name: newFileName,
+          content: '',
+          language: 'plaintext',
+          isDirty: false,
+          isUntitled: true,
+        };
+        setOpenFiles(prev => [...prev, newFile]);
+        setActiveFileId(newFile.id);
+        // 自动打开语言选择器
+        setLanguageSelectorTarget(newFileId);
+        setShowLanguageSelector(true);
+      }
+
+      // Ctrl+S - 保存文件
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        const currentFile = activeFileRef.current;
+        if (!currentFile) return;
+
+        const content = editorRefCurrent.current?.current?.getValue() || currentFile.content;
+
+        if (currentFile.isUntitled) {
+          // 未命名文件，弹出保存对话框
+          const result = await window.mindcode?.dialog?.showSaveDialog?.({
+            defaultPath: currentFile.name,
+            filters: [{ name: 'All Files', extensions: ['*'] }],
+          });
+          if (result?.filePath) {
+            const writeResult = await window.mindcode?.fs?.writeFile?.(result.filePath, content);
+            if (writeResult?.success) {
+              const newName = result.filePath.split(/[/\\]/).pop() || currentFile.name;
+              setOpenFiles(prev => prev.map(f =>
+                f.id === currentFile.id
+                  ? { ...f, path: result.filePath!, name: newName, isDirty: false, isUntitled: false }
+                  : f
+              ));
+              // 刷新文件树
+              if (workspaceRoot) {
+                const tree = await loadDirectoryRef.current(workspaceRoot, true);
+                setFileTree(tree);
+                setStoreFileTree(tree);
+              }
+            }
+          }
+        } else {
+          // 普通保存
+          saveFileRef.current(content);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [workspaceRoot]);
+
   // 主题初始化
   useEffect(() => {
     // 等待 DOM 和样式加载完成
@@ -1447,6 +1665,25 @@ const App: React.FC = () => {
 
     return () => { if (cleanupIpc) cleanupIpc(); };
   }, []);
+
+  // 监听文件系统变更（如 Agent 工具创建/修改文件后自动刷新）
+  useEffect(() => {
+    if (!window.mindcode?.onFileSystemChange) return;
+
+    const cleanup = window.mindcode.onFileSystemChange((data) => {
+      console.log(`[FS] 文件系统变更: ${data.type} - ${data.filePath}`);
+      // 刷新文件树
+      refreshFileTree();
+      // 同步到 Store
+      if (workspaceRoot) {
+        loadDirectory(workspaceRoot, true).then(tree => {
+          setStoreFileTree(tree);
+        });
+      }
+    });
+
+    return cleanup;
+  }, [refreshFileTree, workspaceRoot, loadDirectory, setStoreFileTree]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => {
@@ -1577,7 +1814,7 @@ const App: React.FC = () => {
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          style={{ position: 'relative' }}
+          style={{ position: 'relative', width: sidebarWidth }}
         >
           <div className="sidebar-title">
             {tab === 'files' && 'Explorer'}
@@ -1649,10 +1886,16 @@ const App: React.FC = () => {
           )}
         </div>
 
+        {/* Sidebar Resizer */}
+        <div
+          className={`sidebar-resizer${isResizingSidebar ? ' resizing' : ''}`}
+          onMouseDown={handleSidebarResizeStart}
+        />
+
         {/* Editor */}
         <div className="editor-area">
           <div className="tabs-wrapper">
-            <div className="tabs-scroll">
+            <div className="tabs-scroll" ref={tabsScrollRef} onWheel={handleTabsWheel}>
               {openFiles.length === 0 ? (
                 <div className="tab active">
                   <span className="tab-icon" style={{ color: '#b48ead' }}><Icons.Sparkle /></span>
@@ -1662,13 +1905,20 @@ const App: React.FC = () => {
                 openFiles.map(file => (
                   <div
                     key={file.id}
-                    className={`tab${file.id === activeFileId ? ' active' : ''}${file.isDirty ? ' modified' : ''}`}
+                    className={`tab${file.id === activeFileId ? ' active' : ''}${file.isDirty ? ' modified' : ''}${file.isPreview ? ' preview' : ''}`}
                     onClick={() => switchFile(file.id)}
+                    title={file.isPreview ? `预览: ${file.originalPath || file.path}` : file.path}
                   >
                     <span className="tab-icon">
-                      <svg viewBox="0 0 16 16" fill={getFileColor(file.name)} width="14" height="14">
-                        <path d="M10.5 1H3.5C2.67 1 2 1.67 2 2.5v11c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5V4.5L10.5 1zm2.5 12.5c0 .28-.22.5-.5.5h-9c-.28 0-.5-.22-.5-.5v-11c0-.28.22-.5.5-.5H10v3h3v8.5z"/>
-                      </svg>
+                      {file.isPreview ? (
+                        <svg viewBox="0 0 16 16" fill="#9966cc" width="14" height="14">
+                          <path d="M8 3.5c-4 0-7 4-7 4.5s3 4.5 7 4.5 7-4 7-4.5-3-4.5-7-4.5zm0 7a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/>
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 16 16" fill={getFileColor(file.name)} width="14" height="14">
+                          <path d="M10.5 1H3.5C2.67 1 2 1.67 2 2.5v11c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5V4.5L10.5 1zm2.5 12.5c0 .28-.22.5-.5.5h-9c-.28 0-.5-.22-.5-.5v-11c0-.28.22-.5.5-.5H10v3h3v8.5z"/>
+                        </svg>
+                      )}
                     </span>
                     <span className="tab-label">{file.name}</span>
                     <button className="tab-close" onClick={(e) => closeFile(file.id, e)}>
@@ -1692,26 +1942,39 @@ const App: React.FC = () => {
             ) : (
               <div className="editor-scroll">
                 <div className="welcome">
-                  <div className="welcome-logo">✦</div>
+                  {/* MindCode 钻石 M Logo - 主题自适应 */}
+                  <div className="welcome-logo-container">
+                    <MindCodeLogo size={80} />
+                  </div>
+                  
                   <h1>MindCode</h1>
-                  <p className="welcome-subtitle">AI-Native Code Editor</p>
+                  <p className="welcome-subtitle">AI-NATIVE CODE EDITOR</p>
+                  
+                  {/* Shortcuts in a modern card grid */}
                   <div className="welcome-shortcuts">
-                    <div className="shortcut">
-                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>L</kbd></div>
+                    <div className="shortcut" onClick={() => setShowAI(true)} role="button" tabIndex={0}>
                       <span className="shortcut-text">打开 AI 对话</span>
+                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>L</kbd></div>
                     </div>
-                    <div className="shortcut">
-                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>K</kbd></div>
+                    <div className="shortcut" role="button" tabIndex={0}>
                       <span className="shortcut-text">内联编辑</span>
+                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>K</kbd></div>
                     </div>
-                    <div className="shortcut">
-                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>P</kbd></div>
+                    <div className="shortcut" onClick={() => setShowCommandPalette(true)} role="button" tabIndex={0}>
                       <span className="shortcut-text">快速打开</span>
+                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>P</kbd></div>
                     </div>
-                    <div className="shortcut">
-                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>`</kbd></div>
+                    <div className="shortcut" onClick={() => setShowTerminal(v => !v)} role="button" tabIndex={0}>
                       <span className="shortcut-text">打开终端</span>
+                      <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>`</kbd></div>
                     </div>
+                  </div>
+                  
+                  {/* Version tag */}
+                  <div className="welcome-version">
+                    <span>v0.2.0</span>
+                    <span className="welcome-dot">•</span>
+                    <span>Powered by Claude</span>
                   </div>
                 </div>
               </div>
@@ -1756,6 +2019,42 @@ const App: React.FC = () => {
                   onClose={() => setShowTerminal(false)}
                 />
               </div>
+            </div>
+          )}
+
+          {/* Phase 3: Diff Editor 面板 */}
+          {showDiffPanel && diffData && (
+            <div className="bottom-panel diff-panel" style={{ height: diffPanelHeight }}>
+              <DiffEditorPanel
+                originalPath={diffData.path}
+                originalContent={diffData.originalContent}
+                modifiedContent={diffData.modifiedContent}
+                language={diffData.language}
+                isVisible={showDiffPanel}
+                onApply={async (content) => {
+                  // 写入文件
+                  const result = await window.mindcode?.fs?.writeFile?.(diffData.path, content);
+                  if (result?.success) {
+                    // 更新编辑器中的文件内容
+                    const file = openFiles.find(f => f.path === diffData.path);
+                    if (file) {
+                      setOpenFiles(prev => prev.map(f =>
+                        f.path === diffData.path ? { ...f, content, isDirty: false } : f
+                      ));
+                    }
+                    setShowDiffPanel(false);
+                    setDiffData(null);
+                  }
+                }}
+                onReject={() => {
+                  setShowDiffPanel(false);
+                  setDiffData(null);
+                }}
+                onClose={() => {
+                  setShowDiffPanel(false);
+                  setDiffData(null);
+                }}
+              />
             </div>
           )}
         </div>
@@ -1854,6 +2153,51 @@ const App: React.FC = () => {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* 语言选择器对话框 */}
+      {showLanguageSelector && (
+        <div className="language-selector-overlay" onClick={() => setShowLanguageSelector(false)}>
+          <div className="language-selector-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="language-selector-header">
+              <span>选择语言类型</span>
+              <button
+                className="language-selector-close"
+                onClick={() => setShowLanguageSelector(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="language-selector-list">
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.id}
+                  className="language-selector-item"
+                  onClick={() => {
+                    if (languageSelectorTarget) {
+                      // 更新文件语言和扩展名
+                      setOpenFiles(prev => prev.map(f => {
+                        if (f.id !== languageSelectorTarget) return f;
+                        const baseName = f.name.replace(/\.[^.]+$/, '');
+                        return {
+                          ...f,
+                          language: lang.id,
+                          name: `${baseName}${lang.ext}`,
+                          path: `${baseName}${lang.ext}`,
+                        };
+                      }));
+                    }
+                    setShowLanguageSelector(false);
+                    setLanguageSelectorTarget(null);
+                  }}
+                >
+                  <span className="lang-name">{lang.name}</span>
+                  <span className="lang-ext">{lang.ext}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
