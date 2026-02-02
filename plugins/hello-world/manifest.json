@@ -1,0 +1,17 @@
+{
+  "id": "mindcode.hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "示例插件 - 展示插件系统基础功能",
+  "author": "MindCode Team",
+  "main": "index.js",
+  "permissions": ["editor"],
+  "contributes": {
+    "commands": [
+      { "command": "helloWorld.sayHello", "title": "Say Hello", "category": "Hello World" },
+      { "command": "helloWorld.insertDate", "title": "Insert Date", "category": "Hello World" }
+    ]
+  },
+  "activationEvents": ["onCommand:helloWorld.sayHello", "onCommand:helloWorld.insertDate"],
+  "engines": { "mindcode": ">=0.1.0" }
+}
