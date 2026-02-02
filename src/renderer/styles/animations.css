@@ -1,100 +1,85 @@
 /**
- * MindCode 高性能动画系统
- * 仅使用 transform + opacity (GPU 加速，60fps)
+ * Animations - 动画系统
  */
 
-/* ==================== 动画变量 ==================== */
-:root {
-  --anim-fast: 150ms;
-  --anim-normal: 250ms;
-  --anim-slow: 350ms;
-  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --ui-zoom: 1; /* 全局缩放变量 */
-}
+/* 淡入淡出 */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInLeft { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
 
-/* ==================== GPU 加速基础类 ==================== */
-.gpu-accelerated {
-  will-change: transform, opacity;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
+/* 缩放 */
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes scaleOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+@keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+@keyframes bounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
 
-/* ==================== 淡入淡出 ==================== */
-.fade-enter { opacity: 0; }
-.fade-enter-active { opacity: 1; transition: opacity var(--anim-normal) var(--ease-out); }
-.fade-exit { opacity: 1; }
-.fade-exit-active { opacity: 0; transition: opacity var(--anim-fast) var(--ease-in-out); }
+/* 滑动 */
+@keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideInDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+@keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slideOutUp { from { transform: translateY(0); } to { transform: translateY(-100%); } }
+@keyframes slideOutDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
 
-/* ==================== 滑动 (仅 transform) ==================== */
-.slide-up-enter { transform: translateY(8px); opacity: 0; }
-.slide-up-enter-active { transform: translateY(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
-.slide-up-exit { transform: translateY(0); opacity: 1; }
-.slide-up-exit-active { transform: translateY(-8px); opacity: 0; transition: transform var(--anim-fast) var(--ease-in-out), opacity var(--anim-fast) var(--ease-in-out); }
+/* 旋转 */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes spinReverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
 
-.slide-down-enter { transform: translateY(-8px); opacity: 0; }
-.slide-down-enter-active { transform: translateY(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
-
-.slide-left-enter { transform: translateX(16px); opacity: 0; }
-.slide-left-enter-active { transform: translateX(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
-
-.slide-right-enter { transform: translateX(-16px); opacity: 0; }
-.slide-right-enter-active { transform: translateX(0); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-normal) var(--ease-out); }
-
-/* ==================== 缩放 (仅 transform) ==================== */
-.scale-enter { transform: scale(0.95); opacity: 0; }
-.scale-enter-active { transform: scale(1); opacity: 1; transition: transform var(--anim-normal) var(--ease-spring), opacity var(--anim-normal) var(--ease-out); }
-.scale-exit { transform: scale(1); opacity: 1; }
-.scale-exit-active { transform: scale(0.95); opacity: 0; transition: transform var(--anim-fast) var(--ease-in-out), opacity var(--anim-fast) var(--ease-in-out); }
-
-/* ==================== 弹性效果 ==================== */
-.pop-enter { transform: scale(0.9); opacity: 0; }
-.pop-enter-active { transform: scale(1); opacity: 1; transition: transform var(--anim-slow) var(--ease-bounce), opacity var(--anim-normal) var(--ease-out); }
-
-/* ==================== 侧边栏展开/收起 ==================== */
-.sidebar-expand { transform: translateX(-100%); }
-.sidebar-expand-active { transform: translateX(0); transition: transform var(--anim-normal) var(--ease-out); }
-.sidebar-collapse { transform: translateX(0); }
-.sidebar-collapse-active { transform: translateX(-100%); transition: transform var(--anim-fast) var(--ease-in-out); }
-
-/* ==================== 面板展开 ==================== */
-.panel-expand { transform: scaleY(0); transform-origin: top; opacity: 0; }
-.panel-expand-active { transform: scaleY(1); opacity: 1; transition: transform var(--anim-normal) var(--ease-out), opacity var(--anim-fast) var(--ease-out); }
-
-/* ==================== 加载状态 ==================== */
-@keyframes spin { to { transform: rotate(360deg); } }
+/* 脉冲 */
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+@keyframes bounce { 0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); } 50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); } }
 
-.loading-spin { animation: spin 1s linear infinite; }
-.loading-pulse { animation: pulse 1.5s ease-in-out infinite; }
+/* 闪烁 */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
-.loading-shimmer { position: relative; overflow: hidden; }
-.loading-shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  animation: shimmer 1.5s infinite;
-}
+/* 进度 */
+@keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
+@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
 
-/* ==================== 骨架屏 ==================== */
-.skeleton {
-  background: linear-gradient(90deg, var(--color-bg-subtle) 25%, var(--color-bg-muted) 50%, var(--color-bg-subtle) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s ease-in-out infinite;
-  border-radius: var(--radius-md);
-}
+/* 震动 */
+@keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); } 20%, 40%, 60%, 80% { transform: translateX(4px); } }
+@keyframes wiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 
-@keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* 工具类 */
+.animate-fadeIn { animation: fadeIn var(--duration-normal) var(--easing-default); }
+.animate-fadeOut { animation: fadeOut var(--duration-normal) var(--easing-default); }
+.animate-fadeInUp { animation: fadeInUp var(--duration-normal) var(--easing-out); }
+.animate-fadeInDown { animation: fadeInDown var(--duration-normal) var(--easing-out); }
+.animate-scaleIn { animation: scaleIn var(--duration-normal) var(--easing-out); }
+.animate-popIn { animation: popIn var(--duration-slow) var(--easing-bounce); }
+.animate-bounceIn { animation: bounceIn var(--duration-slow) var(--easing-default); }
+.animate-slideInUp { animation: slideInUp var(--duration-normal) var(--easing-out); }
+.animate-slideInDown { animation: slideInDown var(--duration-normal) var(--easing-out); }
+.animate-slideInLeft { animation: slideInLeft var(--duration-normal) var(--easing-out); }
+.animate-slideInRight { animation: slideInRight var(--duration-normal) var(--easing-out); }
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-pulse { animation: pulse 2s var(--easing-default) infinite; }
+.animate-ping { animation: ping 1s var(--easing-default) infinite; }
+.animate-bounce { animation: bounce 1s infinite; }
+.animate-shake { animation: shake 0.5s var(--easing-default); }
 
-/* ==================== 减少动画 (用户偏好) ==================== */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+/* 过渡 */
+.transition-all { transition: all var(--duration-normal) var(--easing-default); }
+.transition-colors { transition: color, background-color, border-color var(--duration-fast) var(--easing-default); }
+.transition-opacity { transition: opacity var(--duration-normal) var(--easing-default); }
+.transition-transform { transition: transform var(--duration-normal) var(--easing-default); }
+.transition-shadow { transition: box-shadow var(--duration-normal) var(--easing-default); }
+
+/* 悬停效果 */
+.hover-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.hover-scale:hover { transform: scale(1.02); }
+.hover-glow:hover { box-shadow: 0 0 8px var(--color-accent-primary); }
+.hover-brighten:hover { filter: brightness(1.1); }
+
+/* 骨架屏 */
+.skeleton { background: linear-gradient(90deg, var(--color-bg-hover) 25%, var(--color-bg-active) 50%, var(--color-bg-hover) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+
+/* 加载指示器 */
+.loader { width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loader-dots::after { content: ''; animation: dots 1.5s steps(4) infinite; }
+@keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
