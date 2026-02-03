@@ -224,6 +224,7 @@ export function useFocus<T extends HTMLElement>(): [React.RefObject<T>, boolean,
 }
 
 export { useZoom } from './useZoom';
+export { useLSP } from './useLSP';
 
 export default {
   useLocalStorage, useSessionStorage, useAsync, useDebounce, useDebouncedCallback, useThrottle,

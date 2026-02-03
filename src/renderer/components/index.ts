@@ -69,3 +69,10 @@ export { PluginPanel } from './PluginPanel';
 
 // 工具确认对话框
 export { ToolConfirmDialog } from './ToolConfirmDialog';
+
+// 内联编辑组件
+export { InlineEditWidget } from './InlineEditWidget';
+export { InlineChatWidget } from './InlineChatWidget';
+
+// 索引状态
+export { IndexStatus } from './IndexStatus';

@@ -152,6 +152,20 @@ contextBridge.exposeInMainWorld('mindcode', {
       ipcRenderer.invoke('dialog:showMessageBox', options),
   },
 
+  // LSP 语言服务器
+  lsp: {
+    start: (language: string, options?: { command?: string; args?: string[]; rootPath?: string }) => ipcRenderer.invoke('lsp:start', language, options),
+    stop: (language: string) => ipcRenderer.invoke('lsp:stop', language),
+    request: (language: string, method: string, params: any) => ipcRenderer.invoke('lsp:request', language, method, params),
+    notify: (language: string, method: string, params: any) => ipcRenderer.invoke('lsp:notify', language, method, params),
+    status: (language: string) => ipcRenderer.invoke('lsp:status', language),
+    onNotification: (callback: (data: { language: string; method: string; params: any }) => void) => {
+      const handler = (_: any, data: { language: string; method: string; params: any }) => callback(data);
+      ipcRenderer.on('lsp:notification', handler);
+      return () => ipcRenderer.removeListener('lsp:notification', handler);
+    },
+  },
+
   // 代码索引服务
   index: {
     // 索引整个工作区
@@ -299,6 +313,15 @@ declare global {
         showSaveDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<{ canceled: boolean; filePath?: string }>;
         showOpenDialog: (options: { filters?: { name: string; extensions: string[] }[]; properties?: string[] }) => Promise<{ canceled: boolean; filePaths?: string[] }>;
         showMessageBox: (options: { type?: string; title?: string; message: string; buttons?: string[] }) => Promise<{ response: number }>;
+      };
+      // LSP 语言服务器
+      lsp: {
+        start: (language: string, options?: { command?: string; args?: string[]; rootPath?: string }) => Promise<{ success: boolean; capabilities?: any; error?: string }>;
+        stop: (language: string) => Promise<{ success: boolean }>;
+        request: (language: string, method: string, params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+        notify: (language: string, method: string, params: any) => Promise<{ success: boolean }>;
+        status: (language: string) => Promise<{ state: string; capabilities?: any } | null>;
+        onNotification: (callback: (data: { language: string; method: string; params: any }) => void) => () => void;
       };
       // 代码索引服务
       index: {

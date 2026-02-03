@@ -1391,3 +1391,45 @@ ipcMain.handle('index:clear', async () => {
   }
   return { success: false, error: 'Index service not initialized' };
 });
+
+// ==================== LSP 语言服务器 ====================
+import { getLSPManager } from './lsp-manager';
+
+const lspManager = getLSPManager();
+
+// 启动语言服务器
+ipcMain.handle('lsp:start', async (_event, language: string, options?: { command?: string; args?: string[]; rootPath?: string }) => {
+  return lspManager.start(language, options);
+});
+
+// 停止语言服务器
+ipcMain.handle('lsp:stop', async (_event, language: string) => {
+  await lspManager.stop(language);
+  return { success: true };
+});
+
+// 发送 LSP 请求
+ipcMain.handle('lsp:request', async (_event, language: string, method: string, params: any) => {
+  try {
+    const result = await lspManager.request(language, method, params);
+    return { success: true, data: result };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 发送 LSP 通知
+ipcMain.handle('lsp:notify', async (_event, language: string, method: string, params: any) => {
+  await lspManager.notify(language, method, params);
+  return { success: true };
+});
+
+// 获取语言服务器状态
+ipcMain.handle('lsp:status', async (_event, language: string) => {
+  return lspManager.getStatus(language);
+});
+
+// 监听 LSP 通知并转发到渲染进程
+lspManager.on('notification', (language, method, params) => {
+  mainWindow?.webContents.send('lsp:notification', { language, method, params });
+});

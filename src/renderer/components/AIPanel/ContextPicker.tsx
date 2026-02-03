@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAIStore, useFileStore, ContextItem } from '../../stores';
 import './ContextPicker.css';
 
-type PickerMode = 'file' | 'selection' | 'folder' | 'symbol' | 'menu';
+type PickerMode = 'file' | 'selection' | 'folder' | 'symbol' | 'codebase' | 'web' | 'docs' | 'git' | 'menu';
 
 interface ContextPickerProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<{ id: string; label: string; type: PickerMode; data: any }[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -26,6 +27,10 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
     { type: 'selection' as const, label: '@selection - 当前选区', icon: '✂️' },
     { type: 'folder' as const, label: '@folder - 选择目录', icon: '📁' },
     { type: 'symbol' as const, label: '@symbol - 搜索符号', icon: '🔣' },
+    { type: 'codebase' as const, label: '@codebase - 语义搜索', icon: '🔍' },
+    { type: 'web' as const, label: '@web - 网络搜索', icon: '🌐' },
+    { type: 'docs' as const, label: '@docs - 文档搜索', icon: '📚' },
+    { type: 'git' as const, label: '@git - Git历史', icon: '🔀' },
   ];
 
   useEffect(() => { // 聚焦搜索框
@@ -58,13 +63,60 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
     setResults(matches.map(f => ({ id: f, label: f, type: 'folder' as const, data: { path: workspaceRoot + '/' + f } })));
   }, [workspaceRoot, fileTree]);
 
-  const searchSymbols = useCallback(async (query: string) => { // 搜索符号（简化实现）
+  const searchSymbols = useCallback(async (query: string) => { // 搜索符号
     if (!workspaceRoot || !query) return setResults([]);
     try {
-      const searchResult = await window.mindcode?.fs?.searchInFiles?.(workspaceRoot, `(function|class|const|let|var|interface|type)\\s+${query}`);
-      const matches = (searchResult || []).slice(0, 10);
-      setResults(matches.map((m: any) => ({ id: m.path + ':' + m.line, label: `${m.match} (${m.path.split(/[/\\]/).pop()}:${m.line})`, type: 'symbol' as const, data: { path: m.path, content: m.match, range: { start: m.line, end: m.line } } })));
+      const res = await window.mindcode?.index?.searchSymbols?.(query, 10);
+      if (res?.success && res.data) {
+        setResults(res.data.map((s: any) => ({ id: s.id || s.name, label: `${s.kind || ''} ${s.name} (${s.filePath?.split(/[/\\]/).pop()}:${s.startLine})`, type: 'symbol' as const, data: { path: s.filePath, content: s.signature || s.name, range: { start: s.startLine, end: s.endLine } } })));
+      }
     } catch { setResults([]); }
+  }, [workspaceRoot]);
+
+  const searchCodebase = useCallback(async (query: string) => { // @codebase 语义搜索
+    if (!workspaceRoot || !query) return setResults([]);
+    setLoading(true);
+    try {
+      const res = await window.mindcode?.index?.getRelatedCode?.(query, 10);
+      if (res?.success && res.data) {
+        setResults(res.data.map((r: any, i: number) => ({ id: `code-${i}`, label: `${r.filePath?.split(/[/\\]/).pop()} (相关度: ${Math.round(r.relevance * 100)}%)`, type: 'codebase' as const, data: { path: r.filePath, content: r.code, relevance: r.relevance } })));
+      }
+    } catch { setResults([]); } finally { setLoading(false); }
+  }, [workspaceRoot]);
+
+  const searchWeb = useCallback(async (query: string) => { // @web 网络搜索（模拟）
+    if (!query) return setResults([]);
+    setLoading(true);
+    // 实际实现需要调用搜索 API，这里添加占位
+    const webResults = [
+      { id: 'web-1', label: `搜索: "${query}" (需要配置搜索API)`, type: 'web' as const, data: { query, content: `网络搜索: ${query}` } },
+    ];
+    setResults(webResults);
+    setLoading(false);
+  }, []);
+
+  const searchDocs = useCallback(async (query: string) => { // @docs 文档搜索
+    if (!workspaceRoot || !query) return setResults([]);
+    setLoading(true);
+    try { // 搜索 .md 文件
+      const res = await window.mindcode?.fs?.searchInFiles?.({ workspacePath: workspaceRoot, query, maxResults: 10 });
+      if (res?.success && res.data) {
+        const mdFiles = res.data.filter((r: any) => r.file.endsWith('.md'));
+        setResults(mdFiles.map((r: any) => ({ id: r.file + ':' + r.line, label: `${r.relativePath}:${r.line}`, type: 'docs' as const, data: { path: r.file, content: r.text, line: r.line } })));
+      }
+    } catch { setResults([]); } finally { setLoading(false); }
+  }, [workspaceRoot]);
+
+  const searchGit = useCallback(async (query: string) => { // @git Git历史
+    if (!workspaceRoot) return setResults([]);
+    setLoading(true);
+    try {
+      const res = await window.mindcode?.git?.log?.(workspaceRoot, 20);
+      if (res?.success && res.data) {
+        const filtered = query ? res.data.filter((c: any) => c.message.toLowerCase().includes(query.toLowerCase()) || c.author.toLowerCase().includes(query.toLowerCase())) : res.data;
+        setResults(filtered.slice(0, 10).map((c: any) => ({ id: c.hash, label: `${c.shortHash} - ${c.message.slice(0, 50)}`, type: 'git' as const, data: { hash: c.hash, message: c.message, author: c.author, date: c.date, content: `提交: ${c.shortHash}\n作者: ${c.author}\n日期: ${c.date}\n\n${c.message}` } })));
+      }
+    } catch { setResults([]); } finally { setLoading(false); }
   }, [workspaceRoot]);
 
   useEffect(() => { // 搜索防抖
@@ -72,9 +124,13 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
       if (mode === 'file') searchFiles(search);
       else if (mode === 'folder') searchFolders(search);
       else if (mode === 'symbol') searchSymbols(search);
-    }, 200);
+      else if (mode === 'codebase') searchCodebase(search);
+      else if (mode === 'web') searchWeb(search);
+      else if (mode === 'docs') searchDocs(search);
+      else if (mode === 'git') searchGit(search);
+    }, mode === 'codebase' || mode === 'web' ? 500 : 200); // 语义搜索需要更长延迟
     return () => clearTimeout(timer);
-  }, [search, mode, searchFiles, searchFolders, searchSymbols]);
+  }, [search, mode, searchFiles, searchFolders, searchSymbols, searchCodebase, searchWeb, searchDocs, searchGit]);
 
   const handleSelect = async (item: typeof results[0] | typeof menuItems[0]) => { // 选择项目
     if ('type' in item && item.type !== 'selection') {
@@ -91,20 +147,15 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
       }
       return;
     }
-    if ('data' in item) { // 添加文件/目录/符号上下文
-      let content = '';
-      if (item.type === 'file' && item.data.path) {
-        try { 
-          const res = await window.mindcode?.fs?.readFile?.(item.data.path);
-          content = res?.success && res.data ? res.data : '';
-        } catch (e) { console.error('readFile error:', e); }
-      } else if (item.type === 'folder' && item.data.path) {
-        try { // 读取目录结构
-          const res = await window.mindcode?.fs?.readDir?.(item.data.path);
-          content = res?.success && res.data ? res.data.map((f: any) => `${f.type === 'folder' ? '📁' : '📄'} ${f.name}`).join('\n') : '';
-        } catch (e) { console.error('readDir error:', e); }
+    if ('data' in item) { // 添加上下文
+      let content = item.data?.content || '';
+      if (item.type === 'file' && item.data.path && !content) {
+        try { const res = await window.mindcode?.fs?.readFile?.(item.data.path); content = res?.success && res.data ? res.data : ''; } catch {}
+      } else if (item.type === 'folder' && item.data.path && !content) {
+        try { const res = await window.mindcode?.fs?.readDir?.(item.data.path); content = res?.success && res.data ? res.data.map((f: any) => `${f.type === 'folder' ? '📁' : '📄'} ${f.name}`).join('\n') : ''; } catch {}
       }
-      addContext({ id: `ctx-${Date.now()}`, type: item.type as any, label: item.label, data: { ...item.data, content } });
+      const iconMap: Record<string, string> = { file: '📄', folder: '📁', symbol: '🔣', codebase: '🔍', web: '🌐', docs: '📚', git: '🔀' };
+      addContext({ id: `ctx-${Date.now()}`, type: item.type as any, label: `${iconMap[item.type] || ''} ${item.label}`, data: { ...item.data, content } });
       onClose();
     }
   };
@@ -136,17 +187,19 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({ isOpen, onClose, p
               <span>{item.label}</span>
             </div>
           ))
+        ) : loading ? (
+          <div className="context-picker-loading">🔄 搜索中...</div>
         ) : results.length > 0 ? (
           results.map((item, i) => (
             <div key={item.id} className={`context-picker-item ${i === selectedIndex ? 'selected' : ''}`} onClick={() => handleSelect(item)} onMouseEnter={() => setSelectedIndex(i)}>
-              <span className="context-picker-icon">{mode === 'file' ? '📄' : mode === 'folder' ? '📁' : '🔣'}</span>
+              <span className="context-picker-icon">{{ file: '📄', folder: '📁', symbol: '🔣', codebase: '🔍', web: '🌐', docs: '📚', git: '🔀' }[mode] || '📄'}</span>
               <span className="context-picker-label">{item.label}</span>
             </div>
           ))
         ) : search ? (
           <div className="context-picker-empty">未找到匹配项</div>
         ) : (
-          <div className="context-picker-empty">输入关键词搜索</div>
+          <div className="context-picker-empty">{{ codebase: '输入查询语义搜索代码', web: '输入关键词搜索网络', docs: '搜索项目文档', git: '搜索提交历史' }[mode] || '输入关键词搜索'}</div>
         )}
       </div>
     </div>

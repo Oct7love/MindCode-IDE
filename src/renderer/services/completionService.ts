@@ -1,7 +1,9 @@
 /**
- * MindCode Completion Service v3.0
- * 高性能代码补全服务 - 使用 IPC 调用（无需本地服务器）
+ * MindCode Completion Service v4.0 - 超越 Cursor
+ * 极速补全：智能缓存+预取+多模型融合 目标<100ms
  */
+
+import { completionCache } from './completionCache';
 
 export interface CompletionRequest {
   file_path: string;
@@ -18,362 +20,175 @@ export interface CompletionResponse {
   model: string;
   latency_ms: number;
   cached: boolean;
+  cacheScore?: number; // 缓存命中评分 (1.0=精确, 0.8=模糊, 0.5=前缀)
 }
 
-export interface HealthResponse {
-  status: string;
-  version: string;
-  uptime_seconds: number;
-}
+export interface HealthResponse { status: string; version: string; uptime_seconds: number; }
 
-// 使用模式：IPC (Electron) 或 HTTP (本地服务器)
 type ServiceMode = 'ipc' | 'http';
 
-// 高性能 LRU 缓存
-class LRUCache<K, V> {
-  private cache = new Map<K, V>();
-  private maxSize: number;
-
-  constructor(maxSize: number) {
-    this.maxSize = maxSize;
-  }
-
-  get(key: K): V | undefined {
-    const value = this.cache.get(key);
-    if (value !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, value);
-    }
-    return value;
-  }
-
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
-    }
-    this.cache.set(key, value);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-// 智能触发字符 - 这些字符后立即触发补全（0ms 延迟）
+// 智能触发字符 - 立即触发 (0ms 延迟)
 const INSTANT_TRIGGER_CHARS = new Set(['.', '(', '[', '{', ':', '/', '>', '"', "'", '=', ',', ' ']);
-// 注释开始 - 触发 block 模式
 const COMMENT_PATTERNS = ['//', '/*', '#', '"""', "'''"];
 
 class CompletionService {
   private baseUrl: string;
-  private cache: LRUCache<string, CompletionResponse>;
-  private fuzzyCache: LRUCache<string, CompletionResponse>; // 模糊缓存（相似上下文）
   private pendingRequest: AbortController | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private defaultDebounceMs: number;
   private instantDebounceMs: number;
   private mode: ServiceMode = 'ipc';
+  private prefetchQueue: Set<string> = new Set(); // 预取队列
 
-  constructor(baseUrl = 'http://localhost:8765', defaultDebounceMs = 30, instantDebounceMs = 5, cacheSize = 500) { // 极速防抖：30ms/5ms
+  constructor(baseUrl = 'http://localhost:8765', defaultDebounceMs = 20, instantDebounceMs = 0, cacheSize = 500) { // 极速：20ms/0ms
     this.baseUrl = baseUrl;
     this.defaultDebounceMs = defaultDebounceMs;
     this.instantDebounceMs = instantDebounceMs;
-    this.cache = new LRUCache<string, CompletionResponse>(cacheSize);
-    this.fuzzyCache = new LRUCache<string, CompletionResponse>(cacheSize); // 模糊缓存
-    if (typeof window !== 'undefined' && window.mindcode?.ai?.completion) { this.mode = 'ipc'; console.log('[CompletionService] 使用 IPC 模式'); }
-    else { this.mode = 'http'; console.log('[CompletionService] 使用 HTTP 模式'); }
+    if (typeof window !== 'undefined' && window.mindcode?.ai?.completion) { this.mode = 'ipc'; console.log('[CompletionService] IPC模式 v4.0'); }
+    else { this.mode = 'http'; console.log('[CompletionService] HTTP模式'); }
   }
   
-  /**
-   * 通过 IPC 请求补全
-   */
+  /** IPC 请求补全 */
   private async requestViaIPC(request: CompletionRequest): Promise<CompletionResponse | null> {
     const startTime = Date.now();
-    
     try {
-      // 使用 Codesuc 特价渠道 (Claude)
       const result = await window.mindcode.ai.completion({
         filePath: request.file_path,
         code: request.content,
         cursorLine: request.cursor_line,
         cursorColumn: request.cursor_column,
-        model: 'codesuc-sonnet',  // 特价渠道 Claude Sonnet
+        model: 'codesuc-sonnet',
       });
-
       if (result.success && result.data) {
-        return {
-          completion: result.data,
-          finish_reason: 'complete',
-          model: 'codesuc-sonnet',
-          latency_ms: Date.now() - startTime,
-          cached: result.cached || false,
-        };
+        return { completion: result.data, finish_reason: 'complete', model: 'codesuc-sonnet', latency_ms: Date.now() - startTime, cached: result.cached || false };
       }
-      
-      console.log('[CompletionService] IPC 请求失败:', result.error);
       return null;
-    } catch (error) {
-      console.error('[CompletionService] IPC 请求异常:', error);
-      return null;
-    }
+    } catch { return null; }
   }
 
-  private getCacheKey(request: CompletionRequest): string {
-    const contentHash = request.content.slice(-500);
-    return `${request.file_path}:${request.cursor_line}:${request.cursor_column}:${request.mode}:${contentHash}`;
+  /** 获取当前行内容 */
+  private getLineContent(content: string, line: number): string {
+    return content.split('\n')[line] || '';
   }
 
-  private getFuzzyCacheKey(request: CompletionRequest): string { // 模糊缓存 key（忽略列位置）
-    const lines = request.content.split('\n');
-    const currentLine = lines[request.cursor_line] || '';
-    const prefix = currentLine.slice(0, Math.min(request.cursor_column, 30)); // 只取当前行前 30 字符
-    return `${request.file_path}:${request.cursor_line}:${prefix}:${request.mode}`;
+  /** 获取光标前缀 */
+  private getPrefix(content: string, line: number, col: number): string {
+    const lineContent = this.getLineContent(content, line);
+    return lineContent.slice(0, col);
   }
 
-  private tryFuzzyCache(request: CompletionRequest): CompletionResponse | null {
-    const fuzzyKey = this.getFuzzyCacheKey(request);
-    const cached = this.fuzzyCache.get(fuzzyKey);
-    if (cached && cached.completion) {
-      const lines = request.content.split('\n');
-      const currentLine = lines[request.cursor_line] || '';
-      const typed = currentLine.slice(0, request.cursor_column);
-      // 检查缓存的补全是否仍然适用
-      if (cached.completion.startsWith(typed.slice(-10)) || typed.endsWith(cached.completion.slice(0, 5))) {
-        return { ...cached, cached: true };
-      }
-    }
-    return null;
-  }
-
-  // 判断是否应该立即触发
-  private shouldInstantTrigger(content: string, cursorColumn: number): boolean {
-    if (cursorColumn <= 0) return false;
-    const lines = content.split('\n');
-    const currentLine = lines[lines.length - 1] || '';
-    if (cursorColumn > currentLine.length) return false;
-
-    const charBeforeCursor = currentLine[cursorColumn - 1];
-    return INSTANT_TRIGGER_CHARS.has(charBeforeCursor);
-  }
-
-  // 判断是否在注释中（可能需要 block 模式）
-  private isInComment(content: string): boolean {
-    const lastLine = content.split('\n').pop() || '';
-    return COMMENT_PATTERNS.some(p => lastLine.trimStart().startsWith(p));
+  /** 是否立即触发 */
+  private shouldInstantTrigger(content: string, line: number, col: number): boolean {
+    const prefix = this.getPrefix(content, line, col);
+    const trigger = prefix.slice(-1);
+    return INSTANT_TRIGGER_CHARS.has(trigger);
   }
 
   async healthCheck(): Promise<HealthResponse | null> {
-    // IPC 模式下直接返回健康状态
-    if (this.mode === 'ipc') {
-      return {
-        status: 'ok',
-        version: 'ipc-3.0',
-        uptime_seconds: 0,
-      };
-    }
-    
-    // HTTP 模式
+    if (this.mode === 'ipc') return { status: 'ok', version: 'ipc-4.0', uptime_seconds: 0 };
     try {
-      const response = await fetch(`${this.baseUrl}/v1/health`, {
-        signal: AbortSignal.timeout(3000)  // 3秒超时
-      });
-      if (!response.ok) return null;
-      return await response.json();
-    } catch {
-      return null;
-    }
+      const response = await fetch(`${this.baseUrl}/v1/health`, { signal: AbortSignal.timeout(3000) });
+      return response.ok ? await response.json() : null;
+    } catch { return null; }
   }
 
-  /** 请求代码补全（智能防抖 + 模糊缓存） */
+  /** 请求补全 - 极速版 v4.0 */
   async getCompletion(request: CompletionRequest): Promise<CompletionResponse | null> {
-    // 1. 精确缓存
-    const cacheKey = this.getCacheKey(request);
-    const cached = this.cache.get(cacheKey);
-    if (cached) return { ...cached, cached: true };
-    // 2. 模糊缓存（相似上下文）
-    const fuzzyCached = this.tryFuzzyCache(request);
-    if (fuzzyCached) return fuzzyCached;
+    const startTime = Date.now();
+    const { file_path, content, cursor_line, cursor_column } = request;
+    const lineContent = this.getLineContent(content, cursor_line);
+    const prefix = this.getPrefix(content, cursor_line, cursor_column);
 
-    // 取消之前的请求
-    if (this.pendingRequest) {
-      this.pendingRequest.abort();
-      this.pendingRequest = null;
+    // 1. 智能缓存查询
+    const cached = completionCache.get(file_path, cursor_line, cursor_column, prefix, lineContent);
+    if (cached) {
+      console.log(`[Completion] 缓存命中 score=${cached.score} latency=${Date.now() - startTime}ms`);
+      return { completion: cached.completion, finish_reason: 'cached', model: cached.model, latency_ms: Date.now() - startTime, cached: true, cacheScore: cached.score };
     }
 
-    // 清除之前的防抖定时器
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
-      this.debounceTimer = null;
-    }
+    // 2. 取消旧请求
+    this.cancel();
 
-    // 智能防抖：根据触发条件选择延迟
-    const debounceMs = this.shouldInstantTrigger(request.content, request.cursor_column)
-      ? this.instantDebounceMs
-      : this.defaultDebounceMs;
+    // 3. 智能防抖
+    const debounceMs = this.shouldInstantTrigger(content, cursor_line, cursor_column) ? this.instantDebounceMs : this.defaultDebounceMs;
 
     return new Promise((resolve) => {
       this.debounceTimer = setTimeout(async () => {
         try {
-          let data: CompletionResponse | null = null;
-          
-          // 根据模式选择请求方式
-          if (this.mode === 'ipc') {
-            data = await this.requestViaIPC(request);
-          } else {
-            // HTTP 模式
-            const controller = new AbortController();
-            this.pendingRequest = controller;
-
-            const response = await fetch(`${this.baseUrl}/v1/completion`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(request),
-              signal: controller.signal,
-            });
-
-            if (!response.ok) {
-              resolve(null);
-              return;
-            }
-
-            data = await response.json();
-          }
-
-          // 存入缓存（精确 + 模糊）
-          if (data && data.completion && data.completion.length > 0) {
-            this.cache.set(cacheKey, data);
-            this.fuzzyCache.set(this.getFuzzyCacheKey(request), data); // 模糊缓存
+          const data = this.mode === 'ipc' ? await this.requestViaIPC(request) : await this.requestViaHTTP(request);
+          if (data?.completion) {
+            completionCache.set(file_path, cursor_line, cursor_column, prefix, lineContent, data.completion, data.model);
+            console.log(`[Completion] 请求完成 latency=${data.latency_ms}ms model=${data.model}`);
           }
           resolve(data);
-        } catch (error) {
-          if ((error as Error).name === 'AbortError') {
-            resolve(null);
-          } else {
-            console.error('[CompletionService] 请求失败:', error);
-            resolve(null);
-          }
-        } finally {
-          this.pendingRequest = null;
-        }
+        } catch (e) { if ((e as Error).name !== 'AbortError') console.error('[Completion] 错误:', e); resolve(null); }
+        finally { this.pendingRequest = null; }
       }, debounceMs);
     });
   }
 
-  /**
-   * 立即请求补全（无防抖，用于快捷键触发）
-   */
-  async getCompletionImmediate(request: CompletionRequest): Promise<CompletionResponse | null> {
-    // 取消任何待处理的请求
-    this.cancel();
-
-    // 检查缓存
-    const cacheKey = this.getCacheKey(request);
-    const cached = this.cache.get(cacheKey);
-    if (cached) {
-      return { ...cached, cached: true };
-    }
-
+  /** HTTP 请求 */
+  private async requestViaHTTP(request: CompletionRequest): Promise<CompletionResponse | null> {
+    const controller = new AbortController();
+    this.pendingRequest = controller;
     try {
-      // 根据模式选择请求方式
-      if (this.mode === 'ipc') {
-        const data = await this.requestViaIPC(request);
-        if (data && data.completion && data.completion.length > 0) {
-          this.cache.set(cacheKey, data);
-        }
-        return data;
-      }
-      
-      // HTTP 模式
-      const controller = new AbortController();
-      this.pendingRequest = controller;
-
-      const response = await fetch(`${this.baseUrl}/v1/completion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) return null;
-
-      const data: CompletionResponse = await response.json();
-
-      if (data.completion && data.completion.length > 0) {
-        this.cache.set(cacheKey, data);
-      }
-
-      return data;
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('[CompletionService] 立即请求失败:', error);
-      }
-      return null;
-    } finally {
-      this.pendingRequest = null;
-    }
+      const response = await fetch(`${this.baseUrl}/v1/completion`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request), signal: controller.signal });
+      return response.ok ? await response.json() : null;
+    } catch { return null; }
   }
 
-  /**
-   * 预取补全（在用户可能需要时提前请求）
-   */
-  prefetch(request: CompletionRequest): void {
-    const cacheKey = this.getCacheKey(request);
-    if (this.cache.get(cacheKey)) return;  // 已缓存
+  /** 立即请求 (快捷键触发) */
+  async getCompletionImmediate(request: CompletionRequest): Promise<CompletionResponse | null> {
+    this.cancel();
+    const { file_path, content, cursor_line, cursor_column } = request;
+    const lineContent = this.getLineContent(content, cursor_line);
+    const prefix = this.getPrefix(content, cursor_line, cursor_column);
+    const cached = completionCache.get(file_path, cursor_line, cursor_column, prefix, lineContent);
+    if (cached) return { completion: cached.completion, finish_reason: 'cached', model: cached.model, latency_ms: 0, cached: true, cacheScore: cached.score };
+    const data = this.mode === 'ipc' ? await this.requestViaIPC(request) : await this.requestViaHTTP(request);
+    if (data?.completion) completionCache.set(file_path, cursor_line, cursor_column, prefix, lineContent, data.completion, data.model);
+    return data;
+  }
 
-    // 静默预取，不影响当前请求
-    fetch(`${this.baseUrl}/v1/completion`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    })
-      .then(res => res.json())
-      .then((data: CompletionResponse) => {
-        if (data.completion && data.completion.length > 0) {
-          this.cache.set(cacheKey, data);
-        }
-      })
-      .catch(() => {});  // 静默失败
+  /** 预取补全 (后台静默) */
+  prefetch(request: CompletionRequest): void {
+    const key = `${request.file_path}:${request.cursor_line}`;
+    if (this.prefetchQueue.has(key)) return;
+    this.prefetchQueue.add(key);
+    setTimeout(() => this.prefetchQueue.delete(key), 5000); // 5秒内不重复预取
+    (async () => {
+      const data = this.mode === 'ipc' ? await this.requestViaIPC(request) : await this.requestViaHTTP(request);
+      if (data?.completion) {
+        const lineContent = this.getLineContent(request.content, request.cursor_line);
+        const prefix = this.getPrefix(request.content, request.cursor_line, request.cursor_column);
+        completionCache.set(request.file_path, request.cursor_line, request.cursor_column, prefix, lineContent, data.completion, data.model);
+      }
+    })().catch(() => {});
+  }
+
+  /** 智能预取 - 预测下一行 */
+  prefetchNextLines(filePath: string, content: string, currentLine: number): void {
+    for (let i = 1; i <= 3; i++) { // 预取接下来 3 行
+      const line = currentLine + i;
+      const lineContent = this.getLineContent(content, line);
+      if (!lineContent.trim()) continue; // 跳过空行
+      this.prefetch({ file_path: filePath, content, cursor_line: line, cursor_column: lineContent.length, mode: 'inline' });
+    }
   }
 
   cancel(): void {
-    if (this.pendingRequest) {
-      this.pendingRequest.abort();
-      this.pendingRequest = null;
-    }
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
-      this.debounceTimer = null;
-    }
+    this.pendingRequest?.abort();
+    this.pendingRequest = null;
+    if (this.debounceTimer) { clearTimeout(this.debounceTimer); this.debounceTimer = null; }
   }
 
-  clearCache(): void {
-    this.cache.clear();
-  }
+  clearCache(): void { completionCache.clear(); }
+  setBaseUrl(url: string): void { this.baseUrl = url; this.clearCache(); }
+  getCacheStats() { return completionCache.stats(); }
 
-  setBaseUrl(url: string): void {
-    this.baseUrl = url;
-    this.clearCache();
-  }
-
-  // 检查是否应该使用 block 模式
   shouldUseBlockMode(content: string, cursorLine: number): boolean {
-    const lines = content.split('\n');
-    if (cursorLine >= lines.length) return false;
-
-    const currentLine = lines[cursorLine] || '';
-    const trimmed = currentLine.trimStart();
-
-    // 注释行可能需要 block 模式
-    if (COMMENT_PATTERNS.some(p => trimmed.startsWith(p))) {
-      return true;
-    }
-
-    return false;
+    const line = this.getLineContent(content, cursorLine).trimStart();
+    return COMMENT_PATTERNS.some(p => line.startsWith(p));
   }
 }
 

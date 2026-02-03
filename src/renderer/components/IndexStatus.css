@@ -1,0 +1,83 @@
+/* IndexStatus.css - 索引状态组件样式 */
+
+.index-status {
+  background: var(--background-secondary, #252526);
+  border: 1px solid var(--border-color, #3c3c3c);
+  border-radius: 6px;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.index-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.index-status-header:hover { background: var(--background-hover, #2a2d2e); }
+
+.index-status-icon { font-size: 14px; }
+.index-status-icon.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.index-status-label { flex: 1; color: var(--text-primary, #cccccc); font-weight: 500; }
+.index-status-progress, .index-status-count { color: var(--text-secondary, #888888); font-size: 11px; }
+.index-status-chevron { color: var(--text-secondary, #888888); font-size: 10px; }
+
+.index-status-details {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color, #3c3c3c);
+  background: var(--background-tertiary, #1e1e1e);
+}
+
+.index-status-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+  color: var(--text-secondary, #888888);
+}
+.index-status-stats span { margin-right: 4px; }
+
+.index-status-bar {
+  height: 20px;
+  background: var(--background-primary, #1e1e1e);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.index-status-bar-fill {
+  height: 100%;
+  background: var(--accent-color, #0078d4);
+  transition: width 0.3s ease;
+}
+.index-status-bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-primary, #cccccc);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+}
+
+.index-status-actions { display: flex; gap: 8px; }
+.index-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.index-btn-start { background: var(--accent-color, #0078d4); color: white; }
+.index-btn-start:hover:not(:disabled) { background: var(--accent-hover, #1084d8); }
+.index-btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+.index-btn-cancel { background: var(--background-secondary, #3c3c3c); color: var(--text-primary, #cccccc); }
+.index-btn-cancel:hover { background: var(--background-hover, #4a4a4a); }
