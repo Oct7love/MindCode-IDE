@@ -1037,3 +1037,40 @@ body {
 .ext-item-installed { color: var(--color-success); font-size: 12px; flex-shrink: 0; }
 .ext-open-marketplace { width: calc(100% - 24px); margin: 12px; padding: 8px 12px; background: var(--color-bg-hover); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-primary); font-size: 12px; cursor: pointer; transition: all 0.15s; }
 .ext-open-marketplace:hover { background: var(--color-accent-primary); color: white; border-color: var(--color-accent-primary); }
+
+/* ========== Theme Extensions ========== */
+/* Dracula Theme */
+[data-theme="dracula"] {
+  --color-bg-base: #282a36;
+  --color-bg-surface: #21222c;
+  --color-bg-elevated: #343746;
+  --color-bg-hover: #44475a;
+  --color-text-primary: #f8f8f2;
+  --color-text-secondary: #6272a4;
+  --color-accent-primary: #bd93f9;
+  --color-accent-ai: #ff79c6;
+  --color-success: #50fa7b;
+  --color-warning: #ffb86c;
+  --color-error: #ff5555;
+}
+
+/* Nord Theme */
+[data-theme="nord"] {
+  --color-bg-base: #2e3440;
+  --color-bg-surface: #3b4252;
+  --color-bg-elevated: #434c5e;
+  --color-bg-hover: #4c566a;
+  --color-text-primary: #eceff4;
+  --color-text-secondary: #d8dee9;
+  --color-accent-primary: #88c0d0;
+  --color-accent-ai: #b48ead;
+  --color-success: #a3be8c;
+  --color-warning: #ebcb8b;
+  --color-error: #bf616a;
+}
+
+/* Bracket Pair Colorizer */
+.bracket-pair-enabled .mtk1 { color: inherit; }
+.bracket-pair-enabled .bracket-highlighting-0 { color: #ffd700 !important; }
+.bracket-pair-enabled .bracket-highlighting-1 { color: #da70d6 !important; }
+.bracket-pair-enabled .bracket-highlighting-2 { color: #87ceeb !important; }

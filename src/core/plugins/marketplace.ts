@@ -1,6 +1,6 @@
 /**
  * 扩展市场服务
- * 提供扩展浏览、搜索、安装功能
+ * 提供扩展浏览、搜索、安装、激活功能
  */
 
 export interface ExtensionInfo {
@@ -18,7 +18,12 @@ export interface ExtensionInfo {
   repository?: string;
   installed?: boolean;
   enabled?: boolean;
+  config?: Record<string, any>; // 扩展特定配置
 }
+
+// 扩展功能实现
+type ExtensionActivator = (ext: ExtensionInfo) => void;
+type ExtensionDeactivator = (ext: ExtensionInfo) => void;
 
 // 推荐扩展列表（模拟市场数据）
 const FEATURED_EXTENSIONS: ExtensionInfo[] = [
@@ -36,8 +41,14 @@ const FEATURED_EXTENSIONS: ExtensionInfo[] = [
 
 class MarketplaceService {
   private installed = new Map<string, ExtensionInfo>();
+  private activators = new Map<string, ExtensionActivator>();
+  private deactivators = new Map<string, ExtensionDeactivator>();
+  private listeners = new Set<(event: string, ext: ExtensionInfo) => void>();
 
-  constructor() { this.loadInstalled(); }
+  constructor() {
+    this.loadInstalled();
+    this.registerBuiltinExtensions();
+  }
 
   /** 加载已安装扩展 */
   private loadInstalled(): void {
@@ -53,6 +64,71 @@ class MarketplaceService {
   /** 保存已安装扩展 */
   private saveInstalled(): void {
     try { localStorage.setItem('mindcode-installed-extensions', JSON.stringify(Array.from(this.installed.values()))); } catch {}
+  }
+
+  /** 注册内置扩展激活器 */
+  private registerBuiltinExtensions(): void {
+    // 主题扩展 - Dracula
+    this.activators.set('mindcode.theme-dracula', () => {
+      document.documentElement.setAttribute('data-theme', 'dracula');
+      localStorage.setItem('mindcode-theme', 'dracula');
+      console.log('[Extension] Dracula Theme activated');
+    });
+    this.deactivators.set('mindcode.theme-dracula', () => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('mindcode-theme', 'dark');
+    });
+
+    // 主题扩展 - Nord
+    this.activators.set('mindcode.theme-nord', () => {
+      document.documentElement.setAttribute('data-theme', 'nord');
+      localStorage.setItem('mindcode-theme', 'nord');
+      console.log('[Extension] Nord Theme activated');
+    });
+    this.deactivators.set('mindcode.theme-nord', () => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('mindcode-theme', 'dark');
+    });
+
+    // 括号彩色高亮
+    this.activators.set('mindcode.bracket-pair', () => {
+      document.documentElement.classList.add('bracket-pair-enabled');
+      console.log('[Extension] Bracket Pair Colorizer activated');
+    });
+    this.deactivators.set('mindcode.bracket-pair', () => {
+      document.documentElement.classList.remove('bracket-pair-enabled');
+    });
+
+    // React Snippets - 注册到 Monaco
+    this.activators.set('mindcode.snippets-react', () => {
+      this.registerMonacoSnippets('typescriptreact', REACT_SNIPPETS);
+      this.registerMonacoSnippets('javascriptreact', REACT_SNIPPETS);
+      console.log('[Extension] React Snippets activated');
+    });
+
+    // Vue Snippets
+    this.activators.set('mindcode.snippets-vue', () => {
+      this.registerMonacoSnippets('vue', VUE_SNIPPETS);
+      console.log('[Extension] Vue Snippets activated');
+    });
+  }
+
+  /** 注册 Monaco 代码片段 */
+  private registerMonacoSnippets(language: string, snippets: Record<string, { prefix: string; body: string[]; description: string }>): void {
+    if (typeof window === 'undefined' || !(window as any).monaco) return;
+    const monaco = (window as any).monaco;
+    monaco.languages.registerCompletionItemProvider(language, {
+      provideCompletionItems: () => ({
+        suggestions: Object.entries(snippets).map(([name, snippet]) => ({
+          label: snippet.prefix,
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: snippet.body.join('\n'),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: snippet.description,
+          detail: name,
+        })),
+      }),
+    });
   }
 
   /** 获取推荐扩展 */
@@ -77,21 +153,27 @@ class MarketplaceService {
   /** 获取已安装扩展 */
   getInstalled(): ExtensionInfo[] { return Array.from(this.installed.values()); }
 
-  /** 安装扩展 */
+  /** 安装并激活扩展 */
   async install(extensionId: string): Promise<boolean> {
     const ext = FEATURED_EXTENSIONS.find(e => e.id === extensionId);
     if (!ext) return false;
-    this.installed.set(ext.id, { ...ext, installed: true, enabled: true });
+    const installedExt = { ...ext, installed: true, enabled: true };
+    this.installed.set(ext.id, installedExt);
     this.saveInstalled();
+    this.activate(extensionId); // 自动激活
+    this.emit('install', installedExt);
     console.log(`[Marketplace] 安装扩展: ${ext.displayName}`);
     return true;
   }
 
   /** 卸载扩展 */
   async uninstall(extensionId: string): Promise<boolean> {
-    if (!this.installed.has(extensionId)) return false;
+    const ext = this.installed.get(extensionId);
+    if (!ext) return false;
+    this.deactivate(extensionId); // 先停用
     this.installed.delete(extensionId);
     this.saveInstalled();
+    this.emit('uninstall', ext);
     console.log(`[Marketplace] 卸载扩展: ${extensionId}`);
     return true;
   }
@@ -102,7 +184,42 @@ class MarketplaceService {
     if (!ext) return false;
     ext.enabled = enabled;
     this.saveInstalled();
+    if (enabled) this.activate(extensionId);
+    else this.deactivate(extensionId);
+    this.emit(enabled ? 'enable' : 'disable', ext);
     return true;
+  }
+
+  /** 激活扩展 */
+  activate(extensionId: string): void {
+    const activator = this.activators.get(extensionId);
+    const ext = this.installed.get(extensionId);
+    if (activator && ext) activator(ext);
+  }
+
+  /** 停用扩展 */
+  deactivate(extensionId: string): void {
+    const deactivator = this.deactivators.get(extensionId);
+    const ext = this.installed.get(extensionId);
+    if (deactivator && ext) deactivator(ext);
+  }
+
+  /** 初始化 - 激活所有已启用扩展 */
+  initializeExtensions(): void {
+    this.installed.forEach((ext, id) => {
+      if (ext.enabled) this.activate(id);
+    });
+    console.log(`[Marketplace] 初始化完成，激活 ${this.installed.size} 个扩展`);
+  }
+
+  /** 事件监听 */
+  on(callback: (event: string, ext: ExtensionInfo) => void): () => void {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  }
+
+  private emit(event: string, ext: ExtensionInfo): void {
+    this.listeners.forEach(cb => cb(event, ext));
   }
 
   /** 获取分类列表 */
@@ -117,6 +234,23 @@ class MarketplaceService {
     ];
   }
 }
+
+// React 代码片段
+const REACT_SNIPPETS: Record<string, { prefix: string; body: string[]; description: string }> = {
+  'React Function Component': { prefix: 'rfc', body: ['export const ${1:Component} = () => {', '  return (', '    <div>', '      ${2:content}', '    </div>', '  );', '};'], description: '创建 React 函数组件' },
+  'useState Hook': { prefix: 'us', body: ['const [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialValue});'], description: '创建 useState Hook' },
+  'useEffect Hook': { prefix: 'ue', body: ['useEffect(() => {', '  ${1:effect}', '  return () => {', '    ${2:cleanup}', '  };', '}, [${3:deps}]);'], description: '创建 useEffect Hook' },
+  'useCallback Hook': { prefix: 'ucb', body: ['const ${1:callback} = useCallback(() => {', '  ${2:body}', '}, [${3:deps}]);'], description: '创建 useCallback Hook' },
+  'useMemo Hook': { prefix: 'um', body: ['const ${1:value} = useMemo(() => ${2:computation}, [${3:deps}]);'], description: '创建 useMemo Hook' },
+};
+
+// Vue 代码片段
+const VUE_SNIPPETS: Record<string, { prefix: string; body: string[]; description: string }> = {
+  'Vue 3 Setup': { prefix: 'v3setup', body: ['<script setup lang="ts">', '${1:// code}', '</script>', '', '<template>', '  <div>${2:content}</div>', '</template>'], description: 'Vue 3 Setup 组件' },
+  'Vue Ref': { prefix: 'vref', body: ['const ${1:name} = ref(${2:initialValue});'], description: '创建 Vue ref' },
+  'Vue Reactive': { prefix: 'vreactive', body: ['const ${1:state} = reactive({', '  ${2:key}: ${3:value},', '});'], description: '创建 Vue reactive' },
+  'Vue Computed': { prefix: 'vcomputed', body: ['const ${1:name} = computed(() => ${2:expression});'], description: '创建 Vue computed' },
+};
 
 export const marketplaceService = new MarketplaceService();
 export default marketplaceService;

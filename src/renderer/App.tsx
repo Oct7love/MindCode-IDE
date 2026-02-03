@@ -1694,15 +1694,16 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [workspaceRoot]);
 
-  // 主题初始化 - 优化: 移除不必要延迟
+  // 主题初始化 + 扩展初始化
   useEffect(() => {
     const initTheme = async () => {
       if (document.readyState === 'loading') {
         await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
       }
-      // 移除 100ms 延迟 - CSS 已在 HTML head 中同步加载
       const themeId = await loadTheme();
       applyTheme(themeId);
+      // 初始化已安装扩展
+      marketplaceService.initializeExtensions();
     };
     initTheme();
 
