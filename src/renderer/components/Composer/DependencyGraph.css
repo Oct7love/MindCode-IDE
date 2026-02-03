@@ -1,0 +1,36 @@
+/* DependencyGraph.css - 依赖图样式 */
+
+.dependency-graph {
+  background: var(--background-tertiary, #1e1e1e);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.graph-svg { width: 100%; height: 300px; }
+
+.graph-edge { stroke: var(--text-secondary, #888888); stroke-width: 1.5; opacity: 0.6; }
+.graph-edge.edge-imports { stroke-dasharray: 4 2; }
+
+.graph-node circle { transition: all 0.2s ease; }
+.graph-node:hover circle { opacity: 0.4; transform: scale(1.1); }
+.graph-node.selected circle { opacity: 0.5; stroke-width: 3; }
+
+.node-icon { font-size: 16px; font-weight: bold; fill: var(--text-primary, #cccccc); }
+.node-label { font-size: 10px; fill: var(--text-secondary, #888888); }
+
+.graph-legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #888888);
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+}

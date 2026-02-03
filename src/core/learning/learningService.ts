@@ -1,148 +1,147 @@
-// 智能学习服务 - 收集用户编码习惯，个性化补全偏好
+/**
+ * 智能学习系统 - 记录用户习惯、项目术语、团队风格
+ * 用于优化 AI 补全和建议
+ */
 
 // ==================== 类型定义 ====================
-export interface CodingPattern {
-  id: string;
-  pattern: string; // 代码模式 (如 "const ${name} = async () => {")
-  frequency: number; // 使用频率
-  context: string; // 使用场景 (如 "typescript", "react-component")
-  lastUsed: number; // 最后使用时间
-}
 
-export interface TermEntry {
-  term: string; // 术语
-  type: 'variable' | 'function' | 'class' | 'type' | 'constant';
-  frequency: number;
-  files: string[]; // 出现的文件
-}
+export interface CodingPattern { pattern: string; frequency: number; lastUsed: number; context: string; } // 编码模式
+export interface ProjectTerm { term: string; definition?: string; frequency: number; files: string[]; } // 项目术语
+export interface CodeStyle { rule: string; value: string; examples: string[]; } // 代码风格
 
-export interface UserPreferences {
-  indentStyle: 'spaces' | 'tabs';
-  indentSize: number;
-  quoteStyle: 'single' | 'double';
-  semicolons: boolean;
-  trailingComma: boolean;
-  bracketSpacing: boolean;
-  arrowParens: 'always' | 'avoid';
-}
-
-export interface LearningStats {
-  totalPatterns: number;
-  totalTerms: number;
-  sessionsRecorded: number;
+export interface UserProfile {
+  patterns: CodingPattern[]; // 常用编码模式
+  terms: ProjectTerm[]; // 项目特定术语
+  styles: CodeStyle[]; // 代码风格偏好
+  completionAccepted: number; // 补全接受次数
+  completionRejected: number; // 补全拒绝次数
   lastUpdated: number;
 }
 
-// ==================== 智能学习服务 ====================
+// ==================== 学习服务 ====================
+
 class LearningService {
-  private patterns: Map<string, CodingPattern> = new Map();
-  private terms: Map<string, TermEntry> = new Map();
-  private preferences: UserPreferences = {
-    indentStyle: 'spaces', indentSize: 2, quoteStyle: 'single', semicolons: true,
-    trailingComma: true, bracketSpacing: true, arrowParens: 'avoid'
-  };
-  private sessionCount = 0;
+  private storageKey = 'mindcode-learning-profile';
+  private profile: UserProfile = { patterns: [], terms: [], styles: [], completionAccepted: 0, completionRejected: 0, lastUpdated: Date.now() };
+  private maxPatterns = 100;
+  private maxTerms = 200;
 
   constructor() { this.load(); }
 
-  // 记录代码输入模式
+  /** 加载用户画像 */
+  private load(): void {
+    try {
+      const data = localStorage.getItem(this.storageKey);
+      if (data) this.profile = { ...this.profile, ...JSON.parse(data) };
+    } catch {}
+  }
+
+  /** 保存用户画像 */
+  private save(): void {
+    this.profile.lastUpdated = Date.now();
+    try { localStorage.setItem(this.storageKey, JSON.stringify(this.profile)); } catch {}
+  }
+
+  /** 记录编码模式 */
   recordPattern(code: string, context: string): void {
-    const normalized = this.normalizePattern(code);
-    const existing = this.patterns.get(normalized);
+    const pattern = this.extractPattern(code);
+    if (!pattern || pattern.length < 5) return;
+    const existing = this.profile.patterns.find(p => p.pattern === pattern);
     if (existing) { existing.frequency++; existing.lastUsed = Date.now(); }
-    else this.patterns.set(normalized, { id: normalized, pattern: code, frequency: 1, context, lastUsed: Date.now() });
-    this.scheduleAutosave();
-  }
-
-  // 记录术语使用
-  recordTerm(term: string, type: TermEntry['type'], file: string): void {
-    const key = `${type}:${term}`;
-    const existing = this.terms.get(key);
-    if (existing) { existing.frequency++; if (!existing.files.includes(file)) existing.files.push(file); }
-    else this.terms.set(key, { term, type, frequency: 1, files: [file] });
-  }
-
-  // 分析代码风格偏好
-  analyzeStylePreferences(code: string): Partial<UserPreferences> {
-    const prefs: Partial<UserPreferences> = {};
-    if (/^\t/m.test(code)) prefs.indentStyle = 'tabs';
-    else if (/^  /m.test(code)) { prefs.indentStyle = 'spaces'; prefs.indentSize = 2; }
-    else if (/^    /m.test(code)) { prefs.indentStyle = 'spaces'; prefs.indentSize = 4; }
-    if (/'[^']*'/g.test(code) && !/"[^"]*"/g.test(code)) prefs.quoteStyle = 'single';
-    else if (/"[^"]*"/g.test(code)) prefs.quoteStyle = 'double';
-    if (/;\s*$/m.test(code)) prefs.semicolons = true;
-    else if (/[^;]\s*$/m.test(code)) prefs.semicolons = false;
-    if (/,\s*\n\s*[}\]]/g.test(code)) prefs.trailingComma = true;
-    return prefs;
-  }
-
-  // 更新偏好
-  updatePreferences(prefs: Partial<UserPreferences>): void {
-    Object.assign(this.preferences, prefs);
+    else {
+      this.profile.patterns.push({ pattern, frequency: 1, lastUsed: Date.now(), context });
+      if (this.profile.patterns.length > this.maxPatterns) {
+        this.profile.patterns.sort((a, b) => b.frequency - a.frequency);
+        this.profile.patterns = this.profile.patterns.slice(0, this.maxPatterns);
+      }
+    }
     this.save();
   }
 
-  // 获取热门模式 (用于补全建议)
-  getHotPatterns(context?: string, limit = 10): CodingPattern[] {
-    let patterns = [...this.patterns.values()];
-    if (context) patterns = patterns.filter(p => p.context === context);
-    return patterns.sort((a, b) => {
-      const scoreA = a.frequency * (1 + 1 / (Date.now() - a.lastUsed + 1));
-      const scoreB = b.frequency * (1 + 1 / (Date.now() - b.lastUsed + 1));
-      return scoreB - scoreA;
-    }).slice(0, limit);
+  /** 提取模式（简化：取代码骨架） */
+  private extractPattern(code: string): string {
+    return code.replace(/['"`][^'"`]*['"`]/g, '""') // 字符串常量
+      .replace(/\b\d+\b/g, 'N') // 数字常量
+      .replace(/\s+/g, ' ').trim().slice(0, 100);
   }
 
-  // 获取项目术语 (用于补全)
-  getProjectTerms(type?: TermEntry['type'], limit = 20): TermEntry[] {
-    let terms = [...this.terms.values()];
-    if (type) terms = terms.filter(t => t.type === type);
-    return terms.sort((a, b) => b.frequency - a.frequency).slice(0, limit);
-  }
-
-  // 获取当前偏好
-  getPreferences(): UserPreferences { return { ...this.preferences }; }
-
-  // 获取统计
-  getStats(): LearningStats {
-    return { totalPatterns: this.patterns.size, totalTerms: this.terms.size, sessionsRecorded: this.sessionCount, lastUpdated: Date.now() };
-  }
-
-  // 归一化模式 (移除具体变量名)
-  private normalizePattern(code: string): string {
-    return code.replace(/['"][^'"]*['"]/g, 'STR').replace(/\b\d+\b/g, 'NUM').replace(/\b[a-z][a-zA-Z0-9]*\b/g, 'VAR').slice(0, 100);
-  }
-
-  // 自动保存 (防抖)
-  private saveTimeout: any = null;
-  private scheduleAutosave(): void {
-    if (this.saveTimeout) clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => this.save(), 5000);
-  }
-
-  // 持久化
-  private save(): void {
-    try {
-      const data = { patterns: [...this.patterns.values()], terms: [...this.terms.values()], preferences: this.preferences, sessionCount: this.sessionCount + 1 };
-      localStorage.setItem('mindcode.learning', JSON.stringify(data));
-    } catch { /* 忽略存储错误 */ }
-  }
-
-  private load(): void {
-    try {
-      const saved = localStorage.getItem('mindcode.learning');
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.patterns) for (const p of data.patterns) this.patterns.set(p.id, p);
-        if (data.terms) for (const t of data.terms) this.terms.set(`${t.type}:${t.term}`, t);
-        if (data.preferences) Object.assign(this.preferences, data.preferences);
-        if (data.sessionCount) this.sessionCount = data.sessionCount;
+  /** 记录项目术语 */
+  recordTerm(term: string, file: string): void {
+    if (!term || term.length < 2 || /^[a-z]$/.test(term)) return; // 忽略单字符
+    const existing = this.profile.terms.find(t => t.term.toLowerCase() === term.toLowerCase());
+    if (existing) { existing.frequency++; if (!existing.files.includes(file)) existing.files.push(file); }
+    else {
+      this.profile.terms.push({ term, frequency: 1, files: [file] });
+      if (this.profile.terms.length > this.maxTerms) {
+        this.profile.terms.sort((a, b) => b.frequency - a.frequency);
+        this.profile.terms = this.profile.terms.slice(0, this.maxTerms);
       }
-    } catch { /* 忽略解析错误 */ }
+    }
+    this.save();
   }
 
-  // 清空学习数据
-  clear(): void { this.patterns.clear(); this.terms.clear(); this.sessionCount = 0; localStorage.removeItem('mindcode.learning'); }
+  /** 从代码中提取术语 */
+  extractTermsFromCode(code: string, file: string): void {
+    const identifiers = code.match(/\b[A-Z][a-zA-Z0-9]{2,}\b/g) || []; // PascalCase
+    const camelCase = code.match(/\b[a-z][a-zA-Z0-9]{3,}\b/g) || []; // camelCase
+    [...new Set([...identifiers, ...camelCase])].forEach(t => this.recordTerm(t, file));
+  }
+
+  /** 记录代码风格 */
+  recordStyle(rule: string, value: string, example: string): void {
+    const existing = this.profile.styles.find(s => s.rule === rule);
+    if (existing) { existing.value = value; if (!existing.examples.includes(example)) existing.examples.push(example.slice(0, 100)); }
+    else { this.profile.styles.push({ rule, value, examples: [example.slice(0, 100)] }); }
+    this.save();
+  }
+
+  /** 记录补全接受 */
+  recordCompletionAccepted(code: string, context: string): void {
+    this.profile.completionAccepted++;
+    this.recordPattern(code, context);
+    this.save();
+  }
+
+  /** 记录补全拒绝 */
+  recordCompletionRejected(): void { this.profile.completionRejected++; this.save(); }
+
+  /** 获取用户画像 */
+  getProfile(): UserProfile { return { ...this.profile }; }
+
+  /** 获取补全接受率 */
+  getAcceptanceRate(): number {
+    const total = this.profile.completionAccepted + this.profile.completionRejected;
+    return total > 0 ? this.profile.completionAccepted / total : 0;
+  }
+
+  /** 获取常用模式 (用于增强补全) */
+  getTopPatterns(limit = 20): CodingPattern[] {
+    return [...this.profile.patterns].sort((a, b) => b.frequency - a.frequency).slice(0, limit);
+  }
+
+  /** 获取项目术语 (用于增强补全) */
+  getTopTerms(limit = 50): ProjectTerm[] {
+    return [...this.profile.terms].sort((a, b) => b.frequency - a.frequency).slice(0, limit);
+  }
+
+  /** 生成 AI 系统提示补充（基于学习数据） */
+  generatePromptEnhancement(): string {
+    const terms = this.getTopTerms(30).map(t => t.term).join(', ');
+    const patterns = this.getTopPatterns(10).map(p => p.pattern).join('\n');
+    const styles = this.profile.styles.map(s => `${s.rule}: ${s.value}`).join('; ');
+    if (!terms && !patterns && !styles) return '';
+    return `
+用户偏好：
+${terms ? `- 项目术语: ${terms}` : ''}
+${styles ? `- 代码风格: ${styles}` : ''}
+请根据用户的编码习惯生成更符合其风格的代码。`;
+  }
+
+  /** 清除学习数据 */
+  clear(): void {
+    this.profile = { patterns: [], terms: [], styles: [], completionAccepted: 0, completionRejected: 0, lastUpdated: Date.now() };
+    localStorage.removeItem(this.storageKey);
+  }
 }
 
 export const learningService = new LearningService();

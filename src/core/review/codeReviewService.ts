@@ -113,7 +113,6 @@ class CodeReviewService {
 
   // 获取修复建议 (调用 AI)
   async getFixSuggestion(issue: CodeIssue, context: string): Promise<string> {
-    // TODO: 调用 AI 获取智能修复建议
     const fixes: Record<string, string> = {
       'eval() 使用': '使用 JSON.parse() 或安全的解析方法替代',
       'innerHTML 赋值': '使用 textContent 或 DOMPurify.sanitize(html)',
@@ -122,6 +121,70 @@ class CodeReviewService {
       '使用 == 比较': '将 == 改为 ===',
     };
     return fixes[issue.title] || '请手动检查并修复此问题';
+  }
+
+  /** 自动修复 - 返回修复后的代码和修复信息 */
+  autoFix(content: string, issue: CodeIssue): { fixed: string; applied: boolean; description: string } {
+    const lines = content.split('\n');
+    const lineIdx = issue.line - 1;
+    if (lineIdx < 0 || lineIdx >= lines.length) return { fixed: content, applied: false, description: '行号超出范围' };
+    const line = lines[lineIdx];
+    const fixRules: Record<string, { pattern: RegExp; replacement: string; desc: string }> = {
+      '使用 var': { pattern: /\bvar\b/, replacement: 'const', desc: 'var -> const' },
+      '使用 == 比较': { pattern: /==(?!=)/, replacement: '===', desc: '== -> ===' },
+      '使用 != 比较': { pattern: /!=(?!=)/, replacement: '!==', desc: '!= -> !==' },
+      'console 输出': { pattern: /console\.(log|debug|info)\([^)]*\);?/, replacement: '/* $& */', desc: '注释掉 console' },
+    };
+    const rule = fixRules[issue.title];
+    if (!rule) return { fixed: content, applied: false, description: '无自动修复规则' };
+    if (!rule.pattern.test(line)) return { fixed: content, applied: false, description: '未匹配到问题代码' };
+    lines[lineIdx] = line.replace(rule.pattern, rule.replacement);
+    return { fixed: lines.join('\n'), applied: true, description: rule.desc };
+  }
+
+  /** 批量自动修复 */
+  autoFixAll(content: string, issues: CodeIssue[]): { fixed: string; fixedCount: number; details: string[] } {
+    let result = content;
+    const details: string[] = [];
+    let fixedCount = 0;
+    const sorted = [...issues].sort((a, b) => b.line - a.line); // 从后往前修复避免行号偏移
+    for (const issue of sorted) {
+      const { fixed, applied, description } = this.autoFix(result, issue);
+      if (applied) { result = fixed; fixedCount++; details.push(`L${issue.line}: ${description}`); }
+    }
+    return { fixed: result, fixedCount, details };
+  }
+
+  /** AI 智能修复 (调用 LLM) */
+  async aiAutoFix(filePath: string, content: string, issue: CodeIssue): Promise<{ fixed: string; explanation: string } | null> {
+    if (!window.mindcode?.ai?.chat) return null;
+    const prompt = `修复以下代码问题：
+
+文件: ${filePath}
+行号: ${issue.line}
+问题: ${issue.title} - ${issue.message}
+
+原始代码:
+\`\`\`
+${content.split('\n').slice(Math.max(0, issue.line - 5), issue.line + 5).join('\n')}
+\`\`\`
+
+只输出修复后的代码行和简短解释，格式：
+FIX: <修复后的代码>
+REASON: <解释>`;
+    try {
+      const res = await window.mindcode.ai.chat('codesuc-sonnet', [{ role: 'user', content: prompt }]);
+      if (res.success && res.data) {
+        const fixMatch = res.data.match(/FIX:\s*(.+)/);
+        const reasonMatch = res.data.match(/REASON:\s*(.+)/);
+        if (fixMatch) {
+          const lines = content.split('\n');
+          lines[issue.line - 1] = fixMatch[1].trim();
+          return { fixed: lines.join('\n'), explanation: reasonMatch?.[1] || '已修复' };
+        }
+      }
+    } catch {}
+    return null;
   }
 }
 
