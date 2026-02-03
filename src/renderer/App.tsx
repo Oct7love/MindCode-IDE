@@ -22,6 +22,8 @@ import { MindCodeLogo } from './components/MindCodeLogo';
 import { useZoom } from './hooks/useZoom';
 import { StatusBar } from './components/StatusBar';
 import { ErrorBoundary, AIPanelErrorBoundary, EditorErrorBoundary } from './components/ErrorBoundary';
+import { ExtensionMarketplace } from './components/ExtensionMarketplace';
+import { marketplaceService, type ExtensionInfo } from '../core/plugins/marketplace';
 
 // ==================== VSCode 风格 Codicon 图标 ====================
 const Icons = {
@@ -506,6 +508,51 @@ const TreeRow: React.FC<TreeRowProps> = ({
 };
 
 interface Msg { id: string; role: 'user' | 'assistant'; text: string; time: string; }
+
+// ==================== 扩展面板组件 ====================
+const ExtensionsPanel: React.FC = () => {
+  const [search, setSearch] = useState('');
+  const [installed, setInstalled] = useState<ExtensionInfo[]>([]);
+  const [featured, setFeatured] = useState<ExtensionInfo[]>([]);
+  const [loading, setLoading] = useState<string | null>(null);
+  const [showMarketplace, setShowMarketplace] = useState(false);
+
+  useEffect(() => { setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); }, []);
+
+  const handleInstall = async (ext: ExtensionInfo) => { setLoading(ext.id); await marketplaceService.install(ext.id); setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); setLoading(null); };
+  const handleUninstall = async (ext: ExtensionInfo) => { setLoading(ext.id); await marketplaceService.uninstall(ext.id); setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); setLoading(null); };
+  const filteredFeatured = search ? marketplaceService.search(search).slice(0, 8) : featured;
+
+  return (
+    <div className="extensions-panel">
+      <div className="ext-search-box"><input type="text" placeholder="🔍 搜索扩展..." value={search} onChange={e => setSearch(e.target.value)} className="ext-search-input" /></div>
+      {installed.length > 0 && (
+        <div className="ext-section">
+          <div className="ext-section-title">已安装 ({installed.length})</div>
+          {installed.map(ext => (
+            <div key={ext.id} className="ext-item">
+              <span className="ext-item-icon">{ext.icon || '📦'}</span>
+              <div className="ext-item-info"><div className="ext-item-name">{ext.displayName}</div><div className="ext-item-author">{ext.author}</div></div>
+              <button className="ext-item-btn uninstall" onClick={() => handleUninstall(ext)} disabled={loading === ext.id}>{loading === ext.id ? '...' : '×'}</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="ext-section">
+        <div className="ext-section-title">{search ? '搜索结果' : '推荐'}</div>
+        {filteredFeatured.map(ext => (
+          <div key={ext.id} className="ext-item">
+            <span className="ext-item-icon">{ext.icon || '📦'}</span>
+            <div className="ext-item-info"><div className="ext-item-name">{ext.displayName}</div><div className="ext-item-meta">⬇️{(ext.downloads/1000).toFixed(0)}k ⭐{ext.rating}</div></div>
+            {ext.installed ? <span className="ext-item-installed">✓</span> : <button className="ext-item-btn install" onClick={() => handleInstall(ext)} disabled={loading === ext.id}>{loading === ext.id ? '...' : '安装'}</button>}
+          </div>
+        ))}
+      </div>
+      <button className="ext-open-marketplace" onClick={() => setShowMarketplace(true)}>🏪 打开扩展市场</button>
+      <ExtensionMarketplace isOpen={showMarketplace} onClose={() => { setShowMarketplace(false); setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); }} />
+    </div>
+  );
+};
 
 // 对话接口
 interface Conversation {
@@ -1905,11 +1952,7 @@ const App: React.FC = () => {
               </div>
             )}
             {/* 扩展面板 */}
-            {tab === 'ext' && (
-              <div className="git-empty">
-                <p>扩展功能开发中...</p>
-              </div>
-            )}
+            {tab === 'ext' && <ExtensionsPanel />}
           </div>
           {/* 拖拽上传指示器 */}
           {isDragging && (
