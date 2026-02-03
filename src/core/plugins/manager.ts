@@ -79,16 +79,17 @@ export class PluginManager {
 
   private createAPI(): PluginAPI {
     const registry = this.commandRegistry;
+    const decorationTypes = new Map<string, any>();
+    let decorationId = 0;
     return {
       editor: {
         getActiveEditor: () => win.mindcode?.editor?.getActive?.(),
         openFile: async (path) => win.mindcode?.fs?.openFile?.(path),
-        showMessage: (message, type = 'info') => {
-          if (type === 'error') console.error(message);
-          else if (type === 'warning') console.warn(message);
-          else console.log(message);
-          // TODO: 集成通知系统
-        },
+        showMessage: (message, type = 'info') => { if (type === 'error') console.error(message); else if (type === 'warning') console.warn(message); else console.log(message); },
+        setDecorations: (decorationType, ranges) => { const editor = win.mindcode?.editor?.getActive?.(); if (editor?.deltaDecorations) editor.deltaDecorations([], ranges.map(r => ({ range: r.range, options: decorationTypes.get(decorationType) || {} }))); },
+        createDecorationType: (options) => { const id = `decoration-${++decorationId}`; decorationTypes.set(id, options); return id; },
+        getSelection: () => { const editor = win.mindcode?.editor?.getActive?.(); if (!editor) return null; const sel = editor.getSelection?.(); return sel ? { start: { line: sel.startLineNumber, col: sel.startColumn }, end: { line: sel.endLineNumber, col: sel.endColumn }, text: editor.getModel?.()?.getValueInRange?.(sel) || '' } : null; },
+        insertText: (text) => { const editor = win.mindcode?.editor?.getActive?.(); editor?.trigger?.('plugin', 'type', { text }); },
       },
       commands: {
         registerCommand: (command, callback): Disposable => registry.registerCommand(command, callback),
@@ -98,13 +99,24 @@ export class PluginManager {
         readFile: async (path) => { const r = await win.mindcode?.fs?.readFile?.(path); return r?.data || ''; },
         writeFile: async (path, content) => { await win.mindcode?.fs?.writeFile?.(path, content); },
         exists: async (path) => win.mindcode?.fs?.exists?.(path) || false,
+        listDir: async (path) => { const r = await win.mindcode?.fs?.listDir?.(path); return (r?.data || []).map((f: any) => ({ name: f.name, isDirectory: f.isDirectory })); },
       },
       window: {
-        showInputBox: async (options) => prompt(options?.prompt || '', options?.value) || undefined,
-        showQuickPick: async (items, options) => {
-          const index = parseInt(prompt(`${options?.placeholder || '选择'}\n${items.map((it, i) => `${i}: ${it}`).join('\n')}`) || '-1');
-          return index >= 0 && index < items.length ? items[index] : undefined;
-        },
+        showInputBox: async (options) => prompt(options?.prompt || options?.placeholder || '', options?.value) || undefined,
+        showQuickPick: async (items, options) => { const idx = parseInt(prompt(`${options?.placeholder || '选择'}\n${items.map((it, i) => `${i}: ${it}`).join('\n')}`) || '-1'); return idx >= 0 && idx < items.length ? (options?.canPickMany ? [items[idx]] : items[idx]) : undefined; },
+        showNotification: (message, options) => { const type = options?.type || 'info'; console.log(`[${type.toUpperCase()}] ${message}`); },
+        showProgress: async (title, task) => { console.log(`[Progress] ${title}`); await task({ report: (v) => console.log(`[Progress] ${v.message || ''} ${v.increment || ''}%`) }); },
+        createStatusBarItem: (options) => ({ text: options.text, tooltip: options.tooltip, show: () => console.log(`[StatusBar] ${options.text}`), hide: () => {}, dispose: () => {} }),
+      },
+      workspace: {
+        getWorkspacePath: () => win.mindcode?.workspace?.getPath?.() || null,
+        onDidSaveFile: (handler) => { const h = (_: any, path: string) => handler(path); win.mindcode?.workspace?.onSave?.(h); return { dispose: () => win.mindcode?.workspace?.offSave?.(h) }; },
+        onDidOpenFile: (handler) => { const h = (_: any, path: string) => handler(path); win.mindcode?.workspace?.onOpen?.(h); return { dispose: () => win.mindcode?.workspace?.offOpen?.(h) }; },
+        getConfiguration: (section) => ({ get: <T>(key: string, defaultValue?: T) => win.mindcode?.config?.get?.(`${section ? section + '.' : ''}${key}`) ?? defaultValue }),
+      },
+      ai: {
+        chat: async (prompt, options) => { const r = await win.mindcode?.ai?.chat?.(prompt, options); return r?.content || ''; },
+        complete: async (prefix, suffix) => { const r = await win.mindcode?.ai?.complete?.({ prefix, suffix }); return r?.completion || ''; },
       },
     };
   }
