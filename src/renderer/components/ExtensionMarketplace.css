@@ -1,0 +1,134 @@
+/* ExtensionMarketplace.css - 扩展市场样式 */
+
+.ext-marketplace-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.ext-marketplace {
+  width: 800px;
+  max-width: 90vw;
+  max-height: 85vh;
+  background: var(--background-primary, #1e1e1e);
+  border: 1px solid var(--border-color, #3c3c3c);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ext-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, #3c3c3c);
+  background: var(--background-secondary, #252526);
+}
+.ext-header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.ext-close { background: none; border: none; font-size: 24px; color: var(--text-secondary); cursor: pointer; }
+.ext-close:hover { color: var(--text-primary); }
+
+.ext-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px;
+  background: var(--background-secondary, #252526);
+  border-bottom: 1px solid var(--border-color, #3c3c3c);
+}
+.ext-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+}
+.ext-tab:hover { background: var(--background-hover); }
+.ext-tab.active { background: var(--accent-color, #0078d4); color: white; }
+
+.ext-filters { padding: 16px 20px; border-bottom: 1px solid var(--border-color, #3c3c3c); }
+.ext-search {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--background-secondary, #252526);
+  border: 1px solid var(--border-color, #3c3c3c);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.ext-search:focus { outline: none; border-color: var(--accent-color, #0078d4); }
+.ext-categories { display: flex; gap: 8px; flex-wrap: wrap; }
+.ext-category {
+  padding: 6px 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.ext-category:hover { background: var(--background-hover); }
+.ext-category.active { background: var(--accent-color, #0078d4); color: white; border-color: var(--accent-color); }
+
+.ext-list { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.ext-empty { text-align: center; padding: 40px; color: var(--text-secondary); }
+
+.ext-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--background-secondary, #252526);
+  border: 1px solid var(--border-color, #3c3c3c);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.ext-card:hover { border-color: var(--accent-color, #0078d4); }
+
+.ext-icon { font-size: 36px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: var(--background-tertiary); border-radius: 8px; }
+
+.ext-info { flex: 1; min-width: 0; }
+.ext-title { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ext-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.ext-version { font-size: 11px; color: var(--text-secondary); }
+.ext-installed-badge { font-size: 10px; padding: 2px 6px; background: #22c55e; color: white; border-radius: 4px; }
+.ext-author { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.ext-desc { font-size: 13px; color: var(--text-primary); margin-bottom: 8px; line-height: 1.4; }
+.ext-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text-secondary); align-items: center; }
+.ext-tags { display: flex; gap: 4px; margin-left: auto; }
+.ext-tag { padding: 2px 6px; background: var(--background-tertiary); border-radius: 4px; font-size: 10px; }
+
+.ext-actions { display: flex; flex-direction: column; gap: 8px; min-width: 90px; }
+.ext-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.ext-btn.install { background: var(--accent-color, #0078d4); color: white; }
+.ext-btn.install:hover { background: var(--accent-hover, #1084d8); }
+.ext-btn.enabled { background: #22c55e; color: white; }
+.ext-btn.disabled { background: var(--background-tertiary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+.ext-btn.uninstall { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); }
+.ext-btn.uninstall:hover { background: #ef4444; color: white; border-color: #ef4444; }
+.ext-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.ext-footer {
+  padding: 12px 20px;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}

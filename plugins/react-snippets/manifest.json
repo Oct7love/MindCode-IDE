@@ -1,0 +1,23 @@
+{
+  "id": "mindcode.react-snippets",
+  "name": "React Snippets",
+  "version": "1.0.0",
+  "description": "React/JSX 代码片段集合，提高开发效率",
+  "author": "MindCode Team",
+  "main": "index.js",
+  "icon": "⚛️",
+  "category": "snippet",
+  "engines": { "mindcode": ">=1.0.0" },
+  "activationEvents": ["onLanguage:javascript", "onLanguage:typescript", "onLanguage:javascriptreact", "onLanguage:typescriptreact"],
+  "contributes": {
+    "snippets": [
+      { "language": "javascriptreact", "path": "./snippets/react.json" },
+      { "language": "typescriptreact", "path": "./snippets/react.json" }
+    ],
+    "commands": [
+      { "command": "reactSnippets.insertComponent", "title": "插入 React 组件模板" },
+      { "command": "reactSnippets.insertHook", "title": "插入 React Hook 模板" }
+    ]
+  },
+  "permissions": ["editor", "snippets"]
+}

@@ -83,6 +83,10 @@ export interface PluginAPI {
     getActiveEditor(): any;
     openFile(path: string): Promise<void>;
     showMessage(message: string, type?: 'info' | 'warning' | 'error'): void;
+    setDecorations(decorationType: string, ranges: Array<{ range: { startLine: number; startCol: number; endLine: number; endCol: number }; options?: { after?: { contentText: string; color?: string }; className?: string } }>): void;
+    createDecorationType(options: { backgroundColor?: string; border?: string; color?: string; after?: { contentText: string } }): string;
+    getSelection(): { start: { line: number; col: number }; end: { line: number; col: number }; text: string } | null;
+    insertText(text: string): void;
   };
   // 命令
   commands: {
@@ -94,13 +98,31 @@ export interface PluginAPI {
     readFile(path: string): Promise<string>;
     writeFile(path: string, content: string): Promise<void>;
     exists(path: string): Promise<boolean>;
+    listDir(path: string): Promise<Array<{ name: string; isDirectory: boolean }>>;
   };
   // 窗口
   window: {
-    showInputBox(options?: { prompt?: string; value?: string }): Promise<string | undefined>;
-    showQuickPick(items: string[], options?: { placeholder?: string }): Promise<string | undefined>;
+    showInputBox(options?: { prompt?: string; value?: string; placeholder?: string }): Promise<string | undefined>;
+    showQuickPick(items: string[], options?: { placeholder?: string; canPickMany?: boolean }): Promise<string | string[] | undefined>;
+    showNotification(message: string, options?: { type?: 'info' | 'success' | 'warning' | 'error'; duration?: number }): void;
+    showProgress(title: string, task: (progress: { report: (value: { message?: string; increment?: number }) => void }) => Promise<void>): Promise<void>;
+    createStatusBarItem(options: { text: string; tooltip?: string; command?: string; alignment?: 'left' | 'right'; priority?: number }): StatusBarItem;
+  };
+  // 工作区
+  workspace: {
+    getWorkspacePath(): string | null;
+    onDidSaveFile(handler: (path: string) => void): Disposable;
+    onDidOpenFile(handler: (path: string) => void): Disposable;
+    getConfiguration(section?: string): { get<T>(key: string, defaultValue?: T): T };
+  };
+  // AI
+  ai: {
+    chat(prompt: string, options?: { model?: string; systemPrompt?: string }): Promise<string>;
+    complete(prefix: string, suffix: string): Promise<string>;
   };
 }
+
+export interface StatusBarItem { text: string; tooltip?: string; show(): void; hide(): void; dispose(): void; }
 
 // ============ 激活函数签名 ============
 

@@ -4,12 +4,15 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getPluginManager, type PluginInstance } from '../../core/plugins';
+import { getPluginManager, type PluginInstance, marketplaceService } from '../../core/plugins';
+import { ExtensionMarketplace } from './ExtensionMarketplace';
 
 export const PluginPanel: React.FC = () => {
   const [plugins, setPlugins] = useState<PluginInstance[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showMarketplace, setShowMarketplace] = useState(false);
   const manager = getPluginManager();
+  const installedCount = marketplaceService.getInstalled().length;
 
   const refreshPlugins = useCallback(() => { setPlugins([...manager.listPlugins()]); }, []);
 
@@ -23,18 +26,24 @@ export const PluginPanel: React.FC = () => {
     setLoading(false);
   };
 
-  const handleInstall = async () => {
-    const path = prompt('输入插件 manifest.json 路径:');
-    if (path) { setLoading(true); await manager.install(path); refreshPlugins(); setLoading(false); }
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>🧩 插件</h3>
-        <button onClick={handleInstall} disabled={loading} style={{ padding: '4px 8px', background: 'var(--color-accent-primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>安装</button>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>🧩 扩展</h3>
+        <button onClick={() => setShowMarketplace(true)} style={{ padding: '4px 12px', background: 'var(--color-accent-primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>🏪 市场</button>
       </div>
+
+      {/* 快捷入口 */}
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: 8 }}>
+        <button onClick={() => setShowMarketplace(true)} style={{ flex: 1, padding: '8px', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', fontSize: 12, textAlign: 'left' }}>
+          <div style={{ fontSize: 14, marginBottom: 4 }}>📦 已安装 ({installedCount})</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>管理已安装的扩展</div>
+        </button>
+      </div>
+
+      {/* 扩展市场弹窗 */}
+      <ExtensionMarketplace isOpen={showMarketplace} onClose={() => { setShowMarketplace(false); refreshPlugins(); }} />
 
       {/* 插件列表 */}
       <div style={{ flex: 1, overflow: 'auto' }}>

@@ -67,6 +67,9 @@ export { GitHubPanel } from './GitHubPanel';
 // Plugin 面板
 export { PluginPanel } from './PluginPanel';
 
+// 扩展市场
+export { ExtensionMarketplace } from './ExtensionMarketplace';
+
 // 工具确认对话框
 export { ToolConfirmDialog } from './ToolConfirmDialog';
 
