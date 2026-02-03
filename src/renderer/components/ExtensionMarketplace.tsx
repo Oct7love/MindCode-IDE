@@ -15,13 +15,18 @@ export const ExtensionMarketplace: React.FC<ExtensionMarketplaceProps> = ({ isOp
   const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
   const [installed, setInstalled] = useState<ExtensionInfo[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const categories = marketplaceService.getCategories();
 
-  // 加载扩展列表
-  const loadExtensions = useCallback(() => {
-    const list = search ? marketplaceService.search(search, category) : marketplaceService.getByCategory(category);
-    setExtensions(list);
-    setInstalled(marketplaceService.getInstalled());
+  // 加载扩展列表（异步）
+  const loadExtensions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const list = search ? await marketplaceService.search(search, category) : await marketplaceService.getByCategory(category);
+      setExtensions(list);
+      setInstalled(marketplaceService.getInstalled());
+    } catch (err) { console.error('[Marketplace] 加载失败:', err); }
+    setIsLoading(false);
   }, [search, category]);
 
   useEffect(() => { if (isOpen) loadExtensions(); }, [isOpen, loadExtensions]);
@@ -85,12 +90,14 @@ export const ExtensionMarketplace: React.FC<ExtensionMarketplaceProps> = ({ isOp
 
         {/* 扩展列表 */}
         <div className="ext-list">
-          {displayList.length === 0 ? (
+          {isLoading ? (
+            <div className="ext-empty">⏳ 正在从 Open VSX 加载扩展...</div>
+          ) : displayList.length === 0 ? (
             <div className="ext-empty">{tab === 'installed' ? '暂无已安装扩展' : '未找到匹配的扩展'}</div>
           ) : (
             displayList.map(ext => (
               <div key={ext.id} className="ext-card">
-                <div className="ext-icon">{ext.icon || '📦'}</div>
+                <div className="ext-icon">{ext.iconUrl ? <img src={ext.iconUrl} alt="" style={{ width: 36, height: 36, borderRadius: 4 }} /> : '📦'}</div>
                 <div className="ext-info">
                   <div className="ext-title">
                     <span className="ext-name">{ext.displayName}</span>

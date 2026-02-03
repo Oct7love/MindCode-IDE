@@ -1,16 +1,20 @@
 /**
  * 扩展市场服务
- * 提供扩展浏览、搜索、安装、激活功能
+ * 集成 Open VSX Registry (VSCode 兼容扩展市场)
+ * API: https://open-vsx.org/api
  */
 
+const OPEN_VSX_API = 'https://open-vsx.org/api';
+
 export interface ExtensionInfo {
-  id: string;
+  id: string;                    // namespace.name 格式
   name: string;
   displayName: string;
   description: string;
   version: string;
   author: string;
   icon?: string;
+  iconUrl?: string;              // Open VSX 图标 URL
   category: 'theme' | 'language' | 'snippet' | 'tool' | 'ai' | 'other';
   tags: string[];
   downloads: number;
@@ -18,25 +22,47 @@ export interface ExtensionInfo {
   repository?: string;
   installed?: boolean;
   enabled?: boolean;
-  config?: Record<string, any>; // 扩展特定配置
+  downloadUrl?: string;          // .vsix 下载地址
+  namespace?: string;            // 发布者命名空间
+}
+
+// Open VSX API 响应类型
+interface OpenVSXExtension {
+  namespace: string;
+  name: string;
+  displayName?: string;
+  description?: string;
+  version: string;
+  publishedBy?: { loginName: string };
+  files?: { icon?: string; download?: string };
+  downloadCount?: number;
+  averageRating?: number;
+  categories?: string[];
+  tags?: string[];
+  repository?: string;
+}
+
+interface OpenVSXSearchResult {
+  extensions: OpenVSXExtension[];
+  totalSize: number;
 }
 
 // 扩展功能实现
 type ExtensionActivator = (ext: ExtensionInfo) => void;
 type ExtensionDeactivator = (ext: ExtensionInfo) => void;
 
-// 推荐扩展列表（模拟市场数据）
-const FEATURED_EXTENSIONS: ExtensionInfo[] = [
-  { id: 'mindcode.theme-dracula', name: 'theme-dracula', displayName: 'Dracula Theme Pro', description: '流行的暗色主题，支持多种语言高亮', version: '2.0.0', author: 'MindCode', icon: '🧛', category: 'theme', tags: ['theme', 'dark'], downloads: 150000, rating: 4.8 },
-  { id: 'mindcode.theme-nord', name: 'theme-nord', displayName: 'Nord Theme', description: '北欧风格冷色调主题', version: '1.5.0', author: 'MindCode', icon: '❄️', category: 'theme', tags: ['theme', 'dark', 'nord'], downloads: 80000, rating: 4.7 },
-  { id: 'mindcode.snippets-react', name: 'snippets-react', displayName: 'React Snippets', description: 'React/JSX 代码片段集合，提高开发效率', version: '3.0.0', author: 'MindCode', icon: '⚛️', category: 'snippet', tags: ['react', 'snippet', 'jsx'], downloads: 200000, rating: 4.9 },
-  { id: 'mindcode.snippets-vue', name: 'snippets-vue', displayName: 'Vue Snippets', description: 'Vue 3 代码片段，支持 Composition API', version: '2.5.0', author: 'MindCode', icon: '💚', category: 'snippet', tags: ['vue', 'snippet'], downloads: 120000, rating: 4.8 },
-  { id: 'mindcode.python-tools', name: 'python-tools', displayName: 'Python Tools', description: 'Python 开发工具包：格式化、lint、虚拟环境', version: '1.2.0', author: 'MindCode', icon: '🐍', category: 'language', tags: ['python', 'formatter'], downloads: 95000, rating: 4.6 },
-  { id: 'mindcode.ai-codehelper', name: 'ai-codehelper', displayName: 'AI Code Helper', description: 'AI 辅助：代码注释生成、单元测试生成', version: '1.0.0', author: 'MindCode', icon: '🤖', category: 'ai', tags: ['ai', 'automation'], downloads: 50000, rating: 4.5 },
-  { id: 'mindcode.git-lens', name: 'git-lens', displayName: 'Git Lens', description: 'Git 增强：行级 blame、提交历史浏览', version: '2.0.0', author: 'MindCode', icon: '🔍', category: 'tool', tags: ['git', 'scm'], downloads: 180000, rating: 4.9 },
-  { id: 'mindcode.bracket-pair', name: 'bracket-pair', displayName: 'Bracket Pair Colorizer', description: '括号配对彩色高亮', version: '1.8.0', author: 'MindCode', icon: '🌈', category: 'tool', tags: ['bracket', 'colorizer'], downloads: 250000, rating: 4.7 },
-  { id: 'mindcode.todo-tree', name: 'todo-tree', displayName: 'TODO Tree', description: 'TODO/FIXME 注释树形视图', version: '1.5.0', author: 'MindCode', icon: '📋', category: 'tool', tags: ['todo', 'productivity'], downloads: 130000, rating: 4.6 },
-  { id: 'mindcode.live-server', name: 'live-server', displayName: 'Live Server', description: '本地开发服务器，支持热重载', version: '2.1.0', author: 'MindCode', icon: '🌐', category: 'tool', tags: ['server', 'web'], downloads: 170000, rating: 4.8 },
+// 热门扩展 ID 列表（用于首页推荐）
+const POPULAR_EXTENSIONS = [
+  'dracula-theme.theme-dracula',        // Dracula 主题
+  'arcticicestudio.nord-visual-studio-code', // Nord 主题
+  'dsznajder.es7-react-js-snippets',    // React Snippets
+  'Vue.volar',                          // Vue 官方
+  'esbenp.prettier-vscode',             // Prettier
+  'dbaeumer.vscode-eslint',             // ESLint
+  'eamodio.gitlens',                    // GitLens
+  'PKief.material-icon-theme',          // Material Icons
+  'formulahendry.auto-rename-tag',      // Auto Rename Tag
+  'streetsidesoftware.code-spell-checker', // Spell Checker
 ];
 
 class MarketplaceService {
@@ -44,10 +70,12 @@ class MarketplaceService {
   private activators = new Map<string, ExtensionActivator>();
   private deactivators = new Map<string, ExtensionDeactivator>();
   private listeners = new Set<(event: string, ext: ExtensionInfo) => void>();
+  private cache = new Map<string, { data: ExtensionInfo[]; time: number }>();
+  private cacheTimeout = 5 * 60 * 1000; // 5分钟缓存
 
   constructor() {
     this.loadInstalled();
-    this.registerBuiltinExtensions();
+    this.registerBuiltinActivators();
   }
 
   /** 加载已安装扩展 */
@@ -66,101 +94,141 @@ class MarketplaceService {
     try { localStorage.setItem('mindcode-installed-extensions', JSON.stringify(Array.from(this.installed.values()))); } catch {}
   }
 
-  /** 注册内置扩展激活器 */
-  private registerBuiltinExtensions(): void {
-    // 主题扩展 - Dracula
-    this.activators.set('mindcode.theme-dracula', () => {
+  /** 注册内置激活器（主题等需要特殊处理） */
+  private registerBuiltinActivators(): void {
+    // Dracula 主题
+    this.activators.set('dracula-theme.theme-dracula', () => {
       document.documentElement.setAttribute('data-theme', 'dracula');
       localStorage.setItem('mindcode-theme', 'dracula');
-      console.log('[Extension] Dracula Theme activated');
     });
-    this.deactivators.set('mindcode.theme-dracula', () => {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      localStorage.setItem('mindcode-theme', 'dark');
-    });
-
-    // 主题扩展 - Nord
-    this.activators.set('mindcode.theme-nord', () => {
+    // Nord 主题
+    this.activators.set('arcticicestudio.nord-visual-studio-code', () => {
       document.documentElement.setAttribute('data-theme', 'nord');
       localStorage.setItem('mindcode-theme', 'nord');
-      console.log('[Extension] Nord Theme activated');
-    });
-    this.deactivators.set('mindcode.theme-nord', () => {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      localStorage.setItem('mindcode-theme', 'dark');
-    });
-
-    // 括号彩色高亮
-    this.activators.set('mindcode.bracket-pair', () => {
-      document.documentElement.classList.add('bracket-pair-enabled');
-      console.log('[Extension] Bracket Pair Colorizer activated');
-    });
-    this.deactivators.set('mindcode.bracket-pair', () => {
-      document.documentElement.classList.remove('bracket-pair-enabled');
-    });
-
-    // React Snippets - 注册到 Monaco
-    this.activators.set('mindcode.snippets-react', () => {
-      this.registerMonacoSnippets('typescriptreact', REACT_SNIPPETS);
-      this.registerMonacoSnippets('javascriptreact', REACT_SNIPPETS);
-      console.log('[Extension] React Snippets activated');
-    });
-
-    // Vue Snippets
-    this.activators.set('mindcode.snippets-vue', () => {
-      this.registerMonacoSnippets('vue', VUE_SNIPPETS);
-      console.log('[Extension] Vue Snippets activated');
     });
   }
 
-  /** 注册 Monaco 代码片段 */
-  private registerMonacoSnippets(language: string, snippets: Record<string, { prefix: string; body: string[]; description: string }>): void {
-    if (typeof window === 'undefined' || !(window as any).monaco) return;
-    const monaco = (window as any).monaco;
-    monaco.languages.registerCompletionItemProvider(language, {
-      provideCompletionItems: () => ({
-        suggestions: Object.entries(snippets).map(([name, snippet]) => ({
-          label: snippet.prefix,
-          kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: snippet.body.join('\n'),
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          documentation: snippet.description,
-          detail: name,
-        })),
-      }),
-    });
+  /** 转换 Open VSX 响应为 ExtensionInfo */
+  private convertExtension(ext: OpenVSXExtension): ExtensionInfo {
+    const category = this.detectCategory(ext.categories || [], ext.tags || []);
+    return {
+      id: `${ext.namespace}.${ext.name}`,
+      name: ext.name,
+      namespace: ext.namespace,
+      displayName: ext.displayName || ext.name,
+      description: ext.description || '',
+      version: ext.version,
+      author: ext.publishedBy?.loginName || ext.namespace,
+      iconUrl: ext.files?.icon,
+      downloadUrl: ext.files?.download,
+      category,
+      tags: ext.tags || [],
+      downloads: ext.downloadCount || 0,
+      rating: ext.averageRating || 0,
+      repository: ext.repository,
+      installed: this.installed.has(`${ext.namespace}.${ext.name}`),
+      enabled: this.installed.get(`${ext.namespace}.${ext.name}`)?.enabled,
+    };
   }
 
-  /** 获取推荐扩展 */
-  getFeatured(): ExtensionInfo[] {
-    return FEATURED_EXTENSIONS.map(ext => ({ ...ext, installed: this.installed.has(ext.id), enabled: this.installed.get(ext.id)?.enabled }));
+  /** 检测扩展分类 */
+  private detectCategory(categories: string[], tags: string[]): ExtensionInfo['category'] {
+    const all = [...categories, ...tags].map(s => s.toLowerCase());
+    if (all.some(t => t.includes('theme'))) return 'theme';
+    if (all.some(t => t.includes('snippet'))) return 'snippet';
+    if (all.some(t => t.includes('language') || t.includes('linter') || t.includes('formatter'))) return 'language';
+    if (all.some(t => t.includes('ai') || t.includes('copilot'))) return 'ai';
+    return 'tool';
   }
 
-  /** 搜索扩展 */
-  search(query: string, category?: string): ExtensionInfo[] {
-    const q = query.toLowerCase();
-    return FEATURED_EXTENSIONS.filter(ext => {
-      if (category && category !== 'all' && ext.category !== category) return false;
-      return ext.name.toLowerCase().includes(q) || ext.displayName.toLowerCase().includes(q) || ext.description.toLowerCase().includes(q) || ext.tags.some(t => t.includes(q));
-    }).map(ext => ({ ...ext, installed: this.installed.has(ext.id), enabled: this.installed.get(ext.id)?.enabled }));
+  /** 从 Open VSX 搜索扩展 */
+  async searchOnline(query: string, category?: string, size = 20): Promise<ExtensionInfo[]> {
+    try {
+      const cacheKey = `search:${query}:${category}:${size}`;
+      const cached = this.cache.get(cacheKey);
+      if (cached && Date.now() - cached.time < this.cacheTimeout) return cached.data;
+
+      const params = new URLSearchParams({ query, size: size.toString(), sortBy: 'downloadCount', sortOrder: 'desc' });
+      if (category && category !== 'all') params.append('category', category);
+
+      const res = await fetch(`${OPEN_VSX_API}/-/search?${params}`);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+      const data: OpenVSXSearchResult = await res.json();
+      const extensions = data.extensions.map(ext => this.convertExtension(ext));
+      this.cache.set(cacheKey, { data: extensions, time: Date.now() });
+      return extensions;
+    } catch (err) {
+      console.error('[Marketplace] 搜索失败:', err);
+      return [];
+    }
+  }
+
+  /** 获取热门扩展（首页推荐） */
+  async getFeatured(): Promise<ExtensionInfo[]> {
+    const cacheKey = 'featured';
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() - cached.time < this.cacheTimeout) return cached.data;
+
+    try {
+      const extensions = await Promise.all(
+        POPULAR_EXTENSIONS.map(async id => {
+          const [namespace, name] = id.split('.');
+          try {
+            const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`);
+            if (!res.ok) return null;
+            const ext: OpenVSXExtension = await res.json();
+            return this.convertExtension(ext);
+          } catch { return null; }
+        })
+      );
+      const result = extensions.filter((e): e is ExtensionInfo => e !== null);
+      this.cache.set(cacheKey, { data: result, time: Date.now() });
+      return result;
+    } catch (err) {
+      console.error('[Marketplace] 获取推荐失败:', err);
+      return [];
+    }
+  }
+
+  /** 搜索扩展（本地已安装 + 在线） */
+  async search(query: string, category?: string): Promise<ExtensionInfo[]> {
+    if (!query.trim()) return this.getFeatured();
+    return this.searchOnline(query, category);
   }
 
   /** 按分类获取 */
-  getByCategory(category: string): ExtensionInfo[] {
-    return category === 'all' ? this.getFeatured() : FEATURED_EXTENSIONS.filter(ext => ext.category === category).map(ext => ({ ...ext, installed: this.installed.has(ext.id) }));
+  async getByCategory(category: string): Promise<ExtensionInfo[]> {
+    if (category === 'all') return this.getFeatured();
+    return this.searchOnline('', category, 30);
   }
 
   /** 获取已安装扩展 */
   getInstalled(): ExtensionInfo[] { return Array.from(this.installed.values()); }
 
-  /** 安装并激活扩展 */
+  /** 安装并激活扩展（从缓存或在线获取信息） */
   async install(extensionId: string): Promise<boolean> {
-    const ext = FEATURED_EXTENSIONS.find(e => e.id === extensionId);
-    if (!ext) return false;
+    // 先从缓存查找
+    let ext: ExtensionInfo | undefined;
+    for (const [, cached] of this.cache) {
+      ext = cached.data.find(e => e.id === extensionId);
+      if (ext) break;
+    }
+    // 缓存没有则在线获取
+    if (!ext) {
+      const [namespace, name] = extensionId.split('.');
+      if (!namespace || !name) return false;
+      try {
+        const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`);
+        if (!res.ok) return false;
+        const data: OpenVSXExtension = await res.json();
+        ext = this.convertExtension(data);
+      } catch { return false; }
+    }
     const installedExt = { ...ext, installed: true, enabled: true };
     this.installed.set(ext.id, installedExt);
     this.saveInstalled();
-    this.activate(extensionId); // 自动激活
+    this.activate(extensionId);
     this.emit('install', installedExt);
     console.log(`[Marketplace] 安装扩展: ${ext.displayName}`);
     return true;

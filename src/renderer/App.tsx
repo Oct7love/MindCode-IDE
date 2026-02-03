@@ -515,13 +515,21 @@ const ExtensionsPanel: React.FC = () => {
   const [installed, setInstalled] = useState<ExtensionInfo[]>([]);
   const [featured, setFeatured] = useState<ExtensionInfo[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showMarketplace, setShowMarketplace] = useState(false);
 
-  useEffect(() => { setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); }, []);
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setInstalled(marketplaceService.getInstalled());
+    const list = search ? await marketplaceService.search(search) : await marketplaceService.getFeatured();
+    setFeatured(list.slice(0, 6));
+    setIsLoading(false);
+  }, [search]);
 
-  const handleInstall = async (ext: ExtensionInfo) => { setLoading(ext.id); await marketplaceService.install(ext.id); setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); setLoading(null); };
-  const handleUninstall = async (ext: ExtensionInfo) => { setLoading(ext.id); await marketplaceService.uninstall(ext.id); setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); setLoading(null); };
-  const filteredFeatured = search ? marketplaceService.search(search).slice(0, 8) : featured;
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleInstall = async (ext: ExtensionInfo) => { setLoading(ext.id); await marketplaceService.install(ext.id); await loadData(); setLoading(null); };
+  const handleUninstall = async (ext: ExtensionInfo) => { setLoading(ext.id); await marketplaceService.uninstall(ext.id); await loadData(); setLoading(null); };
 
   return (
     <div className="extensions-panel">
@@ -539,17 +547,17 @@ const ExtensionsPanel: React.FC = () => {
         </div>
       )}
       <div className="ext-section">
-        <div className="ext-section-title">{search ? '搜索结果' : '推荐'}</div>
-        {filteredFeatured.map(ext => (
+        <div className="ext-section-title">{search ? '搜索结果' : '推荐 (Open VSX)'}</div>
+        {isLoading ? <div className="ext-item"><span className="ext-item-icon">⏳</span><div className="ext-item-info"><div className="ext-item-name">正在加载...</div></div></div> : featured.length === 0 ? <div className="ext-item"><span className="ext-item-icon">📭</span><div className="ext-item-info"><div className="ext-item-name">暂无数据</div></div></div> : featured.map(ext => (
           <div key={ext.id} className="ext-item">
-            <span className="ext-item-icon">{ext.icon || '📦'}</span>
-            <div className="ext-item-info"><div className="ext-item-name">{ext.displayName}</div><div className="ext-item-meta">⬇️{(ext.downloads/1000).toFixed(0)}k ⭐{ext.rating}</div></div>
+            <span className="ext-item-icon">{ext.iconUrl ? <img src={ext.iconUrl} alt="" style={{ width: 18, height: 18, borderRadius: 2 }} /> : '📦'}</span>
+            <div className="ext-item-info"><div className="ext-item-name">{ext.displayName}</div><div className="ext-item-meta">⬇️{(ext.downloads/1000).toFixed(0)}k ⭐{ext.rating.toFixed(1)}</div></div>
             {ext.installed ? <span className="ext-item-installed">✓</span> : <button className="ext-item-btn install" onClick={() => handleInstall(ext)} disabled={loading === ext.id}>{loading === ext.id ? '...' : '安装'}</button>}
           </div>
         ))}
       </div>
       <button className="ext-open-marketplace" onClick={() => setShowMarketplace(true)}>🏪 打开扩展市场</button>
-      <ExtensionMarketplace isOpen={showMarketplace} onClose={() => { setShowMarketplace(false); setInstalled(marketplaceService.getInstalled()); setFeatured(marketplaceService.getFeatured().slice(0, 6)); }} />
+      <ExtensionMarketplace isOpen={showMarketplace} onClose={() => loadData()} />
     </div>
   );
 };
