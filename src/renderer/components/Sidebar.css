@@ -143,3 +143,41 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ========== Extensions Panel ========== */
+.extensions-panel { padding: 0; }
+.ext-search-box { padding: 8px 12px; border-bottom: 1px solid var(--color-border-subtle); }
+.ext-search-input { width: 100%; padding: 6px 10px; background: var(--color-bg-primary); border: 1px solid var(--color-border-subtle); border-radius: 4px; color: var(--color-text-primary); font-size: 12px; }
+.ext-search-input:focus { outline: none; border-color: var(--color-accent-blue); }
+.ext-section { padding: 8px 0; border-bottom: 1px solid var(--color-border-subtle); }
+.ext-section-title { padding: 4px 12px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); }
+.ext-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; }
+.ext-item:hover { background: var(--color-bg-hover); }
+.ext-item-icon { font-size: 20px; width: 28px; text-align: center; }
+.ext-item-info { flex: 1; min-width: 0; }
+.ext-item-name { font-size: 12px; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ext-item-author, .ext-item-meta { font-size: 10px; color: var(--color-text-muted); }
+.ext-item-btn { padding: 3px 8px; border: none; border-radius: 4px; font-size: 10px; cursor: pointer; }
+.ext-item-btn.install { background: var(--color-accent-blue); color: white; }
+.ext-item-btn.install:hover { background: #1a7fd4; }
+.ext-item-btn.uninstall { background: transparent; color: var(--color-text-muted); }
+.ext-item-btn.uninstall:hover { background: #ef4444; color: white; }
+.ext-item-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ext-item-installed { color: #22c55e; font-size: 12px; }
+.ext-open-marketplace { width: calc(100% - 24px); margin: 12px; padding: 8px 12px; background: var(--color-bg-hover); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-primary); font-size: 12px; cursor: pointer; }
+.ext-open-marketplace:hover { background: var(--color-accent-blue); color: white; border-color: var(--color-accent-blue); }
+
+/* ========== Search Panel ========== */
+.search-panel { padding: 12px; }
+.search-input { width: 100%; padding: 6px 10px; background: var(--color-bg-primary); border: 1px solid var(--color-border-subtle); border-radius: 4px; color: var(--color-text-primary); font-size: 12px; margin-bottom: 8px; }
+.search-options { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--color-text-muted); }
+.search-options label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.search-options input[type="checkbox"] { width: 12px; height: 12px; }
+
+/* ========== Git Panel ========== */
+.git-panel { padding: 12px; }
+.git-message textarea { width: 100%; padding: 8px; background: var(--color-bg-primary); border: 1px solid var(--color-border-subtle); border-radius: 4px; color: var(--color-text-primary); font-size: 12px; resize: none; margin-bottom: 8px; }
+.git-commit-btn { width: 100%; padding: 6px 12px; background: var(--color-accent-blue); border: none; border-radius: 4px; color: white; font-size: 12px; cursor: pointer; margin-bottom: 12px; }
+.git-commit-btn:hover { background: #1a7fd4; }
+.git-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 8px; }
+.git-empty { font-size: 11px; color: var(--color-text-muted); text-align: center; padding: 20px 0; }
