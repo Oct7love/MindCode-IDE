@@ -675,8 +675,9 @@ const App: React.FC = () => {
   // 侧边栏宽度状态 - 紧凑默认值
   const [sidebarWidth, setSidebarWidth] = useState(200);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
-  const sidebarMinWidth = 120;  // 最小可拖到 120px
-  const sidebarMaxWidth = 480;  // 最大可拖到 480px
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // 侧边栏折叠状态
+  const sidebarMinWidth = 120;
+  const sidebarMaxWidth = 480;
 
   // Phase 3: Diff Editor 面板状态
   const [showDiffPanel, setShowDiffPanel] = useState(false);
@@ -1346,7 +1347,7 @@ const App: React.FC = () => {
       // Ctrl+B - 打开/关闭侧边栏
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
-        // TODO: 实现侧边栏折叠
+        setSidebarCollapsed(prev => !prev);
         return;
       }
 
@@ -1900,6 +1901,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Sidebar */}
+        {!sidebarCollapsed && (
         <div
           className="sidebar"
           onDragEnter={handleDragEnter}
@@ -1973,12 +1975,15 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
+        )}
 
         {/* Sidebar Resizer */}
+        {!sidebarCollapsed && (
         <div
           className={`sidebar-resizer${isResizingSidebar ? ' resizing' : ''}`}
           onMouseDown={handleSidebarResizeStart}
         />
+        )}
 
         {/* Editor */}
         <div className="editor-area">

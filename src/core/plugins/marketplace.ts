@@ -53,16 +53,26 @@ type ExtensionDeactivator = (ext: ExtensionInfo) => void;
 
 // 热门扩展 ID 列表（用于首页推荐）
 const POPULAR_EXTENSIONS = [
-  'dracula-theme.theme-dracula',        // Dracula 主题
-  'arcticicestudio.nord-visual-studio-code', // Nord 主题
-  'dsznajder.es7-react-js-snippets',    // React Snippets
-  'Vue.volar',                          // Vue 官方
-  'esbenp.prettier-vscode',             // Prettier
-  'dbaeumer.vscode-eslint',             // ESLint
-  'eamodio.gitlens',                    // GitLens
-  'PKief.material-icon-theme',          // Material Icons
-  'formulahendry.auto-rename-tag',      // Auto Rename Tag
-  'streetsidesoftware.code-spell-checker', // Spell Checker
+  'dracula-theme.theme-dracula',
+  'arcticicestudio.nord-visual-studio-code',
+  'dsznajder.es7-react-js-snippets',
+  'Vue.volar',
+  'esbenp.prettier-vscode',
+  'dbaeumer.vscode-eslint',
+  'eamodio.gitlens',
+  'PKief.material-icon-theme',
+];
+
+// 离线备用数据（当 API 不可用时显示）
+const FALLBACK_EXTENSIONS: ExtensionInfo[] = [
+  { id: 'dracula-theme.theme-dracula', name: 'theme-dracula', displayName: 'Dracula Official', description: 'Official Dracula Theme', version: '2.24.3', author: 'Dracula Theme', icon: '🧛', category: 'theme', tags: ['theme', 'dark'], downloads: 5000000, rating: 4.8 },
+  { id: 'arcticicestudio.nord-visual-studio-code', name: 'nord-visual-studio-code', displayName: 'Nord', description: 'An arctic, north-bluish clean theme', version: '0.19.0', author: 'arcticicestudio', icon: '❄️', category: 'theme', tags: ['theme', 'dark', 'nord'], downloads: 2000000, rating: 4.7 },
+  { id: 'dsznajder.es7-react-js-snippets', name: 'es7-react-js-snippets', displayName: 'ES7+ React Snippets', description: 'Extensions for React, Redux snippets', version: '4.4.3', author: 'dsznajder', icon: '⚛️', category: 'snippet', tags: ['react', 'snippet'], downloads: 8000000, rating: 4.9 },
+  { id: 'Vue.volar', name: 'volar', displayName: 'Vue - Official', description: 'Language Support for Vue', version: '2.0.0', author: 'Vue', icon: '💚', category: 'language', tags: ['vue', 'language'], downloads: 6000000, rating: 4.8 },
+  { id: 'esbenp.prettier-vscode', name: 'prettier-vscode', displayName: 'Prettier', description: 'Code formatter using prettier', version: '10.1.0', author: 'Prettier', icon: '🎨', category: 'tool', tags: ['formatter', 'prettier'], downloads: 30000000, rating: 4.7 },
+  { id: 'dbaeumer.vscode-eslint', name: 'vscode-eslint', displayName: 'ESLint', description: 'Integrates ESLint into VS Code', version: '2.4.2', author: 'Microsoft', icon: '🔧', category: 'tool', tags: ['linter', 'eslint'], downloads: 25000000, rating: 4.6 },
+  { id: 'eamodio.gitlens', name: 'gitlens', displayName: 'GitLens', description: 'Supercharge Git capabilities', version: '14.0.0', author: 'GitKraken', icon: '🔍', category: 'tool', tags: ['git', 'scm'], downloads: 20000000, rating: 4.9 },
+  { id: 'PKief.material-icon-theme', name: 'material-icon-theme', displayName: 'Material Icon Theme', description: 'Material Design Icons for VS Code', version: '4.30.0', author: 'Philipp Kief', icon: '📁', category: 'theme', tags: ['icons', 'theme'], downloads: 15000000, rating: 4.8 },
 ];
 
 class MarketplaceService {
@@ -151,7 +161,7 @@ class MarketplaceService {
       const params = new URLSearchParams({ query, size: size.toString(), sortBy: 'downloadCount', sortOrder: 'desc' });
       if (category && category !== 'all') params.append('category', category);
 
-      const res = await fetch(`${OPEN_VSX_API}/-/search?${params}`);
+      const res = await fetch(`${OPEN_VSX_API}/-/search?${params}`, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
 
       const data: OpenVSXSearchResult = await res.json();
@@ -159,8 +169,10 @@ class MarketplaceService {
       this.cache.set(cacheKey, { data: extensions, time: Date.now() });
       return extensions;
     } catch (err) {
-      console.error('[Marketplace] 搜索失败:', err);
-      return [];
+      console.warn('[Marketplace] 搜索失败，使用离线过滤:', err);
+      // 从备用数据中过滤
+      const q = query.toLowerCase();
+      return this.getFallbackExtensions().filter(ext => ext.name.toLowerCase().includes(q) || ext.displayName.toLowerCase().includes(q) || ext.description.toLowerCase().includes(q));
     }
   }
 
@@ -175,7 +187,7 @@ class MarketplaceService {
         POPULAR_EXTENSIONS.map(async id => {
           const [namespace, name] = id.split('.');
           try {
-            const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`);
+            const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`, { signal: AbortSignal.timeout(5000) });
             if (!res.ok) return null;
             const ext: OpenVSXExtension = await res.json();
             return this.convertExtension(ext);
@@ -183,12 +195,22 @@ class MarketplaceService {
         })
       );
       const result = extensions.filter((e): e is ExtensionInfo => e !== null);
-      this.cache.set(cacheKey, { data: result, time: Date.now() });
-      return result;
+      if (result.length > 0) {
+        this.cache.set(cacheKey, { data: result, time: Date.now() });
+        return result;
+      }
+      // API 返回空则使用备用数据
+      console.warn('[Marketplace] API 无数据，使用离线备用');
+      return this.getFallbackExtensions();
     } catch (err) {
-      console.error('[Marketplace] 获取推荐失败:', err);
-      return [];
+      console.warn('[Marketplace] API 不可用，使用离线备用:', err);
+      return this.getFallbackExtensions();
     }
+  }
+
+  /** 获取离线备用扩展列表 */
+  private getFallbackExtensions(): ExtensionInfo[] {
+    return FALLBACK_EXTENSIONS.map(ext => ({ ...ext, installed: this.installed.has(ext.id), enabled: this.installed.get(ext.id)?.enabled }));
   }
 
   /** 搜索扩展（本地已安装 + 在线） */
