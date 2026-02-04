@@ -1,0 +1,85 @@
+/* LSP 状态指示器样式 */
+
+.lsp-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  height: 22px;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  background: var(--vscode-statusBar-background);
+  cursor: pointer;
+  user-select: none;
+}
+
+.lsp-status:hover {
+  background: var(--vscode-statusBarItem-hoverBackground);
+}
+
+.lsp-status-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.lsp-status-text {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+/* 悬停提示 */
+.lsp-status-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  min-width: 180px;
+  background: var(--vscode-editorHoverWidget-background);
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.lsp-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+  color: var(--vscode-foreground);
+}
+
+.lsp-tooltip-capabilities {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lsp-tooltip-capabilities > div {
+  font-size: 11px;
+  padding: 2px 0;
+}
+
+.cap-active {
+  color: var(--vscode-testing-iconPassed);
+}
+
+.cap-inactive {
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.6;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

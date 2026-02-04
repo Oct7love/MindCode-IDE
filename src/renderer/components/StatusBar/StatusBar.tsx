@@ -3,12 +3,15 @@ import { useFileStore, SUPPORTED_LANGUAGES, EditorFile } from '../../stores';
 import { EncodingPicker } from '../EncodingPicker';
 import './StatusBar.css';
 
+interface LSPStatus { connected: boolean; language: string | null; } // LSP连接状态
+
 interface StatusBarProps {
   workspaceRoot: string | null;
   activeFile: EditorFile | undefined;
   zoomPercent: number;
   cursorPosition: { line: number; column: number };
   onLanguageChange: (fileId: string, language: string) => void;
+  lspStatus?: LSPStatus; // LSP状态
 }
 
 interface GitInfo {
@@ -29,6 +32,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   zoomPercent,
   cursorPosition,
   onLanguageChange,
+  lspStatus,
 }) => {
   const { setFileEncoding } = useFileStore();
   const [gitInfo, setGitInfo] = useState<GitInfo>({ branch: '', staged: 0, unstaged: 0, isRepo: false });
@@ -190,6 +194,16 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             </div>
           )}
         </div>
+
+        {/* LSP 状态 */}
+        {lspStatus && (
+          <span 
+            className={`status-item ${lspStatus.connected ? 'status-item-success' : 'status-item-dim'}`} 
+            title={lspStatus.connected ? `LSP: ${lspStatus.language} 已连接` : 'LSP: 未连接'}
+          >
+            {lspStatus.connected ? `⚡ ${lspStatus.language?.toUpperCase() || 'LSP'}` : '⚡ -'}
+          </span>
+        )}
 
         {/* 缩放 */}
         <span className="status-item" title="Ctrl+Shift++ 放大, Ctrl+Shift+- 缩小">

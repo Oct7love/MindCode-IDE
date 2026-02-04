@@ -91,7 +91,18 @@ export const ExtensionMarketplace: React.FC<ExtensionMarketplaceProps> = ({ isOp
         {/* 扩展列表 */}
         <div className="ext-list">
           {isLoading ? (
-            <div className="ext-empty">⏳ 正在从 Open VSX 加载扩展...</div>
+            <div className="ext-skeleton">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="ext-skeleton-card">
+                  <div className="ext-skeleton-icon" />
+                  <div className="ext-skeleton-content">
+                    <div className="ext-skeleton-title" />
+                    <div className="ext-skeleton-desc" />
+                    <div className="ext-skeleton-meta" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : displayList.length === 0 ? (
             <div className="ext-empty">{tab === 'installed' ? '暂无已安装扩展' : '未找到匹配的扩展'}</div>
           ) : (

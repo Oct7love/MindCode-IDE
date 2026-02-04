@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as monaco from 'monaco-editor';
 import { useCompletion } from '../hooks/useCompletion';
+import { useLSP } from '../hooks/useLSP';
 import './Editor.css';
 
 // 获取文件语言类型
@@ -51,13 +52,17 @@ interface EditorProps {
   onTabChange?: (tab: TabInfo) => void;
   onContentChange?: (tabId: string, content: string) => void;
   onSave?: (tabId: string, content: string) => void;
+  workspacePath?: string | null; // 工作区路径(LSP需要)
+  onLSPStatusChange?: (status: { connected: boolean; language: string | null }) => void; // LSP状态回调
 }
 
 const Editor: React.FC<EditorProps> = ({
   initialTabs,
   onTabChange,
   onContentChange,
-  onSave
+  onSave,
+  workspacePath,
+  onLSPStatusChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -65,6 +70,12 @@ const Editor: React.FC<EditorProps> = ({
 
   // 代码补全 Hook
   const { enabled: completionEnabled, registerProvider } = useCompletion();
+  
+  // LSP 语言服务器 Hook - 提供定义跳转/Hover/诊断
+  const lspState = useLSP(editorRef.current, { workspacePath, enabled: !!workspacePath });
+  
+  // 通知父组件 LSP 状态变化
+  useEffect(() => { onLSPStatusChange?.({ connected: lspState.connected, language: lspState.language }); }, [lspState.connected, lspState.language, onLSPStatusChange]);
 
   const [tabs, setTabs] = useState<TabInfo[]>(initialTabs || [{
     id: 'welcome',

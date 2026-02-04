@@ -40,6 +40,10 @@
   color: var(--color-text-tertiary);
 }
 
+.status-item-success {
+  color: var(--color-success, #4ec9b0);
+}
+
 /* Git 信息 */
 .status-item-git {
   color: var(--color-accent);

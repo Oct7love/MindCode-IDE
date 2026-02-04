@@ -43,8 +43,22 @@ function shouldUseBlockMode(content: string, lineNumber: number): boolean {
   return false;
 }
 
+/** 获取 LSP 补全并提取最佳项 */
+async function getLSPCompletion(lang: string, uri: string, line: number, col: number): Promise<string | null> {
+  try {
+    const win = window as any;
+    if (!win.mindcode?.lsp?.request) return null;
+    const result = await win.mindcode.lsp.request(lang, 'textDocument/completion', { textDocument: { uri }, position: { line, character: col } });
+    if (!result?.success || !result.data) return null;
+    const items = Array.isArray(result.data) ? result.data : result.data.items || [];
+    if (items.length === 0) return null;
+    const best = items.sort((a: any, b: any) => ((b.sortText || b.label) < (a.sortText || a.label) ? 1 : -1))[0]; // 取最佳匹配
+    return best?.insertText || best?.label || null;
+  } catch { return null; }
+}
+
 /**
- * 创建内联补全提供者
+ * 创建内联补全提供者 - 融合 LSP + AI
  */
 export function createInlineCompletionProvider(
   getFilePath: () => string
@@ -58,52 +72,37 @@ export function createInlineCompletionProvider(
     ): Promise<monaco.languages.InlineCompletions | null> => {
       const filePath = getFilePath();
       if (!filePath) return null;
-
-      // 检查是否被取消
       if (token.isCancellationRequested) return null;
 
       const content = model.getValue();
       const mode = shouldUseBlockMode(content, position.lineNumber) ? 'block' : 'inline';
+      const lang = model.getLanguageId();
+      const uri = `file://${filePath.replace(/\\/g, '/')}`;
 
-      const request: CompletionRequest = {
-        file_path: filePath,
-        content: content,
-        cursor_line: position.lineNumber - 1,
-        cursor_column: position.column - 1,
-        mode: mode,
-      };
+      // 并行获取 LSP 补全和 AI 补全
+      const [lspResult, aiResult] = await Promise.all([
+        getLSPCompletion(lang === 'typescriptreact' ? 'typescript' : lang, uri, position.lineNumber - 1, position.column - 1),
+        completionService.getCompletion({ file_path: filePath, content, cursor_line: position.lineNumber - 1, cursor_column: position.column - 1, mode }),
+      ]);
 
-      const response = await completionService.getCompletion(request);
-
-      // 再次检查取消状态
       if (token.isCancellationRequested) return null;
 
-      if (!response || !response.completion) {
-        return null;
-      }
+      // 融合策略：AI 优先（更智能），LSP 作为快速回退
+      let completion = aiResult?.completion;
+      let source = 'ai';
+      if (!completion && lspResult) { completion = lspResult; source = 'lsp'; }
+      if (!completion) return null;
 
       // 多行补全：计算结束位置
-      const completionLines = response.completion.split('\n');
+      const completionLines = completion.split('\n');
       const endLineNumber = position.lineNumber + completionLines.length - 1;
       const lastLineLength = completionLines[completionLines.length - 1].length;
-      const endColumn = completionLines.length === 1
-        ? position.column + lastLineLength
-        : lastLineLength + 1;
+      const endColumn = completionLines.length === 1 ? position.column + lastLineLength : lastLineLength + 1;
 
       const inlineCompletion: monaco.languages.InlineCompletion = {
-        insertText: response.completion,
-        range: new monaco.Range(
-          position.lineNumber,
-          position.column,
-          endLineNumber,
-          endColumn
-        ),
-        // 命令：补全被接受时执行（用于分析）
-        command: {
-          id: 'mindcode.completionAccepted',
-          title: 'Completion Accepted',
-          arguments: [response.model, response.latency_ms]
-        }
+        insertText: completion,
+        range: new monaco.Range(position.lineNumber, position.column, endLineNumber, endColumn),
+        command: { id: 'mindcode.completionAccepted', title: 'Completion Accepted', arguments: [source === 'ai' ? (aiResult?.model || 'ai') : 'lsp', aiResult?.latency_ms || 0] }
       };
 
       return {

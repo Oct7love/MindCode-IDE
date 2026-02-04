@@ -17,6 +17,7 @@ import type {
 import { IndexStore, createIndexStore } from './storage/sqliteStore';
 import { SymbolExtractor, createSymbolExtractor } from './extractor/symbolExtractor';
 import { HybridSearch, createHybridSearch } from './search/hybridSearch';
+import { getEmbeddingsService } from './embeddings';
 
 /** 索引服务事件 */
 export interface IndexServiceEvents {
@@ -53,8 +54,8 @@ export class IndexService {
         '**/.git/**', '**/coverage/**', '**/*.min.js',
       ],
       maxFileSize: 1024 * 1024, // 1MB
-      enableEmbeddings: false, // 暂时禁用向量索引
-      embeddingModel: 'openai-text-embedding-3-small',
+      enableEmbeddings: true, // 启用向量索引增强语义搜索
+      embeddingModel: 'text-embedding-3-small',
       incrementalIndex: true,
       concurrency: 4,
       supportedLanguages: ['typescript', 'javascript', 'python', 'go', 'rust', 'java', 'c', 'cpp'],
@@ -190,7 +191,18 @@ export class IndexService {
     this.store.saveSymbols(result.symbols);
     this.store.saveCallRelations(result.callRelations);
     this.store.saveFileDependencies(result.dependencies);
-    this.store.saveCodeChunks(result.chunks);
+    
+    // 为代码块生成向量嵌入（如果启用）
+    let chunksToSave = result.chunks;
+    if (this.config.enableEmbeddings && result.chunks.length > 0) {
+      try {
+        const embService = getEmbeddingsService({ model: this.config.embeddingModel });
+        const texts = result.chunks.map(c => c.text.slice(0, 2000)); // 截断长文本
+        const embeddings = await embService.embedBatch(texts);
+        chunksToSave = result.chunks.map((c, i) => ({ ...c, embedding: embeddings[i]?.embedding, embeddingModel: this.config.embeddingModel }));
+      } catch (e) { console.warn('[IndexService] 向量嵌入生成失败，跳过:', e); }
+    }
+    this.store.saveCodeChunks(chunksToSave);
     
     return result.symbols.length;
   }

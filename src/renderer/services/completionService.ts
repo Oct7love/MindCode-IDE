@@ -175,6 +175,28 @@ class CompletionService {
       this.prefetch({ file_path: filePath, content, cursor_line: line, cursor_column: lineContent.length, mode: 'inline' });
     }
   }
+  
+  /** 高优先级预取 - 基于代码结构和光标移动方向 */
+  prefetchSmart(filePath: string, content: string, currentLine: number, direction: 'up' | 'down' = 'down'): void {
+    const lines = content.split('\n');
+    const targets: number[] = [];
+    // 基于移动方向预取
+    const step = direction === 'down' ? 1 : -1;
+    for (let i = 1; i <= 3; i++) {
+      const line = currentLine + i * step;
+      if (line >= 0 && line < lines.length) targets.push(line);
+    }
+    // 检测代码结构热点(函数定义后、循环/条件语句内)
+    const currentLineText = lines[currentLine] || '';
+    if (/^\s*(function|const\s+\w+\s*=|class|if|for|while|switch)\b/.test(currentLineText)) {
+      for (let i = 1; i <= 5; i++) { if (currentLine + i < lines.length) targets.push(currentLine + i); }
+    }
+    // 去重并预取
+    [...new Set(targets)].slice(0, 5).forEach(line => {
+      const lineContent = lines[line] || '';
+      if (lineContent.trim()) this.prefetch({ file_path: filePath, content, cursor_line: line, cursor_column: lineContent.length, mode: 'inline' });
+    });
+  }
 
   cancel(): void {
     this.pendingRequest?.abort();

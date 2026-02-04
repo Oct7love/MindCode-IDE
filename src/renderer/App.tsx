@@ -585,6 +585,9 @@ const App: React.FC = () => {
   
   // 光标位置
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+  
+  // LSP 连接状态
+  const [lspStatus, setLspStatus] = useState<{ connected: boolean; language: string | null }>({ connected: false, language: null });
 
   // Command Palette 状态
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -2025,7 +2028,7 @@ const App: React.FC = () => {
           <div className="editor-content" style={{ flex: showTerminal ? `1 1 calc(100% - ${terminalHeight}px)` : '1 1 100%' }}>
             {activeFile ? (
               <EditorErrorBoundary>
-                <CodeEditor file={{ path: activeFile.path, content: activeFile.content }} onContentChange={updateFileContent} onSave={saveFile} onCursorPositionChange={(line, column) => setCursorPosition({ line, column })} />
+                <CodeEditor file={{ path: activeFile.path, content: activeFile.content }} onContentChange={updateFileContent} onSave={saveFile} onCursorPositionChange={(line, column) => setCursorPosition({ line, column })} workspacePath={workspaceRoot} onLSPStatusChange={setLspStatus} />
               </EditorErrorBoundary>
             ) : (
               <div className="editor-scroll">
@@ -2179,6 +2182,7 @@ const App: React.FC = () => {
         zoomPercent={zoomPercent}
         cursorPosition={cursorPosition}
         onLanguageChange={(id, lang) => setFileLanguage(id, lang)}
+        lspStatus={lspStatus}
       />
 
       {!showAI && <button className="chat-fab" onClick={() => setShowAI(true)}><Icons.Chat /></button>}

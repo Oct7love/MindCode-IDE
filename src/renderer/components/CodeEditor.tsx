@@ -7,11 +7,8 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import * as monaco from 'monaco-editor';
 import { InlineEditWidget } from './InlineEditWidget';
 import { completionService, CompletionRequest } from '../services/completionService';
-import {
-  triggerInlineCompletion,
-  acceptCompletionWord,
-  acceptCompletionLine,
-} from '../services/inlineCompletionProvider';
+import { triggerInlineCompletion, acceptCompletionWord, acceptCompletionLine } from '../services/inlineCompletionProvider';
+import { useLSP } from '../hooks/useLSP';
 
 // 配置 Monaco Worker - 使用 Vite 兼容的静态导入方式
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -191,11 +188,9 @@ interface CodeEditorProps {
   fontSize?: number;
   enableGhostText?: boolean; // 启用 Ghost Text 补全
   completionModel?: string; // 补全使用的模型
-  onAIEdit?: (prompt: string, code: string, callbacks: {
-    onToken: (token: string) => void;
-    onComplete: (result: string) => void;
-    onError: (error: string) => void;
-  }) => void;
+  workspacePath?: string | null; // 工作区路径(LSP需要)
+  onLSPStatusChange?: (status: { connected: boolean; language: string | null }) => void; // LSP状态回调
+  onAIEdit?: (prompt: string, code: string, callbacks: { onToken: (token: string) => void; onComplete: (result: string) => void; onError: (error: string) => void; }) => void;
 }
 
 // AI 代码补全提供者
@@ -312,6 +307,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   fontSize = 12, // 紧凑模式
   enableGhostText = true,
   completionModel = 'gemini-2.5-flash-lite', // 使用 Gemini 2.5 Flash Lite 做代码补全
+  workspacePath,
+  onLSPStatusChange,
   onAIEdit,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -323,6 +320,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const [inlineEditPosition, setInlineEditPosition] = useState({ top: 0, left: 0 });
   const [selectedCode, setSelectedCode] = useState('');
   const [selectionRange, setSelectionRange] = useState<monaco.Range | null>(null);
+  
+  // LSP 语言服务器集成 - 提供定义跳转/Hover/诊断
+  const lspState = useLSP(editorRef.current, { workspacePath, enabled: !!workspacePath });
+  useEffect(() => { onLSPStatusChange?.({ connected: lspState.connected, language: lspState.language }); }, [lspState.connected, lspState.language, onLSPStatusChange]);
 
   // 注册 Ghost Text 补全提供者（使用本地补全服务）
   useEffect(() => {
