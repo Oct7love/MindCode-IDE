@@ -2582,10 +2582,78 @@
   background: transparent;
   cursor: ns-resize;
   transition: background 0.15s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
 }
 
 .bottom-panel-resizer:hover {
   background: var(--color-accent-blue);
+}
+
+/* 底部面板标签页 */
+.bottom-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  height: 35px;
+  background: var(--vscode-editorGroupHeader-tabsBackground, var(--color-bg-secondary));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bottom-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--vscode-tab-inactiveForeground, var(--color-text-tertiary));
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.bottom-tab:hover {
+  color: var(--vscode-tab-activeForeground, var(--color-text-primary));
+  background: var(--vscode-tab-hoverBackground, var(--color-bg-hover));
+}
+
+.bottom-tab.active {
+  color: var(--vscode-tab-activeForeground, var(--color-text-primary));
+  border-bottom-color: var(--vscode-tab-activeBorderTop, var(--color-accent-blue));
+}
+
+.bottom-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bottom-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--vscode-icon-foreground, var(--color-text-tertiary));
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.bottom-tab-close:hover {
+  background: var(--vscode-toolbar-hoverBackground, var(--color-bg-hover));
+}
+
+.bottom-tab-close svg {
+  width: 14px;
+  height: 14px;
 }
 
 .bottom-panel-content {

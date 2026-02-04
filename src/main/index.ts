@@ -12,8 +12,13 @@ import { LLMClient, classifyError, getUserFriendlyError } from '../core/ai/llm-c
 import { startupTracker, markStartup, logStartupReport } from '../core/performance';
 import { warmupConnections, StreamBuffer } from '../core/ai/request-optimizer';
 import { readFileWithEncoding, writeFileWithEncoding, detectEncoding, SUPPORTED_ENCODINGS, EncodingId } from '../core/encoding';
+import { getRequestPipeline } from '../core/ai/request-pipeline';
 
 markStartup('main_start');
+
+// 初始化请求管道
+const aiPipeline = getRequestPipeline();
+aiPipeline.setMaxConcurrent(2); // 限制AI并发数为2,避免过载
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -445,27 +450,51 @@ function getProviderForModel(model: string) {
   return providers.codesuc;
 }
 
-// AI 聊天（非流式）- 使用 LLM 客户端
+// AI 聊天（非流式）- 使用 LLM 客户端 + 请求管道
 ipcMain.handle('ai-chat', async (_event, { model, messages }) => {
   console.log(`[AI] chat request: model=${model}, messages=${messages.length}`);
-  const result = await getLLMClient().chat({ model, messages });
+  
+  // 使用管道控制并发
+  const result = await aiPipeline.add(
+    () => getLLMClient().chat({ model, messages }),
+    1 // 普通优先级
+  );
+  
   console.log(`[AI] chat result: success=${result.success}, model=${result.model}, fallback=${result.usedFallback}`);
   if (result.success) return { success: true, data: result.data, model: result.model, usedFallback: result.usedFallback };
   return { success: false, error: getUserFriendlyError(result.error!), errorType: result.error?.type };
 });
 
-// AI 聊天（流式）- 使用 LLM 客户端 + StreamBuffer 优化
+// AI 聊天（流式）- 使用 LLM 客户端 + StreamBuffer 优化 + 请求管道
 ipcMain.on('ai-chat-stream', async (event, { model, messages, requestId }) => {
   console.log(`[AI] stream request: id=${requestId}, model=${model}, mode=chat`);
   const buffer = new StreamBuffer((text) => event.sender.send('ai-stream-token', { requestId, token: text }), 16);
-  try {
-    await getLLMClient().chatStream({ model, messages }, {
+  
+  // 使用管道控制并发
+  aiPipeline.add(
+    () => getLLMClient().chatStream({ model, messages }, {
       onToken: (token) => buffer.push(token),
-      onComplete: (fullText, meta) => { buffer.destroy(); console.log(`[AI] stream complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
-      onError: (error) => { buffer.destroy(); console.error(`[AI] stream error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
-      onFallback: (from, to) => { console.log(`[AI] fallback: ${from} -> ${to}`); event.sender.send('ai-stream-fallback', { requestId, from, to }); }
-    });
-  } catch (e: any) { buffer.destroy(); console.error(`[AI] stream exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
+      onComplete: (fullText, meta) => { 
+        buffer.destroy(); 
+        console.log(`[AI] stream complete: id=${requestId}, model=${meta.model}`); 
+        event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); 
+      },
+      onError: (error) => { 
+        buffer.destroy(); 
+        console.error(`[AI] stream error: id=${requestId}`, error); 
+        event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); 
+      },
+      onFallback: (from, to) => { 
+        console.log(`[AI] fallback: ${from} -> ${to}`); 
+        event.sender.send('ai-stream-fallback', { requestId, from, to }); 
+      }
+    }),
+    2 // 流式请求高优先级
+  ).catch(e => {
+    buffer.destroy(); 
+    console.error(`[AI] stream exception: id=${requestId}`, e); 
+    event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' });
+  });
 });
 
 // AI 聊天（流式 + 工具调用）- 使用 LLM 客户端 + StreamBuffer 优化
@@ -1432,4 +1461,167 @@ ipcMain.handle('lsp:status', async (_event, language: string) => {
 // 监听 LSP 通知并转发到渲染进程
 lspManager.on('notification', (language, method, params) => {
   mainWindow?.webContents.send('lsp:notification', { language, method, params });
+});
+
+// ============ 调试器操作 ============
+import { debuggerManager } from '../core/debugger';
+
+// 启动调试会话
+ipcMain.handle('debug:start', async (_event, config: any) => {
+  try {
+    const sessionId = await debuggerManager.startSession(config);
+    return { success: true, sessionId };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 停止调试会话
+ipcMain.handle('debug:stop', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.stopSession(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 继续执行
+ipcMain.handle('debug:continue', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.continue(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 单步跳过
+ipcMain.handle('debug:stepOver', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.stepOver(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 单步进入
+ipcMain.handle('debug:stepInto', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.stepInto(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 单步跳出
+ipcMain.handle('debug:stepOut', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.stepOut(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 暂停
+ipcMain.handle('debug:pause', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.pause(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 重启
+ipcMain.handle('debug:restart', async (_event, sessionId?: string) => {
+  try {
+    await debuggerManager.restart(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 添加断点
+ipcMain.handle('debug:addBreakpoint', async (_event, file: string, line: number, options?: any) => {
+  try {
+    const breakpoint = debuggerManager.addBreakpoint(file, line, options);
+    return { success: true, breakpoint };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 移除断点
+ipcMain.handle('debug:removeBreakpoint', async (_event, breakpointId: string) => {
+  try {
+    debuggerManager.removeBreakpoint(breakpointId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 切换断点
+ipcMain.handle('debug:toggleBreakpoint', async (_event, file: string, line: number) => {
+  try {
+    const breakpoint = debuggerManager.toggleBreakpoint(file, line);
+    return { success: true, breakpoint };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取断点列表
+ipcMain.handle('debug:getBreakpoints', async (_event, file?: string) => {
+  try {
+    const breakpoints = debuggerManager.getBreakpoints(file);
+    return { success: true, breakpoints };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取变量
+ipcMain.handle('debug:getVariables', async (_event, frameId?: number) => {
+  try {
+    const variables = await debuggerManager.getVariables(frameId);
+    return { success: true, variables };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 求值表达式
+ipcMain.handle('debug:evaluate', async (_event, expression: string, frameId?: number) => {
+  try {
+    const result = await debuggerManager.evaluate(expression, frameId);
+    return { success: true, result };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取调试会话
+ipcMain.handle('debug:getSession', async (_event, sessionId?: string) => {
+  try {
+    const session = debuggerManager.getSession(sessionId);
+    return { success: true, session };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 获取所有会话
+ipcMain.handle('debug:listSessions', async () => {
+  try {
+    const sessions = debuggerManager.listSessions();
+    return { success: true, sessions };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 });

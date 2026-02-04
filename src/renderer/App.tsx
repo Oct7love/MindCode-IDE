@@ -16,6 +16,8 @@ import { GitPanel } from './components/GitPanel';
 import { AIPanel } from './components/AIPanel';
 import { DiffEditorPanel } from './components/DiffEditorPanel';
 import { ComposerPanel } from './components/ComposerPanel';
+import { DebugPanel } from './components/Debugger';
+import { DiagnosticsPanel } from './components/LSP';
 import { applyTheme, loadTheme, saveTheme } from './utils/themes';
 import { useFileStore, SUPPORTED_LANGUAGES, EditorFile } from './stores';
 import { MindCodeLogo } from './components/MindCodeLogo';
@@ -24,6 +26,9 @@ import { StatusBar } from './components/StatusBar';
 import { ErrorBoundary, AIPanelErrorBoundary, EditorErrorBoundary } from './components/ErrorBoundary';
 import { ExtensionMarketplace } from './components/ExtensionMarketplace';
 import { marketplaceService, type ExtensionInfo } from '../core/plugins/marketplace';
+import { preloadCriticalComponents, preloadAIComponents } from './utils/lazyComponents';
+import { markStartupPoint, deferNonCriticalResources, precompileMonacoLanguages } from './services/startupOptimizer';
+import { fixTabSwitchFocus, startPeriodicCleanup } from './services/bugFixes';
 
 // ==================== VSCode 风格 Codicon 图标 ====================
 const Icons = {
@@ -670,10 +675,11 @@ const App: React.FC = () => {
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
 
-  // 终端状态
-  const [showTerminal, setShowTerminal] = useState(false);
-  const [terminalHeight, setTerminalHeight] = useState(250);
-  const [isResizingTerminal, setIsResizingTerminal] = useState(false);
+  // 底部面板状态
+  const [showBottomPanel, setShowBottomPanel] = useState(false);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(250);
+  const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
+  const [bottomPanelTab, setBottomPanelTab] = useState<'terminal' | 'diagnostics'>('terminal');
 
   // 侧边栏宽度状态 - 紧凑默认值
   const [sidebarWidth, setSidebarWidth] = useState(200);
@@ -1354,17 +1360,34 @@ const App: React.FC = () => {
         return;
       }
 
-      // Ctrl+` - 打开/关闭终端
+      // Ctrl+` - 打开/关闭底部面板
       if ((e.ctrlKey || e.metaKey) && e.key === '`') {
         e.preventDefault();
-        setShowTerminal(prev => !prev);
+        setShowBottomPanel(prev => !prev);
+        setBottomPanelTab('terminal');
         return;
       }
 
-      // Ctrl+J - 打开/关闭终端（备选快捷键）
+      // Ctrl+J - 打开/关闭底部面板（备选快捷键）
       if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
         e.preventDefault();
-        setShowTerminal(prev => !prev);
+        setShowBottomPanel(prev => !prev);
+        setBottomPanelTab('terminal');
+        return;
+      }
+
+      // F5 - 启动调试
+      if (e.key === 'F5' && !e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        setTab('debug');
+        // TODO: 触发调试启动
+        return;
+      }
+
+      // F9 - 切换断点
+      if (e.key === 'F9' && !e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        // TODO: 在当前行切换断点
         return;
       }
 
@@ -1492,14 +1515,26 @@ const App: React.FC = () => {
     },
     {
       id: 'terminal.toggle',
-      label: '打开/关闭终端',
+      label: '打开/关闭底部面板',
       shortcut: 'Ctrl+`',
-      action: () => setShowTerminal(prev => !prev)
+      action: () => setShowBottomPanel(prev => !prev)
     },
     {
       id: 'terminal.new',
       label: '新建终端',
-      action: () => setShowTerminal(true)
+      action: () => { setShowBottomPanel(true); setBottomPanelTab('terminal'); }
+    },
+    {
+      id: 'debug.start',
+      label: '启动调试',
+      shortcut: 'F5',
+      action: () => setTab('debug')
+    },
+    {
+      id: 'debug.toggleBreakpoint',
+      label: '切换断点',
+      shortcut: 'F9',
+      action: () => console.log('Toggle breakpoint')
     },
   ], [handleOpenFolder, activeFile, activeFileId, closeFile, saveFile, createNewConversation]);
 
@@ -1624,7 +1659,8 @@ const App: React.FC = () => {
           setTab('git');
           break;
         case 'menu:toggleTerminal':
-          setShowTerminal(prev => !prev);
+          setShowBottomPanel(prev => !prev);
+          setBottomPanelTab('terminal');
           break;
         case 'menu:toggleAI':
           setShowAI(prev => !prev);
@@ -1706,7 +1742,7 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [workspaceRoot]);
 
-  // 主题初始化 + 扩展初始化
+  // 主题初始化 + 扩展初始化 + 性能优化
   useEffect(() => {
     const initTheme = async () => {
       if (document.readyState === 'loading') {
@@ -1716,6 +1752,21 @@ const App: React.FC = () => {
       applyTheme(themeId);
       // 初始化已安装扩展
       marketplaceService.initializeExtensions();
+      
+      // 性能优化: 预加载关键组件
+      markStartupPoint('theme_loaded');
+      preloadCriticalComponents();
+      
+      // 启动定期清理任务 (Bug修复)
+      startPeriodicCleanup();
+      
+      // 延迟加载非关键资源
+      setTimeout(() => {
+        deferNonCriticalResources();
+        precompileMonacoLanguages();
+        preloadAIComponents();
+        markStartupPoint('deferred_loaded');
+      }, 1500);
     };
     initTheme();
 
@@ -1895,6 +1946,7 @@ const App: React.FC = () => {
             <button className={`activity-action${tab === 'files' ? ' active' : ''}`} onClick={() => setTab('files')} title="Explorer"><Icons.Files /></button>
             <button className={`activity-action${tab === 'search' ? ' active' : ''}`} onClick={() => setTab('search')} title="Search"><Icons.Search /></button>
             <button className={`activity-action${tab === 'git' ? ' active' : ''}`} onClick={() => setTab('git')} title="Source Control"><Icons.Git /></button>
+            <button className={`activity-action${tab === 'debug' ? ' active' : ''}`} onClick={() => setTab('debug')} title="Run and Debug"><Icons.Debug /></button>
             <button className={`activity-action${tab === 'ext' ? ' active' : ''}`} onClick={() => setTab('ext')} title="Extensions"><Icons.Extensions /></button>
           </div>
           <div className="activitybar-bottom">
@@ -1917,6 +1969,7 @@ const App: React.FC = () => {
             {tab === 'files' && 'Explorer'}
             {tab === 'search' && 'Search'}
             {tab === 'git' && 'Source Control'}
+            {tab === 'debug' && 'Run and Debug'}
             {tab === 'ext' && 'Extensions'}
           </div>
           <div className="sidebar-body">
@@ -1965,6 +2018,8 @@ const App: React.FC = () => {
                 <p>使用 Ctrl+Shift+F 进行全局搜索</p>
               </div>
             )}
+            {/* 调试面板 */}
+            {tab === 'debug' && <DebugPanel />}
             {/* 扩展面板 */}
             {tab === 'ext' && <ExtensionsPanel />}
           </div>
@@ -2025,10 +2080,10 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="editor-content" style={{ flex: showTerminal ? `1 1 calc(100% - ${terminalHeight}px)` : '1 1 100%' }}>
+          <div className="editor-content" style={{ flex: showBottomPanel ? `1 1 calc(100% - ${bottomPanelHeight}px)` : '1 1 100%' }}>
             {activeFile ? (
               <EditorErrorBoundary>
-                <CodeEditor file={{ path: activeFile.path, content: activeFile.content }} onContentChange={updateFileContent} onSave={saveFile} onCursorPositionChange={(line, column) => setCursorPosition({ line, column })} workspacePath={workspaceRoot} onLSPStatusChange={setLspStatus} />
+                <CodeEditor file={{ path: activeFile.path, content: activeFile.content }} onContentChange={updateFileContent} onSave={saveFile} onCursorPositionChange={(line, column) => setCursorPosition({ line, column })} workspacePath={workspaceRoot} />
               </EditorErrorBoundary>
             ) : (
               <div className="editor-scroll">
@@ -2055,7 +2110,7 @@ const App: React.FC = () => {
                       <span className="shortcut-text">快速打开</span>
                       <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>P</kbd></div>
                     </div>
-                    <div className="shortcut" onClick={() => setShowTerminal(v => !v)} role="button" tabIndex={0}>
+                    <div className="shortcut" onClick={() => { setShowBottomPanel(v => !v); setBottomPanelTab('terminal'); }} role="button" tabIndex={0}>
                       <span className="shortcut-text">打开终端</span>
                       <div className="shortcut-keys"><kbd>Ctrl</kbd><kbd>`</kbd></div>
                     </div>
@@ -2072,25 +2127,25 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* 终端面板 */}
-          {showTerminal && (
-            <div className="bottom-panel" style={{ height: terminalHeight }}>
+          {/* 底部面板 (终端 + 诊断) */}
+          {showBottomPanel && (
+            <div className="bottom-panel" style={{ height: bottomPanelHeight }}>
               <div
                 className="bottom-panel-resizer"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  setIsResizingTerminal(true);
+                  setIsResizingBottomPanel(true);
                   const startY = e.clientY;
-                  const startHeight = terminalHeight;
+                  const startHeight = bottomPanelHeight;
 
                   const handleMouseMove = (moveEvent: MouseEvent) => {
                     const delta = startY - moveEvent.clientY;
-                    const newHeight = Math.max(100, Math.min(500, startHeight + delta));
-                    setTerminalHeight(newHeight);
+                    const newHeight = Math.max(100, Math.min(600, startHeight + delta));
+                    setBottomPanelHeight(newHeight);
                   };
 
                   const handleMouseUp = () => {
-                    setIsResizingTerminal(false);
+                    setIsResizingBottomPanel(false);
                     document.removeEventListener('mousemove', handleMouseMove);
                     document.removeEventListener('mouseup', handleMouseUp);
                     document.body.style.cursor = '';
@@ -2103,12 +2158,45 @@ const App: React.FC = () => {
                   document.body.style.userSelect = 'none';
                 }}
               />
+              <div className="bottom-panel-tabs">
+                <button 
+                  className={`bottom-tab ${bottomPanelTab === 'terminal' ? 'active' : ''}`}
+                  onClick={() => setBottomPanelTab('terminal')}
+                >
+                  <Icons.Terminal />
+                  <span>Terminal</span>
+                </button>
+                <button 
+                  className={`bottom-tab ${bottomPanelTab === 'diagnostics' ? 'active' : ''}`}
+                  onClick={() => setBottomPanelTab('diagnostics')}
+                >
+                  <span>⚠️</span>
+                  <span>Problems</span>
+                </button>
+                <button 
+                  className="bottom-tab-close"
+                  onClick={() => setShowBottomPanel(false)}
+                  title="Close Panel"
+                >
+                  <Icons.Close />
+                </button>
+              </div>
               <div className="bottom-panel-content">
-                <Terminal
-                  workspacePath={workspaceRoot}
-                  isVisible={showTerminal}
-                  onClose={() => setShowTerminal(false)}
-                />
+                {bottomPanelTab === 'terminal' && (
+                  <Terminal
+                    workspacePath={workspaceRoot}
+                    isVisible={showBottomPanel}
+                    onClose={() => setShowBottomPanel(false)}
+                  />
+                )}
+                {bottomPanelTab === 'diagnostics' && (
+                  <DiagnosticsPanel 
+                    onJumpToLocation={(file, line, column) => {
+                      // TODO: 实现跳转到文件位置
+                      console.log('Jump to:', file, line, column);
+                    }}
+                  />
+                )}
               </div>
             </div>
           )}

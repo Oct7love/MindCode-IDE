@@ -166,6 +166,30 @@ contextBridge.exposeInMainWorld('mindcode', {
     },
   },
 
+  // 调试器
+  debug: {
+    start: (config: any) => ipcRenderer.invoke('debug:start', config),
+    stop: (sessionId?: string) => ipcRenderer.invoke('debug:stop', sessionId),
+    continue: (sessionId?: string) => ipcRenderer.invoke('debug:continue', sessionId),
+    stepOver: (sessionId?: string) => ipcRenderer.invoke('debug:stepOver', sessionId),
+    stepInto: (sessionId?: string) => ipcRenderer.invoke('debug:stepInto', sessionId),
+    stepOut: (sessionId?: string) => ipcRenderer.invoke('debug:stepOut', sessionId),
+    pause: (sessionId?: string) => ipcRenderer.invoke('debug:pause', sessionId),
+    restart: (sessionId?: string) => ipcRenderer.invoke('debug:restart', sessionId),
+    addBreakpoint: (file: string, line: number, options?: any) => 
+      ipcRenderer.invoke('debug:addBreakpoint', file, line, options),
+    removeBreakpoint: (breakpointId: string) => 
+      ipcRenderer.invoke('debug:removeBreakpoint', breakpointId),
+    toggleBreakpoint: (file: string, line: number) => 
+      ipcRenderer.invoke('debug:toggleBreakpoint', file, line),
+    getBreakpoints: (file?: string) => ipcRenderer.invoke('debug:getBreakpoints', file),
+    getVariables: (frameId?: number) => ipcRenderer.invoke('debug:getVariables', frameId),
+    evaluate: (expression: string, frameId?: number) => 
+      ipcRenderer.invoke('debug:evaluate', expression, frameId),
+    getSession: (sessionId?: string) => ipcRenderer.invoke('debug:getSession', sessionId),
+    listSessions: () => ipcRenderer.invoke('debug:listSessions'),
+  },
+
   // 代码索引服务
   index: {
     // 索引整个工作区
