@@ -34,6 +34,16 @@ export interface TraceEvent {
   status: 'running' | 'ok' | 'warn' | 'fail';
 }
 
+// 图片附件
+export interface ImageAttachment {
+  id: string;
+  data: string; // base64 数据 (用于 API 请求)
+  blobUrl?: string; // Blob URL (用于显示，更可靠)
+  mimeType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | string;
+  name?: string;
+  size?: number; // 字节数
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system' | 'tool';
@@ -41,6 +51,7 @@ export interface Message {
   timestamp: Date;
   mode?: AIMode; // 发送时的模式
   contexts?: ContextItem[]; // 消息关联的上下文
+  images?: ImageAttachment[]; // 图片附件
   toolCalls?: ToolCallStatus[]; // 工具调用及状态
   toolCallId?: string; // tool 消息的调用 ID
   plan?: Plan; // Plan 模式生成的计划
@@ -116,6 +127,9 @@ interface AIState {
   thinkingUIData: Partial<ThinkingUIData> | null; // 当前流式 Thinking UI 数据
   thinkingUIStartTime: number | null; // Thinking UI 开始时间
   useThinkingUIMode: boolean; // 是否启用 Thinking UI 模式
+  // 智能模型路由
+  useSmartRouting: boolean; // 是否启用智能路由（自动选择 Haiku/Sonnet/Opus）
+  lastRoutingDecision: { model: string; taskType: string; reason: string } | null; // 上次路由决策
 }
 
 interface AIActions {
@@ -163,9 +177,12 @@ interface AIActions {
   setThinkingUIStartTime: (time: number | null) => void;
   setUseThinkingUIMode: (use: boolean) => void;
   updateLastMessageThinkingUI: (data: ThinkingUIData) => void;
+  // 智能模型路由
+  setUseSmartRouting: (use: boolean) => void;
+  setLastRoutingDecision: (decision: { model: string; taskType: string; reason: string } | null) => void;
 }
 
-const DEFAULT_MODEL = 'claude-opus-4-5-thinking';
+const DEFAULT_MODEL = 'claude-opus-4-5-20251101';
 const STORAGE_KEY = 'mindcode-ai-conversations';
 
 const defaultConversation: Conversation = {
@@ -223,6 +240,9 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     thinkingUIData: null,
     thinkingUIStartTime: null,
     useThinkingUIMode: false, // 默认关闭，可通过设置开启
+    // 智能模型路由
+    useSmartRouting: false, // 默认关闭，选什么模型就用什么模型
+    lastRoutingDecision: null,
 
     setMode: (mode) => set((state) => ({ mode, model: state.modelByMode[mode] })),
     setModel: (model) => set((state) => ({ model, modelByMode: { ...state.modelByMode, [state.mode]: model } })),
@@ -453,5 +473,10 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
       saveConversations(updatedConversations);
       return { conversations: updatedConversations };
     }),
+
+    // 智能模型路由
+    setUseSmartRouting: (useSmartRouting) => set({ useSmartRouting }),
+
+    setLastRoutingDecision: (lastRoutingDecision) => set({ lastRoutingDecision }),
   };
 });

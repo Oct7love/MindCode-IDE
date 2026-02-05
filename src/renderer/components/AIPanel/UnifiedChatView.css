@@ -71,32 +71,36 @@
   transform: scale(0.92);
 }
 
-/* === 空状态 === */
+/* === 空状态 - 已迁移到 EmptyState.css === */
 .unified-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12, 48px) var(--space-4, 16px);
+  padding: var(--space-6, 24px) var(--space-4, 16px);
   text-align: center;
+  flex: 1;
 }
 
 .unified-empty-icon {
-  font-size: 32px;
-  margin-bottom: var(--space-3, 12px);
-  opacity: 0.6;
+  font-size: 48px;
+  margin-bottom: var(--space-4, 16px);
+  opacity: 0.8;
+  filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));
 }
 
 .unified-empty-title {
-  font-size: 15px;
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text-secondary, #a1a1aa);
-  margin-bottom: var(--space-1, 4px);
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #fafafa);
+  margin-bottom: var(--space-2, 8px);
 }
 
 .unified-empty-subtitle {
   font-size: 13px;
   color: var(--color-text-tertiary, #71717a);
+  max-width: 280px;
+  line-height: 1.5;
 }
 
 /* === 消息列表区域背景效果 === */
@@ -777,4 +781,202 @@
 .scroll-hint {
   color: var(--color-accent-primary, #3b82f6);
   font-size: 11px;
+}
+
+/* 图片预览区域 */
+.unified-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px 8px;
+}
+
+.unified-image-preview {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.unified-image-preview:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.unified-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 9px;
+}
+
+.unified-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  border: 2px solid var(--color-bg-elevated, #1a1a2e);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: 1;
+}
+
+.unified-image-preview:hover .unified-image-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.unified-image-remove:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* 用户消息中的图片 */
+.unified-msg-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.unified-msg-image {
+  max-width: 240px;
+  max-height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.unified-msg-image:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.unified-msg-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  border-radius: 11px;
+}
+
+/* 图片预览加载占位 */
+.unified-image-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+  z-index: 0;
+}
+
+.unified-image-preview img {
+  position: relative;
+  z-index: 1;
+}
+
+/* 图片预览悬停效果增强 */
+.unified-image-preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.3) 100%);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.unified-image-preview:hover::after {
+  opacity: 1;
+}
+
+/* 图片预览组件包装器 */
+.image-preview-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 200ms ease;
+}
+
+/* 加载动画 */
+.image-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  animation: image-spin 0.8s linear infinite;
+}
+
+@keyframes image-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 加载失败占位符 */
+.image-error-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  text-align: center;
+}
+
+.image-error-icon {
+  font-size: 20px;
+  opacity: 0.6;
+}
+
+.image-error-text {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
+/* 在用户消息图片中使用 */
+.unified-msg-image .image-preview-wrapper {
+  min-height: 60px;
+}
+
+.unified-msg-image .image-error-placeholder {
+  padding: 20px;
+}
+
+.unified-msg-image .image-error-icon {
+  font-size: 28px;
+}
+
+.unified-msg-image .image-error-text {
+  font-size: 12px;
 }

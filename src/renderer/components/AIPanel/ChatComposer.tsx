@@ -6,10 +6,11 @@
  * - focus 时发光边框
  * - 自动增高 textarea
  * - 上下文芯片显示
+ * - 图片粘贴/拖拽支持
  * - 底栏: 模式选择 + 模型选择 + 发送按钮
  */
-import React, { memo } from 'react';
-import { useAIStore, AIMode } from '../../stores';
+import React, { memo, useCallback } from 'react';
+import { useAIStore, AIMode, ImageAttachment } from '../../stores';
 import { ContextChip } from './ContextChip';
 import { ModelPicker, TOOL_CAPABLE_MODELS } from './ModelPicker';
 import { ModeSelector } from './ModeSelector';
@@ -29,6 +30,9 @@ interface ChatComposerProps {
   isResizing?: boolean;
   queueCount: number;
   onClearQueue: () => void;
+  // 图片相关
+  images?: ImageAttachment[];
+  onImagesChange?: (images: ImageAttachment[]) => void;
 }
 
 export const ChatComposer: React.FC<ChatComposerProps> = memo(({
@@ -42,12 +46,89 @@ export const ChatComposer: React.FC<ChatComposerProps> = memo(({
   isLoading,
   isResizing,
   queueCount,
-  onClearQueue
+  onClearQueue,
+  images = [],
+  onImagesChange
 }) => {
   const { mode, setMode, model, setModel, contexts, removeContext } = useAIStore();
 
+  // 处理粘贴图片
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items || !onImagesChange) return;
+
+    const newImages: ImageAttachment[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            const img: ImageAttachment = {
+              id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              data: base64,
+              mimeType: item.type as ImageAttachment['mimeType'],
+              name: file.name || 'pasted-image',
+              size: file.size
+            };
+            onImagesChange([...images, img]);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    }
+  }, [images, onImagesChange]);
+
+  // 处理拖拽图片
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onImagesChange) return;
+
+    const files = e.dataTransfer?.files;
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64 = event.target?.result as string;
+          const img: ImageAttachment = {
+            id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            data: base64,
+            mimeType: file.type as ImageAttachment['mimeType'],
+            name: file.name,
+            size: file.size
+          };
+          onImagesChange([...images, img]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, [images, onImagesChange]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  // 移除图片
+  const removeImage = useCallback((id: string) => {
+    if (onImagesChange) {
+      onImagesChange(images.filter(img => img.id !== id));
+    }
+  }, [images, onImagesChange]);
+
   return (
-    <div className={`chat-composer ${isLoading ? 'loading' : ''}`}>
+    <div 
+      className={`chat-composer ${isLoading ? 'loading' : ''}`}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
       {/* 队列指示器 */}
       <QueueIndicator count={queueCount} onClear={onClearQueue} />
 
@@ -64,6 +145,25 @@ export const ChatComposer: React.FC<ChatComposerProps> = memo(({
         </div>
       )}
 
+      {/* 图片预览 */}
+      {images.length > 0 && (
+        <div className="composer-images">
+          {images.map(img => (
+            <div key={img.id} className="composer-image-preview">
+              <img src={img.data} alt={img.name || '图片'} />
+              <button
+                className="composer-image-remove"
+                onClick={() => removeImage(img.id)}
+                title="移除图片"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 输入区 */}
       <div className="composer-input-area">
         <textarea
@@ -71,7 +171,8 @@ export const ChatComposer: React.FC<ChatComposerProps> = memo(({
           value={input}
           onChange={onInputChange}
           onKeyDown={onKeyDown}
-          placeholder={isLoading ? "消息将排队执行..." : "发送消息..."}
+          onPaste={handlePaste}
+          placeholder={isLoading ? "消息将排队执行..." : "发送消息... (可粘贴图片)"}
           rows={1}
           aria-label="消息输入"
         />
@@ -109,7 +210,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = memo(({
         <div className="composer-footer-right">
           <SendButton
             isLoading={isLoading}
-            disabled={!input.trim() && !isLoading}
+            disabled={(!input.trim() && images.length === 0) && !isLoading}
             onSend={onSend}
             onStop={onStop}
           />

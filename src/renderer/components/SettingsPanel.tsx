@@ -15,7 +15,7 @@ const SETTINGS: SettingItem[] = [
   { key: 'editor.minimap', label: '小地图', type: 'boolean', category: '编辑器', default: true },
   { key: 'editor.lineNumbers', label: '行号', type: 'select', category: '编辑器', default: 'on', options: ['on', 'off', 'relative'] },
   // AI
-  { key: 'ai.model', label: '默认模型', type: 'select', category: 'AI', default: 'claude-sonnet-4-5', options: ['claude-opus-4-5-thinking', 'claude-sonnet-4-5', 'gpt-4o', 'gemini-2.5-pro'] },
+  { key: 'ai.model', label: '默认模型', type: 'select', category: 'AI', default: 'claude-sonnet-4-5-20250929', options: ['claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', 'claude-haiku-4-5-20251001', 'gpt-4o', 'gemini-2.5-pro', 'deepseek-chat'] },
   { key: 'ai.streaming', label: '流式输出', type: 'boolean', category: 'AI', default: true },
   { key: 'ai.autoComplete', label: '自动补全', type: 'boolean', category: 'AI', default: true },
   { key: 'completion.debounce', label: '补全延迟 (ms)', type: 'number', category: 'AI', default: 30 },

@@ -5,25 +5,30 @@ import './ModelPicker.css';
 export interface ModelInfo { id: string; name: string; icon: string; desc: string; provider: string; toolCapable?: boolean; }
 
 export const MODELS: ModelInfo[] = [
-  { id: 'claude-opus-4-5-thinking', name: 'Claude Opus 4.5 (Thinking)', icon: '🧠', desc: '最强思维', provider: 'claude', toolCapable: true },
-  { id: 'claude-sonnet-4-5-thinking', name: 'Claude Sonnet 4.5 (Thinking)', icon: '💡', desc: '思维链', provider: 'claude', toolCapable: true },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', icon: '⚡', desc: '代码推理', provider: 'claude', toolCapable: true },
+  // Claude 系列 (智能路由：Opus/Sonnet 简单任务自动调用 Haiku)
+  { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', icon: '🧠', desc: '最强思维 (含智能路由)', provider: 'claude', toolCapable: true },
+  { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', icon: '💡', desc: '代码推理 (含智能路由)', provider: 'claude', toolCapable: true },
+  { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', icon: '⚡', desc: '快速响应', provider: 'claude', toolCapable: true },
+  // Gemini 系列
   { id: 'gemini-3-flash', name: 'Gemini 3 Flash', icon: '⚡', desc: '极速预览', provider: 'gemini', toolCapable: true },
   { id: 'gemini-3-pro-high', name: 'Gemini 3 Pro', icon: '🎯', desc: '最强推理', provider: 'gemini', toolCapable: true },
   { id: 'gemini-3-pro-low', name: 'Gemini 3 Lite', icon: '💨', desc: '轻量极速', provider: 'gemini', toolCapable: true },
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', icon: '⚡', desc: '极速响应', provider: 'gemini', toolCapable: true },
   { id: 'gemini-2.5-flash-thinking', name: 'Gemini 2.5 Flash (Thinking)', icon: '🧠', desc: '思维链', provider: 'gemini', toolCapable: true },
+  // DeepSeek 系列
   { id: 'deepseek-chat', name: 'DeepSeek V3', icon: '🐋', desc: '性价比高', provider: 'deepseek', toolCapable: true },
   { id: 'deepseek-coder', name: 'DeepSeek Coder', icon: '💻', desc: '代码专家', provider: 'deepseek', toolCapable: true },
   { id: 'deepseek-reasoner', name: 'DeepSeek R2', icon: '🧠', desc: '深度推理', provider: 'deepseek', toolCapable: true },
+  // GLM 系列
   { id: 'glm-4.7', name: 'GLM-4.7', icon: '🔮', desc: '高智能旗舰', provider: 'glm', toolCapable: true },
   { id: 'glm-4.7-flashx', name: 'GLM-4.7 FlashX', icon: '⚡', desc: '轻量高速', provider: 'glm', toolCapable: true },
-  // ===== 特价渠道 =====
-  { id: 'codesuc-opus', name: 'Claude Opus 4.5 [特价]', icon: '💎', desc: '特价渠道', provider: 'codesuc', toolCapable: true },
-  { id: 'codesuc-sonnet', name: 'Claude Sonnet 4.5 [特价]', icon: '💰', desc: '特价渠道', provider: 'codesuc', toolCapable: true },
+  // ===== 特价渠道 (智能路由：Opus/Sonnet 简单任务自动调用 Haiku) =====
+  { id: 'codesuc-opus', name: 'Claude Opus 4.5 [特价]', icon: '💎', desc: '特价渠道 (含智能路由)', provider: 'codesuc', toolCapable: true },
+  { id: 'codesuc-sonnet', name: 'Claude Sonnet 4.5 [特价]', icon: '💰', desc: '特价渠道 (含智能路由)', provider: 'codesuc', toolCapable: true },
   { id: 'codesuc-haiku', name: 'Claude Haiku 4.5 [特价]', icon: '🏷️', desc: '特价渠道', provider: 'codesuc', toolCapable: true },
 ];
 
+// 支持工具调用的模型列表
 export const TOOL_CAPABLE_MODELS = MODELS.filter(m => m.toolCapable).map(m => m.id);
 
 interface ModelPickerProps {

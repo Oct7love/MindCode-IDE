@@ -2,12 +2,14 @@
  * useChatEngine - AI 对话核心引擎
  * 提取自 UnifiedChatView，负责 API 调用、工具执行、消息队列处理
  * 支持 Thinking UI 模式（Cursor 风格）
+ * 支持智能模型路由（自动选择 Haiku/Sonnet/Opus）
  */
 import { useCallback, useRef, useEffect } from 'react';
 import { useAIStore, AIMode, Plan, ToolCallStatus, ThinkingUIData } from '../../../stores';
 import { useFileStore } from '../../../stores';
 import { MODELS, TOOL_CAPABLE_MODELS } from '../ModelPicker';
 import { THINKING_UI_SYSTEM_PROMPT, buildThinkingUserPrompt, parseThinkingOutput } from '../../../../core/ai/thinking-prompt';
+import { ModelRouter, detectTaskType, TaskType } from '../../../../core/ai/model-router';
 
 // 模式工具权限映射 - 对标 Cursor 的模式差异化设计
 const MODE_TOOLS: Record<AIMode, string[]> = {
@@ -80,9 +82,17 @@ export function useChatEngine(options: ChatEngineOptions) {
     useThinkingUIMode, thinkingUIData, thinkingUIStartTime,
     setThinkingUIData, setThinkingUIStartTime, updateLastMessageThinkingUI,
     // 对话切换相关
-    activeConversationId
+    activeConversationId,
+    // 智能模型路由
+    useSmartRouting, setLastRoutingDecision
   } = useAIStore();
   const { workspaceRoot, getActiveFile } = useFileStore();
+  
+  // 模型路由器实例
+  const routerRef = useRef<ModelRouter | null>(null);
+  if (!routerRef.current || routerRef.current['primaryModel'] !== model) {
+    routerRef.current = new ModelRouter(model);
+  }
 
   const stopStreamRef = useRef<(() => void) | null>(null);
   const abortRef = useRef(false);
@@ -507,15 +517,15 @@ ${thinkingProtocol}`;
     return allTools.filter(t => allowedTools.includes(t.name));
   }, [mode, workspaceRoot]);
 
-  // 发送消息核心逻辑
-  const handleSend = useCallback(async (input: string) => {
-    if (!input.trim()) return;
+  // 发送消息核心逻辑（支持图片）
+  const handleSend = useCallback(async (input: string, images?: import('../../../stores').ImageAttachment[]) => {
+    if (!input.trim() && (!images || images.length === 0)) return;
     const userContent = input.trim();
 
     // 检测是否是询问模型身份的问题
     const askingModelIdentity = isModelIdentityQuestion(userContent);
 
-    // 如果正在加载中，将消息加入队列
+    // 如果正在加载中，将消息加入队列（暂不支持图片队列）
     if (isLoading) {
       enqueueMessage(userContent, [...contexts], mode);
       return true; // 返回 true 表示已入队
@@ -525,7 +535,9 @@ ${thinkingProtocol}`;
     if (contexts.length > 0) {
       finalContent = contexts.map(c => `[${c.type}: ${c.label}]\n${c.data.content || c.data.path}`).join('\n\n') + `\n\n用户: ${userContent}`;
     }
-    addMessage({ role: 'user', content: userContent, mode });
+    
+    // 添加用户消息（包含图片）
+    addMessage({ role: 'user', content: userContent || '(图片)', mode, images: images && images.length > 0 ? images : undefined });
     setLoading(true);
     setStreamingText('');
     abortRef.current = false;
@@ -534,9 +546,35 @@ ${thinkingProtocol}`;
     const messages = conversation?.messages || [];
     const systemPrompt = getSystemPrompt();
     const modelInfo = MODELS.find(m => m.id === model) || MODELS[0];
+    const tools = getTools();
+    
+    // 先检查是否会使用工具（基于用户选择的主模型）
+    const willUseTools = tools.length > 0 && TOOL_CAPABLE_MODELS.includes(model);
+
+    // 智能模型路由：根据任务类型自动选择最优模型
+    // 关键：如果会使用工具，说明是复杂任务，应该用主模型
+    let effectiveModel = model;
+    if (useSmartRouting && routerRef.current) {
+      routerRef.current.setEnabled(true);
+      routerRef.current.setPrimaryModel(model);
+      const routingResult = routerRef.current.route(userContent, {
+        isFirstRound: true,
+        messageCount: messages.length,
+        useTools: willUseTools  // 传入工具使用信息
+      });
+      effectiveModel = routingResult.model;
+      setLastRoutingDecision({
+        model: routingResult.model,
+        taskType: routingResult.taskType,
+        reason: routingResult.reason
+      });
+      if (effectiveModel !== model) {
+        console.log(`[ChatEngine] 🔀 智能路由: ${model} → ${effectiveModel} (任务: ${routingResult.taskType}, 使用工具: ${willUseTools})`);
+      }
+    }
 
     // 调试日志
-    console.log('[ChatEngine] 发送消息, 模型:', model, ', 身份问题:', askingModelIdentity);
+    console.log('[ChatEngine] 发送消息, 主模型:', model, ', 实际模型:', effectiveModel, ', 身份问题:', askingModelIdentity, ', 使用工具:', willUseTools);
     console.log('[ChatEngine] 系统提示词前200字:', systemPrompt.slice(0, 200));
 
     // 过滤对话历史中涉及模型身份的内容，防止身份混淆
@@ -564,11 +602,27 @@ ${thinkingProtocol}`;
       return true;
     }).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-    let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: finalContent }];
-    const tools = getTools();
+    // 构建 API 消息，支持图片（Claude Vision API 格式）
+    let userMessageContent: any = finalContent;
+    if (images && images.length > 0) {
+      // 使用 Claude Vision API 格式: content 是数组
+      userMessageContent = [
+        ...images.map(img => ({
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: img.mimeType,
+            data: img.data.replace(/^data:image\/\w+;base64,/, '') // 移除 data URL 前缀
+          }
+        })),
+        { type: 'text' as const, content: finalContent || '请描述这张图片' }
+      ];
+    }
+    let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: userMessageContent }];
 
     // 所有模式都可以使用工具（工具已按 MODE_TOOLS 过滤），只要模型支持
-    const useTools = tools.length > 0 && TOOL_CAPABLE_MODELS.includes(model);
+    // 注意：这里用 effectiveModel 检查，因为路由后的模型也需要支持工具
+    const useTools = willUseTools && TOOL_CAPABLE_MODELS.includes(effectiveModel);
     // 只有 Agent 和 Debug 模式下的危险操作需要确认
     const requiresConfirm = (mode === 'agent' || mode === 'debug')
       ? ['workspace_writeFile', 'terminal_execute']
@@ -609,7 +663,8 @@ ${thinkingProtocol}`;
 
           addMessage({ role: 'assistant', content: '', mode: nextMsg.mode });
           resetThinkingState();
-          const cleanup = window.mindcode?.ai?.chatStream?.(model, queueApiMessages, {
+          // 队列消息也使用智能路由后的模型
+          const cleanup = window.mindcode?.ai?.chatStream?.(effectiveModel, queueApiMessages, {
             onToken: (token: string) => handleStreamToken(token),
             onComplete: (fullText: string) => {
               const savedThinking = useAIStore.getState().thinkingText; // 保存思考内容
@@ -654,9 +709,9 @@ ${thinkingProtocol}`;
               reject(new Error('API 不可用'));
               return;
             }
-            console.log('[ChatEngine] 调用 chatStreamWithTools, 工具数:', tools.length, ', 工具名:', tools.map(t => t.name).join(', '));
+            console.log('[ChatEngine] 调用 chatStreamWithTools, 工具数:', tools.length, ', 工具名:', tools.map(t => t.name).join(', '), ', 模型:', effectiveModel);
             resetThinkingState();
-            window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
+            window.mindcode.ai.chatStreamWithTools(effectiveModel, apiMessages, tools, {
               onToken: (token) => {
                 responseText += token;
                 handleStreamToken(token);
@@ -762,7 +817,7 @@ ${thinkingProtocol}`;
         { role: 'user', content: buildThinkingUIUserMessage(finalContent) }
       ];
       
-      const cleanup = window.mindcode?.ai?.chatStream?.(model, thinkingUIMessages, {
+      const cleanup = window.mindcode?.ai?.chatStream?.(effectiveModel, thinkingUIMessages, {
         onToken: (token: string) => handleThinkingUIToken(token),
         onComplete: (_fullText: string, meta?: { model: string; usedFallback: boolean }) => {
           const parsed = finishThinkingUI();
@@ -798,7 +853,7 @@ ${thinkingProtocol}`;
       // === 传统模式：使用 <thinking> 标签 ===
       addMessage({ role: 'assistant', content: '', mode });
       resetThinkingState();
-      const cleanup = window.mindcode?.ai?.chatStream?.(model, apiMessages, {
+      const cleanup = window.mindcode?.ai?.chatStream?.(effectiveModel, apiMessages, {
         onToken: (token: string) => handleStreamToken(token),
         onComplete: (fullText: string, meta?: { model: string; usedFallback: boolean }) => {
           // 清理 thinking 标签后的文本

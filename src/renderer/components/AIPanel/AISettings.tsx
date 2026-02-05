@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAIStore } from '../../stores';
 
 export interface AIConfig {
   provider: 'anthropic' | 'openai' | 'google' | 'local';
@@ -16,10 +17,10 @@ export interface AIConfig {
 }
 
 const PROVIDERS = {
-  anthropic: { name: 'Anthropic', models: ['claude-sonnet-4-5', 'claude-sonnet-4-20250514', 'claude-3-haiku-20240307'] },
+  anthropic: { name: 'Anthropic', models: ['claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', 'claude-haiku-4-5-20251001'] },
   openai: { name: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
   google: { name: 'Google', models: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'] },
-  local: { name: '本地/代理', models: ['codesuc-sonnet', 'deepseek-chat', 'qwen-turbo'] },
+  local: { name: '本地/代理', models: ['codesuc-opus', 'codesuc-sonnet', 'codesuc-haiku', 'deepseek-chat', 'qwen-turbo'] },
 };
 
 const STORAGE_KEY = 'mindcode_ai_config';
@@ -30,6 +31,7 @@ interface AISettingsProps { isOpen: boolean; onClose: () => void; onSave?: (conf
 export const AISettings: React.FC<AISettingsProps> = ({ isOpen, onClose, onSave }) => {
   const [config, setConfig] = useState<AIConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'model' | 'params' | 'prompt'>('model');
+  const { useSmartRouting, setUseSmartRouting, lastRoutingDecision } = useAIStore();
 
   // 加载配置
   useEffect(() => {
@@ -110,6 +112,48 @@ export const AISettings: React.FC<AISettingsProps> = ({ isOpen, onClose, onSave 
                   <input type="checkbox" checked={config.stream} onChange={e => setConfig({ ...config, stream: e.target.checked })} />
                   启用流式输出
                 </label>
+              </div>
+              
+              {/* 智能模型路由 */}
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--color-bg-base)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>🔀 智能模型路由</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>自动选择模型：简单任务用 Haiku，复杂任务用主模型</div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 20 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={useSmartRouting} 
+                      onChange={e => setUseSmartRouting(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      background: useSmartRouting ? '#22c55e' : 'var(--color-bg-hover)',
+                      borderRadius: 20,
+                      transition: '0.2s',
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '""',
+                        height: 16, width: 16,
+                        left: useSmartRouting ? 22 : 2,
+                        bottom: 2,
+                        background: '#fff',
+                        borderRadius: '50%',
+                        transition: '0.2s',
+                      }} />
+                    </span>
+                  </label>
+                </div>
+                {lastRoutingDecision && (
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)', padding: '4px 8px', background: 'var(--color-bg-hover)', borderRadius: 4 }}>
+                    上次路由: {lastRoutingDecision.model} ({lastRoutingDecision.taskType})
+                  </div>
+                )}
               </div>
             </>
           )}
