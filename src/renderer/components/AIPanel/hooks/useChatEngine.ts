@@ -19,6 +19,17 @@ const MODE_TOOLS: Record<AIMode, string[]> = {
   debug: ['workspace_listDir', 'workspace_readFile', 'workspace_search', 'codebase_semantic', 'editor_getActiveFile', 'terminal_execute', 'git_status', 'git_diff'], // Debug: 只读+执行
 };
 
+// 支持图片/视觉的模型列表（Claude Vision API 格式）
+const VISION_CAPABLE_MODELS = [
+  'claude-opus-4-5-20251101',
+  'claude-sonnet-4-5-20250929', 
+  'claude-haiku-4-5-20251001',
+  'codesuc-opus',
+  'codesuc-sonnet',
+  'codesuc-haiku',
+  // OpenAI 也支持，但格式不同，暂不处理
+];
+
 // 检测是否是询问模型身份的问题
 const isModelIdentityQuestion = (text: string): boolean => {
   const patterns = [
@@ -604,19 +615,27 @@ ${thinkingProtocol}`;
 
     // 构建 API 消息，支持图片（Claude Vision API 格式）
     let userMessageContent: any = finalContent;
+    const supportsVision = VISION_CAPABLE_MODELS.includes(effectiveModel);
+    
     if (images && images.length > 0) {
-      // 使用 Claude Vision API 格式: content 是数组
-      userMessageContent = [
-        ...images.map(img => ({
-          type: 'image' as const,
-          source: {
-            type: 'base64' as const,
-            media_type: img.mimeType,
-            data: img.data.replace(/^data:image\/\w+;base64,/, '') // 移除 data URL 前缀
-          }
-        })),
-        { type: 'text' as const, content: finalContent || '请描述这张图片' }
-      ];
+      if (!supportsVision) {
+        // 模型不支持图片，添加提示信息
+        console.warn('[ChatEngine] 当前模型不支持图片:', effectiveModel);
+        userMessageContent = `[注意：当前模型 ${effectiveModel} 不支持图片识别，图片已忽略]\n\n${finalContent}`;
+      } else {
+        // 使用 Claude Vision API 格式: content 是数组
+        userMessageContent = [
+          ...images.map(img => ({
+            type: 'image' as const,
+            source: {
+              type: 'base64' as const,
+              media_type: img.mimeType,
+              data: img.data.replace(/^data:image\/\w+;base64,/, '') // 移除 data URL 前缀
+            }
+          })),
+          { type: 'text' as const, content: finalContent || '请描述这张图片' }
+        ];
+      }
     }
     let apiMessages: any[] = [{ role: 'system', content: systemPrompt }, ...chatHistory, { role: 'user', content: userMessageContent }];
 

@@ -1,6 +1,14 @@
 import { BaseAIProvider } from './base';
 import { ChatMessage, StreamCallbacks, ModelInfo, AIProviderConfig, ToolSchema, ToolCallbacks, ToolCallInfo } from '@shared/types/ai';
-import { net } from 'electron';
+
+// 延迟导入 electron.net，避免在模块加载阶段访问未初始化的 Electron API
+let electronNet: typeof import('electron').net | null = null;
+function getNet(): typeof import('electron').net {
+  if (!electronNet) {
+    electronNet = require('electron').net;
+  }
+  return electronNet!;
+}
 
 export class CodesucProvider extends BaseAIProvider { // 特价渠道 - Electron net 模块（纯文本 Agent Loop）
   name = 'codesuc' as const;
@@ -63,7 +71,7 @@ export class CodesucProvider extends BaseAIProvider { // 特价渠道 - Electron
     const bodyStr = JSON.stringify(body);
     console.log(`[Codesuc] Request: ${url}, model=${body.model}, stream=${stream}`);
     return new Promise((resolve, reject) => {
-      const request = net.request({ method: 'POST', url });
+      const request = getNet().request({ method: 'POST', url });
       request.setHeader('Content-Type', 'application/json');
       request.setHeader('x-api-key', this.apiKey); // Anthropic 标准认证
       request.setHeader('anthropic-version', '2023-06-01');

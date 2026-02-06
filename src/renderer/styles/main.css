@@ -1,14 +1,17 @@
 /**
- * MindCode Design System v3.0 - Main Stylesheet
+ * MindCode Design System v4.0 - Main Stylesheet
  * Cursor-Inspired Premium Dark Theme
  */
 
 @import "tailwindcss";
 
+/* 核心设计系统 */
+@import './cursor-theme.css';        /* 新版 Cursor 主题变量 */
 @import './design-tokens.css';
 @import './chat-tokens.css';
 @import './cursor-premium.css';
 @import './theme-sync.css';
+@import './micro-interactions.css';  /* 微交互动画 */
 
 /* Tailwind 主题映射 — 桥接现有 CSS 变量 */
 @theme {

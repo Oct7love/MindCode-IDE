@@ -9,7 +9,8 @@ export interface Variable { name: string; value: string; type: string; variables
 export interface DebugSession { id: string; name: string; config: LaunchConfig; state: 'inactive' | 'running' | 'paused' | 'stopped'; breakpoints: Breakpoint[]; stackFrames: StackFrame[]; variables: Variable[]; }
 
 type DebugEventHandler = (event: string, data: any) => void;
-const win = window as any;
+// 安全地访问 window（兼容主进程和渲染进程）
+const win = typeof window !== 'undefined' ? (window as any) : null;
 
 class DebuggerManager {
   private sessions = new Map<string, DebugSession>();

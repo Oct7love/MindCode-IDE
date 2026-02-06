@@ -182,8 +182,6 @@ hello();
         strings: false
       }
     });
-    
-    console.log('[Editor] Monaco editor created, inlineSuggest enabled');
 
     editorRef.current = editor;
 
@@ -242,7 +240,6 @@ hello();
       }
       // 注册新的 provider
       completionDisposableRef.current = registerProvider(monaco);
-      console.log('[Editor] Completion provider registered');
     }
 
     return () => {
@@ -266,7 +263,7 @@ hello();
         onTabChange?.(activeTab);
       }
     }
-  }, [activeTabId]);
+  }, [activeTabId, tabs, onTabChange]);
 
   // 关闭标签
   const closeTab = useCallback((tabId: string, e: React.MouseEvent) => {

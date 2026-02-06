@@ -627,7 +627,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     if (onAIEdit) {
       onAIEdit(prompt, code, callbacks);
     } else if (window.mindcode?.ai?.chatStream) {
-      window.mindcode.ai.chatStream('claude-sonnet-4-5', [{ role: 'user', content: prompt }], callbacks); // 内联编辑使用 Claude 4.5 Sonnet
+      window.mindcode.ai.chatStream('claude-sonnet-4-5-20250929', [{ role: 'user', content: prompt }], callbacks); // 内联编辑使用 Claude 4.5 Sonnet
     } else {
       setTimeout(() => callbacks.onComplete(code + '\n// AI 编辑示例'), 500); // 开发模式 fallback
     }

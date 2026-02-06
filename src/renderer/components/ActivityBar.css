@@ -1,0 +1,175 @@
+/**
+ * ActivityBar - Cursor Premium 风格活动栏
+ */
+
+.activity-bar {
+  width: var(--cursor-size-activity-bar, 48px);
+  min-width: var(--cursor-size-activity-bar, 48px);
+  height: 100%;
+  background: var(--cursor-bg-base, #09090b);
+  border-right: 1px solid var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  z-index: 10;
+}
+
+/* 顶部活动项区域 */
+.activity-bar-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+/* 底部区域（设置、账户） */
+.activity-bar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+  margin-top: auto;
+}
+
+/* 活动项按钮 */
+.activity-bar-item {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+/* 左侧指示条 */
+.activity-bar-item-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 0;
+  background: var(--cursor-accent, #3b82f6);
+  border-radius: 0 2px 2px 0;
+  transition: height var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+.activity-bar-item:hover .activity-bar-item-indicator {
+  height: 16px;
+  background: var(--cursor-text-tertiary, #71717a);
+}
+
+.activity-bar-item.active .activity-bar-item-indicator {
+  height: 24px;
+  background: var(--cursor-accent, #3b82f6);
+}
+
+/* 图标容器 */
+.activity-bar-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--cursor-radius-md, 6px);
+  color: var(--cursor-text-muted, #52525b);
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.activity-bar-item:hover .activity-bar-item-icon {
+  color: var(--cursor-text-secondary, #a1a1aa);
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.activity-bar-item.active .activity-bar-item-icon {
+  color: var(--cursor-text-primary, #fafafa);
+}
+
+/* AI 按钮特殊样式 */
+.activity-bar-item-ai .activity-bar-item-icon {
+  position: relative;
+}
+
+.activity-bar-item-ai:hover .activity-bar-item-icon,
+.activity-bar-item-ai.active .activity-bar-item-icon {
+  color: var(--cursor-ai-purple, #8b5cf6);
+}
+
+.activity-bar-item-ai.active .activity-bar-item-indicator {
+  background: var(--cursor-ai-gradient, linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%));
+}
+
+/* AI 徽章（有新消息时显示） */
+.activity-bar-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--cursor-ai-gradient);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.8);
+  }
+}
+
+/* 次要按钮（设置、账户）*/
+.activity-bar-item-secondary .activity-bar-item-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.activity-bar-item-secondary:hover .activity-bar-item-icon {
+  color: var(--cursor-text-secondary, #a1a1aa);
+}
+
+/* 工具提示增强（可选，使用 CSS tooltip） */
+.activity-bar-item::after {
+  content: attr(title);
+  position: absolute;
+  left: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  background: var(--cursor-bg-floating, #141418);
+  border: 1px solid var(--cursor-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--cursor-radius-md, 6px);
+  font-size: 12px;
+  color: var(--cursor-text-secondary, #a1a1aa);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+  pointer-events: none;
+  box-shadow: var(--cursor-shadow-md);
+  z-index: 1000;
+}
+
+.activity-bar-item:hover::after {
+  opacity: 1;
+  visibility: visible;
+  left: 52px;
+}
+
+/* 禁用默认 title 提示 */
+.activity-bar-item[title] {
+  /* 通过 ::after 实现自定义提示 */
+}

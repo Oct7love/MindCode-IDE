@@ -581,7 +581,7 @@ const App: React.FC = () => {
   const [showAI, setShowAI] = useState(true);
   const [showComposer, setShowComposer] = useState(false); // Composer 面板
   const [selected, setSelected] = useState('');
-  const [model, setModel] = useState('claude-opus-4-5-thinking'); // 默认使用 Claude 4.5 Opus Thinking
+  const [model, setModel] = useState('claude-opus-4-5-20251101'); // 默认使用 Claude 4.5 Opus
   const [aiPanelWidth, setAiPanelWidth] = useState(380);
   const [isResizing, setIsResizing] = useState(false);
   
@@ -2257,7 +2257,7 @@ const App: React.FC = () => {
               }}
             />
             <AIPanelErrorBoundary>
-              <AIPanel model={model} onModelChange={setModel} onClose={() => setShowAI(false)} width={aiPanelWidth} isResizing={isResizing} />
+              <AIPanel onClose={() => setShowAI(false)} width={aiPanelWidth} isResizing={isResizing} />
             </AIPanelErrorBoundary>
           </div>
         )}

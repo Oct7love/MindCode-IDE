@@ -136,7 +136,7 @@ export class LLMClient extends EventEmitter {
     let providerName = 'claude'; // 默认
     if (model.startsWith('codesuc-') || model.startsWith('special-claude-')) providerName = 'codesuc'; // 特价渠道（兼容旧 ID）
     else if (model.startsWith('claude-')) providerName = 'claude';
-    else if (model.startsWith('gemini-')) providerName = 'gemini';
+    else if (model.startsWith('gemini-') || model.includes('gemini-')) providerName = 'gemini'; // 支持 [次]gemini- 格式
     else if (model.startsWith('deepseek-')) providerName = 'deepseek';
     else if (model.startsWith('glm-')) providerName = 'glm';
     else if (model.startsWith('gpt-')) providerName = 'openai';

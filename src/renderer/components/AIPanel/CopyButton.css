@@ -118,7 +118,7 @@
 
 /* Default (带背景) */
 .copy-btn-default {
-  background: var(--color-bg-elevated, #151519);
+  background: var(--color-bg-elevated, #252526);
   border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.06));
   color: var(--color-text-secondary, #a1a1aa);
 }

@@ -7,28 +7,7 @@
  * AI Panel Container - Cursor Style
  * ============================================ */
 
-.ai-panel {
-  width: var(--size-ai-panel-default);
-  min-width: var(--size-ai-panel-min);
-  max-width: var(--size-ai-panel-max);
-  height: 100%;
-  background: linear-gradient(180deg,
-    var(--color-bg-surface) 0%,
-    var(--color-bg-base) 100%
-  );
-  border-left: 1px solid var(--color-border-subtle);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-}
-
-.ai-panel.collapsed {
-  width: 0;
-  min-width: 0;
-  border-left: none;
-  overflow: hidden;
-}
+/* .ai-panel 主容器样式已迁移至 AIPanel.css 组件文件 */
 
 /* 拖动调整大小 - 高级版 */
 .ai-panel-resizer {
@@ -1181,87 +1160,4 @@
   background: var(--color-bg-hover);
 }
 
-/* ============================================
- * AI Panel Header - 新版样式
- * ============================================ */
-
-.ai-panel-header {
-  height: 48px;
-  min-height: 48px;
-  padding: 0 var(--space-4, 16px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--color-bg-surface, #0f0f12);
-  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
-  position: relative;
-  flex-shrink: 0;
-}
-
-.ai-panel-header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 12px);
-}
-
-.ai-panel-header-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md, 6px);
-  background: var(--gradient-ai, linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.ai-panel-header-icon svg {
-  width: 16px;
-  height: 16px;
-  color: white;
-}
-
-.ai-panel-header-title {
-  font-size: var(--font-size-md, 14px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary, #fafafa);
-  letter-spacing: var(--letter-spacing-tight, -0.015em);
-}
-
-.ai-panel-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1, 4px);
-}
-
-.ai-panel-header-btn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md, 6px);
-  color: var(--color-text-muted, #52525b);
-  cursor: pointer;
-  transition: all var(--duration-fast, 125ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
-}
-
-.ai-panel-header-btn:hover {
-  color: var(--color-text-secondary, #a1a1aa);
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
-}
-
-.ai-panel-header-btn.active {
-  color: var(--color-accent-blue, #3b82f6);
-}
-
-.ai-panel-header-btn:active {
-  transform: scale(0.9);
-}
-
-.ai-panel-header-btn svg {
-  width: 15px;
-  height: 15px;
-}
+/* AI Panel Header - 样式已迁移至 AIPanel.css 组件文件 */

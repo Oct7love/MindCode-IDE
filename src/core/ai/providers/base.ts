@@ -1,4 +1,5 @@
 import { AIProvider, ChatMessage, StreamCallbacks, ModelInfo, AIProviderConfig } from '@shared/types/ai';
+import { countTokens as tiktokenCount } from '../tokenizer';
 
 export abstract class BaseAIProvider implements AIProvider {
   abstract name: 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm' | 'codesuc';
@@ -22,10 +23,9 @@ export abstract class BaseAIProvider implements AIProvider {
   abstract chat(messages: ChatMessage[]): Promise<string>;
   abstract chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void>;
 
+  // 使用 tiktoken 进行准确的 token 计算
   countTokens(text: string): number {
-    const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
-    const otherChars = text.length - chineseChars;
-    return Math.ceil(chineseChars / 1.5 + otherChars / 4);
+    return tiktokenCount(text, this.getModel());
   }
 
   // 前端模型 ID 到 API 模型名的映射

@@ -1,0 +1,363 @@
+/**
+ * MindCode Premium Theme - Cursor-Inspired
+ * Version: 4.0
+ * 
+ * 设计理念：
+ * - 极致深邃的暗色背景
+ * - 精妙的紫蓝渐变 AI 强调色
+ * - 微妙的光晕与毛玻璃效果
+ * - 流畅自然的动画过渡
+ */
+
+:root {
+  /* ============================================
+   * 🎨 色彩系统 - Cursor Premium
+   * ============================================ */
+
+  /* 背景层级 - 深邃的蓝黑色调 */
+  --cursor-bg-base: #09090b;              /* 最深 - 编辑器背景 */
+  --cursor-bg-surface: #0c0c0f;           /* 面板背景 */
+  --cursor-bg-elevated: #111114;          /* 卡片/弹层 */
+  --cursor-bg-floating: #141418;          /* 浮动面板 */
+  --cursor-bg-overlay: rgba(0, 0, 0, 0.75);
+  
+  /* 交互态背景 */
+  --cursor-bg-hover: rgba(255, 255, 255, 0.04);
+  --cursor-bg-active: rgba(255, 255, 255, 0.07);
+  --cursor-bg-selected: rgba(59, 130, 246, 0.12);
+  --cursor-bg-muted: rgba(255, 255, 255, 0.02);
+
+  /* 文本层级 */
+  --cursor-text-primary: #fafafa;         /* 主要文本 */
+  --cursor-text-secondary: #a1a1aa;       /* 次要文本 */
+  --cursor-text-tertiary: #71717a;        /* 辅助文本 */
+  --cursor-text-muted: #52525b;           /* 静音 */
+  --cursor-text-disabled: #3f3f46;        /* 禁用 */
+  --cursor-text-inverse: #09090b;         /* 反色 */
+
+  /* 边框层级 - 极其微妙 */
+  --cursor-border-subtle: rgba(255, 255, 255, 0.04);
+  --cursor-border-default: rgba(255, 255, 255, 0.06);
+  --cursor-border-strong: rgba(255, 255, 255, 0.1);
+  --cursor-border-focus: #3b82f6;
+
+  /* 强调色系 */
+  --cursor-accent: #3b82f6;               /* 主强调蓝 */
+  --cursor-accent-hover: #60a5fa;         /* hover 态 */
+  --cursor-accent-muted: rgba(59, 130, 246, 0.15);
+  
+  /* AI 渐变色系 */
+  --cursor-ai-purple: #8b5cf6;
+  --cursor-ai-blue: #3b82f6;
+  --cursor-ai-cyan: #06b6d4;
+  --cursor-ai-gradient: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%);
+  --cursor-ai-gradient-soft: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 50%, rgba(6, 182, 212, 0.15) 100%);
+
+  /* 语义色 */
+  --cursor-success: #22c55e;
+  --cursor-success-muted: rgba(34, 197, 94, 0.12);
+  --cursor-warning: #f59e0b;
+  --cursor-warning-muted: rgba(245, 158, 11, 0.12);
+  --cursor-error: #ef4444;
+  --cursor-error-muted: rgba(239, 68, 68, 0.12);
+
+  /* ============================================
+   * ✨ 效果系统 - 光影与毛玻璃
+   * ============================================ */
+
+  /* 阴影 */
+  --cursor-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --cursor-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --cursor-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --cursor-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.4);
+  --cursor-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7), 0 8px 16px rgba(0, 0, 0, 0.5);
+
+  /* 光晕效果 */
+  --cursor-glow-accent: 0 0 20px rgba(59, 130, 246, 0.25);
+  --cursor-glow-ai: 0 0 30px rgba(139, 92, 246, 0.2), 0 0 60px rgba(59, 130, 246, 0.1);
+  --cursor-glow-success: 0 0 20px rgba(34, 197, 94, 0.2);
+  --cursor-glow-error: 0 0 20px rgba(239, 68, 68, 0.2);
+
+  /* 聚焦环 */
+  --cursor-focus-ring: 0 0 0 2px var(--cursor-bg-base), 0 0 0 4px rgba(59, 130, 246, 0.5);
+
+  /* 毛玻璃 */
+  --cursor-glass-bg: rgba(17, 17, 20, 0.8);
+  --cursor-glass-blur: blur(12px);
+  --cursor-glass-border: rgba(255, 255, 255, 0.06);
+
+  /* ============================================
+   * 📐 间距系统 - 8px 基准
+   * ============================================ */
+
+  --cursor-space-0: 0;
+  --cursor-space-px: 1px;
+  --cursor-space-0-5: 2px;
+  --cursor-space-1: 4px;
+  --cursor-space-1-5: 6px;
+  --cursor-space-2: 8px;
+  --cursor-space-2-5: 10px;
+  --cursor-space-3: 12px;
+  --cursor-space-3-5: 14px;
+  --cursor-space-4: 16px;
+  --cursor-space-5: 20px;
+  --cursor-space-6: 24px;
+  --cursor-space-7: 28px;
+  --cursor-space-8: 32px;
+  --cursor-space-10: 40px;
+  --cursor-space-12: 48px;
+  --cursor-space-16: 64px;
+
+  /* ============================================
+   * 🔤 字体系统 - Premium Typography
+   * ============================================ */
+
+  /* 字体族 */
+  --cursor-font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --cursor-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+
+  /* 字号 */
+  --cursor-text-xs: 11px;
+  --cursor-text-sm: 12px;
+  --cursor-text-base: 13px;
+  --cursor-text-md: 14px;
+  --cursor-text-lg: 16px;
+  --cursor-text-xl: 18px;
+  --cursor-text-2xl: 20px;
+  --cursor-text-3xl: 24px;
+
+  /* 字重 */
+  --cursor-font-normal: 400;
+  --cursor-font-medium: 500;
+  --cursor-font-semibold: 600;
+  --cursor-font-bold: 700;
+
+  /* 行高 */
+  --cursor-leading-none: 1;
+  --cursor-leading-tight: 1.25;
+  --cursor-leading-snug: 1.375;
+  --cursor-leading-normal: 1.5;
+  --cursor-leading-relaxed: 1.625;
+
+  /* 字间距 */
+  --cursor-tracking-tighter: -0.05em;
+  --cursor-tracking-tight: -0.025em;
+  --cursor-tracking-normal: 0;
+  --cursor-tracking-wide: 0.025em;
+  --cursor-tracking-wider: 0.05em;
+
+  /* ============================================
+   * 📦 圆角系统
+   * ============================================ */
+
+  --cursor-radius-none: 0;
+  --cursor-radius-sm: 4px;
+  --cursor-radius-md: 6px;
+  --cursor-radius-lg: 8px;
+  --cursor-radius-xl: 12px;
+  --cursor-radius-2xl: 16px;
+  --cursor-radius-full: 9999px;
+
+  /* ============================================
+   * ⚡ 动画系统 - 流畅自然
+   * ============================================ */
+
+  /* 时长 */
+  --cursor-duration-instant: 50ms;
+  --cursor-duration-fast: 100ms;
+  --cursor-duration-normal: 150ms;
+  --cursor-duration-slow: 250ms;
+  --cursor-duration-slower: 350ms;
+
+  /* 缓动函数 */
+  --cursor-ease-linear: linear;
+  --cursor-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --cursor-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --cursor-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --cursor-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --cursor-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* ============================================
+   * 📏 尺寸系统
+   * ============================================ */
+
+  --cursor-size-titlebar: 38px;
+  --cursor-size-activity-bar: 48px;
+  --cursor-size-sidebar: 260px;
+  --cursor-size-sidebar-min: 200px;
+  --cursor-size-sidebar-max: 400px;
+  --cursor-size-ai-panel: 420px;
+  --cursor-size-ai-panel-min: 320px;
+  --cursor-size-ai-panel-max: 600px;
+  --cursor-size-statusbar: 24px;
+  --cursor-size-tab: 36px;
+  --cursor-size-terminal: 220px;
+
+  /* 图标尺寸 */
+  --cursor-icon-xs: 12px;
+  --cursor-icon-sm: 14px;
+  --cursor-icon-md: 16px;
+  --cursor-icon-lg: 20px;
+  --cursor-icon-xl: 24px;
+
+  /* ============================================
+   * 🎭 Z-Index 层级
+   * ============================================ */
+
+  --cursor-z-base: 0;
+  --cursor-z-dropdown: 100;
+  --cursor-z-sticky: 200;
+  --cursor-z-fixed: 300;
+  --cursor-z-modal-backdrop: 400;
+  --cursor-z-modal: 500;
+  --cursor-z-popover: 600;
+  --cursor-z-tooltip: 700;
+  --cursor-z-toast: 800;
+}
+
+/* ============================================
+ * 🌈 主题应用 - 覆盖默认变量
+ * ============================================ */
+
+:root {
+  /* 背景 */
+  --color-bg-base: var(--cursor-bg-base);
+  --color-bg-surface: var(--cursor-bg-surface);
+  --color-bg-elevated: var(--cursor-bg-elevated);
+  --color-bg-hover: var(--cursor-bg-hover);
+  --color-bg-active: var(--cursor-bg-active);
+  --color-bg-selected: var(--cursor-bg-selected);
+
+  /* 文本 */
+  --color-text-primary: var(--cursor-text-primary);
+  --color-text-secondary: var(--cursor-text-secondary);
+  --color-text-tertiary: var(--cursor-text-tertiary);
+  --color-text-muted: var(--cursor-text-muted);
+
+  /* 边框 */
+  --color-border-subtle: var(--cursor-border-subtle);
+  --color-border-default: var(--cursor-border-default);
+  --color-border-strong: var(--cursor-border-strong);
+
+  /* 强调色 */
+  --color-accent-primary: var(--cursor-accent);
+  --color-accent-ai: var(--cursor-ai-purple);
+  --gradient-ai: var(--cursor-ai-gradient);
+
+  /* 间距 */
+  --space-1: var(--cursor-space-1);
+  --space-2: var(--cursor-space-2);
+  --space-3: var(--cursor-space-3);
+  --space-4: var(--cursor-space-4);
+  --space-5: var(--cursor-space-5);
+  --space-6: var(--cursor-space-6);
+
+  /* 字体 */
+  --font-family-ui: var(--cursor-font-sans);
+  --font-family-code: var(--cursor-font-mono);
+
+  /* 圆角 */
+  --radius-sm: var(--cursor-radius-sm);
+  --radius-md: var(--cursor-radius-md);
+  --radius-lg: var(--cursor-radius-lg);
+  --radius-xl: var(--cursor-radius-xl);
+
+  /* 阴影 */
+  --shadow-sm: var(--cursor-shadow-sm);
+  --shadow-md: var(--cursor-shadow-md);
+  --shadow-lg: var(--cursor-shadow-lg);
+
+  /* 动画 */
+  --duration-fast: var(--cursor-duration-fast);
+  --duration-normal: var(--cursor-duration-normal);
+  --ease-out: var(--cursor-ease-out);
+}
+
+/* ============================================
+ * 🎬 全局动画关键帧
+ * ============================================ */
+
+@keyframes cursor-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cursor-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes cursor-slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cursor-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cursor-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cursor-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cursor-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes cursor-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes cursor-glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* ============================================
+ * 🔲 滚动条 - 精致细窄
+ * ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--cursor-radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}

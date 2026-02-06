@@ -45,6 +45,7 @@ export interface AIProvider {
   chat(messages: ChatMessage[]): Promise<string>;
   chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void>;
   countTokens(text: string): number;
+  setModel(model: string): AIProvider; // 运行时设置模型
 }
 
 export interface ModelInfo {

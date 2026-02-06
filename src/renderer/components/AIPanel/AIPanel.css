@@ -1,14 +1,245 @@
-/* AI Panel 组件样式 - 基于设计系统 */
-/* 主要样式已在 design-system-v2.css 中定义，这里只添加特定覆盖 */
+/**
+ * AIPanel - AI 面板样式
+ * 背景色与编辑器区域 (#1e1e1e) 保持一致
+ */
 
-.ai-panel-v2 {
+/* 主容器 — 固定高度，内部 flex 布局 */
+.ai-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  min-width: 280px;
+  background: #1e1e1e;
+  border-left: 1px solid #2d2d2d;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;  /* 允许 flex 收缩 */
+}
+
+/* ============================================
+ * 统一 Header
+ * ============================================ */
+.ai-panel-header {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 6px 0 10px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  flex-shrink: 0;
+  user-select: none;
   overflow: hidden;
 }
 
-.ai-panel-header-btn.active {
-  color: var(--accent-primary);
-  background: var(--semantic-info-bg);
+/* 左侧: 图标+标题, 自动收缩 */
+.ai-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ai-panel-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.ai-panel-header-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cccccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* 右侧: 按钮组, 永不收缩 */
+.ai-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+/* 图标按钮 — 方形带背景 */
+.ai-panel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #333333;
+  border: 1px solid #4a4a4a;
+  border-radius: 5px;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 100ms ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ai-panel-btn:hover {
+  background: #404040;
+  border-color: #5a5a5a;
+  color: #ffffff;
+}
+
+.ai-panel-btn:active {
+  transform: scale(0.92);
+}
+
+.ai-panel-btn.active {
+  background: #264f78;
+  border-color: #0078d4;
+  color: #ffffff;
+}
+
+.ai-panel-btn.close:hover {
+  background: #c42b1c;
+  border-color: #c42b1c;
+  color: #ffffff;
+}
+
+/* ============================================
+ * 拖动条
+ * ============================================ */
+.ai-panel-resizer {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 20;
+}
+
+.ai-panel-resizer::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 0;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  border-radius: 9999px;
+  transition: all 100ms ease;
+}
+
+.ai-panel-resizer:hover::before {
+  height: 48px;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+}
+
+.ai-panel-resizer:active::before {
+  height: 64px;
+}
+
+.ai-panel.collapsed {
+  width: 0;
+  min-width: 0;
+  border-left: none;
+}
+
+/* ============================================
+ * 消息区域增强 - 匹配编辑器色系
+ * ============================================ */
+
+.unified-messages {
+  background: #1e1e1e;
+}
+
+.unified-msg {
+  animation: msg-slide-in 0.25s ease-out;
+}
+
+@keyframes msg-slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* AI 头像 */
+.unified-msg-assistant .unified-msg-avatar {
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
+}
+
+/* 用户消息 */
+.unified-msg-user .unified-msg-content {
+  background: #2d4a3e;
+  border: 1px solid #3d5a4e;
+}
+
+/* 代码块 */
+.code-block {
+  background: #1a1a1a;
+  border: 1px solid #333333;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.code-block-header {
+  background: #252526;
+  border-bottom: 1px solid #333333;
+}
+
+/* 工具卡片 */
+.tool-block {
+  background: #252526;
+  border: 1px solid #333333;
+  border-radius: 8px;
+}
+
+.tool-block-header {
+  border-bottom: 1px solid #333333;
+}
+
+/* 思考动画 */
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 8px;
+  animation: think-pulse 2s ease-in-out infinite;
+}
+
+@keyframes think-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* 上下文标签 */
+.context-chip {
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  border-radius: 9999px;
+  transition: all 100ms ease;
+}
+
+.context-chip:hover {
+  background: #333333;
+  border-color: #4a4a4a;
+}
+
+/* 对话历史面板 */
+.conv-list-panel {
+  background: #252526;
+  border-left: 1px solid #3c3c3c;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
 }

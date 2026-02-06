@@ -1,8 +1,16 @@
 /**
  * Styles Index - 样式统一导入
+ * 
+ * 导入顺序很重要：
+ * 1. 变量定义 (variables.css)
+ * 2. 变量别名 (variable-aliases.css) - 统一历史遗留命名
+ * 3. 基础样式 (base.css)
+ * 4. 动画 (animations.css)
+ * 5. 组件样式 (components.css)
  */
 
 @import './variables.css';
+@import './variable-aliases.css';
 @import './base.css';
 @import './animations.css';
 @import './components.css';

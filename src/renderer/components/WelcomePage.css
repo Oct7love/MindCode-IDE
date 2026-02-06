@@ -1,0 +1,325 @@
+/**
+ * WelcomePage - Cursor Premium 风格欢迎页
+ */
+
+.welcome-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 48px 32px;
+  background: var(--cursor-bg-base, #09090b);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景装饰 */
+.welcome-page::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(139, 92, 246, 0.06) 0%,
+    rgba(59, 130, 246, 0.04) 30%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.welcome-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, black 30%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 内容容器 */
+.welcome-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 560px;
+  width: 100%;
+}
+
+/* Logo 区域 */
+.welcome-logo {
+  margin-bottom: 24px;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* 标题 */
+.welcome-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--cursor-text-primary, #fafafa);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  text-align: center;
+  background: linear-gradient(135deg, #fafafa 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: var(--cursor-text-tertiary, #71717a);
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+/* 快速操作区域 */
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 48px;
+}
+
+.welcome-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--cursor-bg-surface, #0c0c0f);
+  border: 1px solid var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+  border-radius: var(--cursor-radius-xl, 12px);
+  color: var(--cursor-text-secondary, #a1a1aa);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+.welcome-action:hover {
+  background: var(--cursor-bg-elevated, #111114);
+  border-color: var(--cursor-border-default, rgba(255, 255, 255, 0.06));
+  color: var(--cursor-text-primary, #fafafa);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.welcome-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--cursor-bg-muted, rgba(255, 255, 255, 0.02));
+  border-radius: var(--cursor-radius-lg, 8px);
+  color: var(--cursor-text-muted, #52525b);
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.welcome-action:hover .welcome-action-icon {
+  background: var(--cursor-bg-active, rgba(255, 255, 255, 0.07));
+  color: var(--cursor-accent, #3b82f6);
+}
+
+.welcome-action-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.welcome-action-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.welcome-action-title {
+  font-weight: 500;
+  color: var(--cursor-text-primary, #fafafa);
+}
+
+.welcome-action-desc {
+  font-size: 12px;
+  color: var(--cursor-text-muted, #52525b);
+}
+
+.welcome-action-shortcut {
+  padding: 4px 8px;
+  background: var(--cursor-bg-muted, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+  border-radius: var(--cursor-radius-sm, 4px);
+  font-size: 11px;
+  font-family: var(--cursor-font-mono);
+  color: var(--cursor-text-muted, #52525b);
+}
+
+/* 最近文件列表 */
+.welcome-recent {
+  width: 100%;
+  max-width: 400px;
+}
+
+.welcome-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.welcome-recent-title {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--cursor-text-muted, #52525b);
+}
+
+.welcome-recent-clear {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--cursor-radius-sm, 4px);
+  font-size: 11px;
+  color: var(--cursor-text-muted, #52525b);
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.welcome-recent-clear:hover {
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--cursor-text-secondary, #a1a1aa);
+}
+
+.welcome-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.welcome-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--cursor-radius-lg, 8px);
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.welcome-recent-item:hover {
+  background: var(--cursor-bg-surface, #0c0c0f);
+  border-color: var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+}
+
+.welcome-recent-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--cursor-bg-muted, rgba(255, 255, 255, 0.02));
+  border-radius: var(--cursor-radius-md, 6px);
+  color: var(--cursor-text-muted, #52525b);
+}
+
+.welcome-recent-item-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.welcome-recent-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.welcome-recent-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cursor-text-secondary, #a1a1aa);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-recent-item:hover .welcome-recent-item-name {
+  color: var(--cursor-text-primary, #fafafa);
+}
+
+.welcome-recent-item-path {
+  font-size: 11px;
+  color: var(--cursor-text-muted, #52525b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 底部信息 */
+.welcome-footer {
+  position: absolute;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 11px;
+  color: var(--cursor-text-muted, #52525b);
+  z-index: 1;
+}
+
+.welcome-footer a {
+  color: var(--cursor-text-tertiary, #71717a);
+  text-decoration: none;
+  transition: color var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.welcome-footer a:hover {
+  color: var(--cursor-text-secondary, #a1a1aa);
+}
+
+.welcome-footer-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .welcome-page {
+    padding: 32px 16px;
+  }
+  
+  .welcome-title {
+    font-size: 24px;
+  }
+  
+  .welcome-actions {
+    max-width: 100%;
+  }
+  
+  .welcome-action {
+    padding: 12px 16px;
+  }
+  
+  .welcome-action-icon {
+    width: 36px;
+    height: 36px;
+  }
+}

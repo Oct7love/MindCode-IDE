@@ -1,24 +1,24 @@
 /**
- * ThinkingBlock 样式 - Cursor 风格
- * 特点：小字体、灰色、等宽字体、左侧强调线
+ * ThinkingBlock - VS Code 色系
+ * 左侧强调线 + 等宽字体 + 折叠
  */
 
 .thinking-block {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   border-radius: 6px;
   overflow: hidden;
-  background: var(--thinking-bg, #1e2228);
-  border-left: 3px solid var(--thinking-accent, #4a5568);
+  background: #252526;
+  border-left: 3px solid #4a4a4a;
   transition: all 0.2s ease;
 }
 
 .thinking-block.thinking {
-  border-left-color: var(--thinking-active-accent, #8b5cf6);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.1);
+  border-left-color: #8b5cf6;
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.08);
 }
 
 .thinking-block.done.collapsed {
-  background: var(--thinking-done-bg, #161b22);
+  background: #1e1e1e;
   opacity: 0.85;
 }
 
@@ -30,15 +30,14 @@
   padding: 8px 12px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease;
+  transition: background 0.12s ease;
   font-size: 12px;
 }
 
 .thinking-header:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: #2d2d30;
 }
 
-/* 图标 */
 .thinking-icon-wrapper {
   display: flex;
   align-items: center;
@@ -64,7 +63,7 @@
 
 .thinking-chevron {
   font-size: 10px;
-  color: var(--text-muted, #6e7681);
+  color: #6e6e6e;
   transition: transform 0.2s ease;
 }
 
@@ -73,12 +72,12 @@
   flex: 1;
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-muted, #6e7681);
+  color: #808080;
   font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 }
 
 .thinking-block.thinking .thinking-title {
-  color: var(--thinking-active-text, #a78bfa);
+  color: #b497f7;
 }
 
 .thinking-status {
@@ -87,19 +86,13 @@
   gap: 2px;
 }
 
-/* 打字机点点动画 */
+/* 打字机点动画 */
 .thinking-dots span {
   animation: blink 1.4s infinite both;
   font-weight: bold;
 }
-
-.thinking-dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.thinking-dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes blink {
   0%, 80%, 100% { opacity: 0; }
@@ -114,7 +107,7 @@
 
 .summary-text {
   font-weight: 400;
-  color: var(--text-muted, #484f58);
+  color: #6e6e6e;
   font-size: 11px;
   max-width: 250px;
   overflow: hidden;
@@ -122,25 +115,24 @@
   white-space: nowrap;
 }
 
-/* 提示文字 */
 .thinking-hint {
   font-size: 10px;
-  color: var(--text-muted, #484f58);
+  color: #6e6e6e;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.12s ease;
 }
 
 .thinking-header:hover .thinking-hint {
   opacity: 0.7;
 }
 
-/* 内容区 - Cursor 风格：小字体、灰色、等宽 */
+/* 内容区 */
 .thinking-content {
   padding: 0 12px;
   font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--thinking-text, #6e7681);
+  color: #808080;
   max-height: 250px;
   overflow-y: auto;
   transition: all 0.25s ease;
@@ -163,37 +155,22 @@
   pointer-events: none;
 }
 
-/* 内容区滚动条 */
-.thinking-content::-webkit-scrollbar {
-  width: 4px;
-}
+.thinking-content::-webkit-scrollbar { width: 6px; }
+.thinking-content::-webkit-scrollbar-track { background: transparent; }
+.thinking-content::-webkit-scrollbar-thumb { background: rgba(121, 121, 121, 0.3); border-radius: 3px; }
+.thinking-content::-webkit-scrollbar-thumb:hover { background: rgba(121, 121, 121, 0.5); }
 
-.thinking-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.thinking-content::-webkit-scrollbar-thumb {
-  background: rgba(110, 118, 129, 0.3);
-  border-radius: 2px;
-}
-
-.thinking-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(110, 118, 129, 0.5);
-}
-
-/* 占位符 */
 .thinking-placeholder {
-  color: var(--text-muted, #484f58);
+  color: #6e6e6e;
   font-style: italic;
   font-size: 12px;
 }
 
-/* 流式光标 - 更细腻 */
 .thinking-cursor {
   display: inline-block;
   width: 1px;
   height: 1em;
-  background: var(--thinking-cursor, #6e7681);
+  background: #808080;
   margin-left: 1px;
   vertical-align: text-bottom;
   animation: cursor-blink 0.8s step-end infinite;
@@ -204,36 +181,27 @@
   50% { opacity: 0; }
 }
 
-/* 思考内容中的 Markdown 样式覆盖 - 保持简洁 */
+/* Markdown 样式覆盖 */
 .thinking-content .markdown-content {
   font-size: 13px;
-  color: var(--thinking-text, #6e7681);
+  color: #808080;
 }
 
-.thinking-content .markdown-content p {
-  margin: 0.3em 0;
-}
-
+.thinking-content .markdown-content p { margin: 0.3em 0; }
 .thinking-content .markdown-content ul,
-.thinking-content .markdown-content ol {
-  margin: 0.3em 0;
-  padding-left: 1.2em;
-}
-
-.thinking-content .markdown-content li {
-  margin: 0.15em 0;
-}
+.thinking-content .markdown-content ol { margin: 0.3em 0; padding-left: 1.2em; }
+.thinking-content .markdown-content li { margin: 0.15em 0; }
 
 .thinking-content .markdown-content code {
-  background: rgba(110, 118, 129, 0.2);
+  background: #333333;
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 12px;
-  color: #8b949e;
+  color: #a0a0a0;
 }
 
 .thinking-content .markdown-content pre {
-  background: rgba(0, 0, 0, 0.25);
+  background: #1a1a1a;
   padding: 6px 8px;
   border-radius: 4px;
   margin: 6px 0;
@@ -241,13 +209,13 @@
   font-size: 12px;
 }
 
-/* 过渡状态 - 思考完成后即将折叠 */
+/* 过渡状态 */
 .thinking-block.transitioning {
-  border-left-color: var(--thinking-done-accent, #4ade80);
+  border-left-color: #4ade80;
 }
 
 .thinking-block.transitioning .thinking-title {
-  color: var(--thinking-done-text, #4ade80);
+  color: #4ade80;
 }
 
 .thinking-block.transitioning::after {
@@ -257,7 +225,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--thinking-done-accent, #4ade80), transparent);
+  background: linear-gradient(90deg, #4ade80, transparent);
   animation: progress 2s linear;
 }
 
@@ -266,26 +234,11 @@
   to { width: 0%; }
 }
 
-/* 折叠动画更平滑 */
 .thinking-block.done:not(.transitioning) {
-  animation: fadeToCollapsed 300ms ease;
+  animation: fadeCollapsed 300ms ease;
 }
 
-@keyframes fadeToCollapsed {
+@keyframes fadeCollapsed {
   from { opacity: 1; }
   to { opacity: 0.85; }
-}
-
-/* 暗色主题变量 */
-:root {
-  --thinking-bg: #1e2228;
-  --thinking-done-bg: #161b22;
-  --thinking-accent: #4a5568;
-  --thinking-active-accent: #8b5cf6;
-  --thinking-done-accent: #4ade80;
-  --thinking-text: #6e7681;
-  --thinking-active-text: #a78bfa;
-  --thinking-done-text: #4ade80;
-  --thinking-cursor: #6e7681;
-  --text-muted: #6e7681;
 }

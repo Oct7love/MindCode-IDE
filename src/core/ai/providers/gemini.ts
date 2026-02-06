@@ -6,14 +6,17 @@ export class GeminiProvider extends BaseAIProvider {
   name = 'gemini' as const;
   displayName = 'Gemini (Google)';
   models: ModelInfo[] = [
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', contextWindow: 1000000, inputPrice: 1.25, outputPrice: 5 },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', contextWindow: 1000000, inputPrice: 0.075, outputPrice: 0.3 },
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', contextWindow: 1000000, inputPrice: 0.1, outputPrice: 0.4 },
+    { id: '[次]gemini-2.5-pro', name: 'Gemini 2.5 Pro', contextWindow: 1000000, inputPrice: 0.03, outputPrice: 0.12 },
+    { id: '[次]gemini-2.5-pro-thinking', name: 'Gemini 2.5 Pro Thinking', contextWindow: 1000000, inputPrice: 0.03, outputPrice: 0.12 },
+    { id: '[次]gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', contextWindow: 1000000, inputPrice: 0.02, outputPrice: 0.08 },
+    { id: '[次]gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', contextWindow: 1000000, inputPrice: 0.05, outputPrice: 0.2 },
+    { id: '[次]gemini-3-pro-preview-thinking', name: 'Gemini 3 Pro Preview Thinking', contextWindow: 1000000, inputPrice: 0.05, outputPrice: 0.2 },
   ];
   private client: OpenAI;
 
   constructor(config: AIProviderConfig) {
     super(config);
+    console.log('[Gemini] Init: baseUrl=' + config.baseUrl + ', model=' + config.model);
     this.client = new OpenAI({ apiKey: config.apiKey, baseURL: config.baseUrl }); // OpenAI 兼容接口
   }
 
@@ -35,6 +38,7 @@ export class GeminiProvider extends BaseAIProvider {
     let fullText = '';
     const toolCalls: ToolCallInfo[] = [];
     try {
+      console.log('[Gemini] chatWithTools: model=' + this.getModel() + ', messages=' + messages.length + ', tools=' + tools.length);
       const openaiTools = tools.map(t => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } }));
       const openaiMsgs: any[] = [];
       for (const m of messages) { // 保持消息顺序
@@ -42,9 +46,13 @@ export class GeminiProvider extends BaseAIProvider {
         else if (m.toolCalls?.length) { openaiMsgs.push({ role: 'assistant', content: m.content || null, tool_calls: m.toolCalls.map(tc => ({ id: tc.id, type: 'function' as const, function: { name: tc.name, arguments: JSON.stringify(tc.arguments) } })) }); }
         else { openaiMsgs.push({ role: m.role, content: m.content }); }
       }
+      console.log('[Gemini] Requesting stream...');
       const stream = await this.client.chat.completions.create({ model: this.getModel(), max_tokens: this.getMaxTokens(), temperature: this.getTemperature(), stream: true, messages: openaiMsgs, tools: openaiTools });
+      console.log('[Gemini] Stream received, processing chunks...');
       const toolCallMap = new Map<number, { id: string; name: string; args: string }>();
+      let chunkCount = 0;
       for await (const chunk of stream) {
+        chunkCount++;
         const delta = chunk.choices[0]?.delta;
         if (delta?.content) { fullText += delta.content; callbacks.onToken(delta.content); }
         if (delta?.tool_calls) {
@@ -57,9 +65,13 @@ export class GeminiProvider extends BaseAIProvider {
           }
         }
       }
+      console.log('[Gemini] Stream done: chunks=' + chunkCount + ', fullText.length=' + fullText.length + ', toolCalls=' + toolCallMap.size);
       for (const [, tc] of toolCallMap) { try { toolCalls.push({ id: tc.id, name: tc.name, arguments: JSON.parse(tc.args || '{}') }); } catch {} }
       if (toolCalls.length > 0 && callbacks.onToolCall) callbacks.onToolCall(toolCalls);
       callbacks.onComplete(fullText);
-    } catch (error) { callbacks.onError(error as Error); }
+    } catch (error) { 
+      console.error('[Gemini] Error:', error);
+      callbacks.onError(error as Error); 
+    }
   }
 }

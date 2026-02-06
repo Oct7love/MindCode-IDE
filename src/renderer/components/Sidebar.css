@@ -1,23 +1,29 @@
+/* ============================================
+ * Sidebar - MindCode 侧边栏
+ * Premium VSCode-like File Explorer
+ * ============================================ */
+
 .sidebar {
   display: flex;
   height: 100%;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-surface, #0f0f12);
 }
 
+/* ========== Activity Bar ========== */
 .activity-bar {
   width: 48px;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-base, #09090b);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 0;
-  border-right: 1px solid var(--color-border-subtle);
+  padding: 4px 0;
+  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
 }
 
 .activity-icons {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 .activity-bottom {
@@ -27,24 +33,24 @@
 
 .activity-icon {
   width: 48px;
-  height: 42px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--color-text-muted, #52525b);
   cursor: pointer;
   position: relative;
-  transition: color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .activity-icon:hover {
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #a1a1aa);
 }
 
 .activity-icon.active {
-  color: var(--color-text-primary);
+  color: var(--color-text-primary, #fafafa);
 }
 
 .activity-icon.active::before {
@@ -54,36 +60,64 @@
   top: 50%;
   transform: translateY(-50%);
   width: 2px;
-  height: 20px;
-  background: var(--color-accent-blue);
-  border-radius: 0 1px 1px 0;
+  height: 24px;
+  background: var(--color-accent-blue, #3b82f6);
+  border-radius: 0 2px 2px 0;
 }
 
+/* ========== Sidebar Panel ========== */
 .sidebar-panel {
   width: 240px;
+  min-width: 180px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface, #0f0f12);
+  border-right: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
 }
 
 .panel-header {
-  height: 35px;
+  height: 36px;
+  min-height: 36px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 12px;
+  background: var(--color-bg-surface, #0f0f12);
+  border-bottom: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.03));
+}
+
+.panel-title {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border-subtle);
+  letter-spacing: 0.8px;
+  color: var(--color-text-tertiary, #71717a);
 }
 
 .panel-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
+/* 滚动条样式 */
+.panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: var(--color-border-default, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong, rgba(255, 255, 255, 0.15));
+}
+
+/* ========== Section ========== */
 .section {
   padding: 0;
 }
@@ -92,56 +126,86 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-muted);
+  color: var(--color-text-muted, #52525b);
   cursor: pointer;
   user-select: none;
+  transition: all 0.1s ease;
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-surface, #0f0f12);
+  z-index: 1;
 }
 
 .section-header:hover {
-  background: var(--color-bg-hover);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.03));
+  color: var(--color-text-secondary, #a1a1aa);
 }
 
+/* ========== File Tree ========== */
 .file-tree {
   font-size: 13px;
+  padding-bottom: 8px;
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
   cursor: pointer;
   user-select: none;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #a1a1aa);
   transition: all 0.1s ease;
+  border-radius: 0;
 }
 
 .file-item:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--color-text-primary, #fafafa);
+}
+
+.file-item.selected {
+  background: var(--color-bg-active, rgba(59, 130, 246, 0.1));
+  color: var(--color-text-primary, #fafafa);
 }
 
 .file-item .chevron {
   width: 16px;
+  min-width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted);
+  color: var(--color-text-muted, #52525b);
+  transition: transform 0.15s ease;
 }
 
-.file-item.file {
-  padding-left: 28px;
+.file-item.folder.expanded .chevron {
+  transform: rotate(90deg);
+}
+
+.file-item.file .chevron {
+  visibility: hidden;
 }
 
 .file-item .file-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* 文件图标颜色增强 */
+.file-item svg {
+  flex-shrink: 0;
 }
 
 /* ========== Extensions Panel ========== */

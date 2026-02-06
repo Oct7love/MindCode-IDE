@@ -39,7 +39,7 @@ export interface UseCompletionReturn {
 
 export const COMPLETION_MODELS = [
   { id: 'deepseek-chat', name: 'DeepSeek V3', description: '快速、高性价比' },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet', description: '高质量' },
+  { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet', description: '高质量' },
   { id: 'glm-4.7-flashx', name: 'GLM Flash', description: '国产、快速' },
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: '平衡' },
 ];
@@ -50,7 +50,7 @@ export const COMPLETION_MODELS = [
 
 export function useCompletion(): UseCompletionReturn {
   const [enabled, setEnabled] = useState(true);
-  const [model, setModelState] = useState('claude-sonnet-4-5');
+  const [model, setModelState] = useState('claude-sonnet-4-5-20250929');
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debounceMs, setDebounceMs] = useState(150);

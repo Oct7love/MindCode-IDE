@@ -1,0 +1,72 @@
+/**
+ * CSS Variable Aliases - 变量别名统一
+ * 
+ * 历史遗留问题：项目中存在两套变量命名：
+ * - --color-* (主要)
+ * - --cursor-* (历史遗留)
+ * 
+ * 此文件提供别名映射，确保两套命名都能正常工作
+ * 新代码应使用 --color-* 命名规范
+ */
+
+:root {
+  /* ========== 背景色别名 ========== */
+  --cursor-bg-base: var(--color-bg-base);
+  --cursor-bg-surface: var(--color-bg-elevated);
+  --cursor-bg-elevated: var(--color-bg-elevated);
+  --cursor-bg-hover: var(--color-bg-hover);
+  --cursor-bg-active: var(--color-bg-active);
+  --cursor-bg-overlay: var(--color-bg-overlay);
+  
+  /* --color-bg-surface 别名 (部分组件使用) */
+  --color-bg-surface: var(--color-bg-elevated);
+  
+  /* ========== 文本色别名 ========== */
+  --cursor-text-primary: var(--color-text-primary);
+  --cursor-text-secondary: var(--color-text-secondary);
+  --cursor-text-muted: var(--color-text-muted);
+  --cursor-text-disabled: var(--color-text-disabled);
+  
+  /* ========== 边框色别名 ========== */
+  --cursor-border: var(--color-border);
+  --cursor-border-subtle: var(--color-border);
+  --cursor-border-light: var(--color-border-light);
+  --cursor-border-focus: var(--color-border-focus);
+  --color-border-subtle: var(--color-border);
+  
+  /* ========== 强调色别名 ========== */
+  --cursor-accent: var(--color-accent-primary);
+  --cursor-accent-primary: var(--color-accent-primary);
+  --cursor-accent-hover: var(--color-accent-hover);
+  --cursor-accent-active: var(--color-accent-active);
+  
+  /* ========== 语义色别名 ========== */
+  --cursor-success: var(--color-success);
+  --cursor-warning: var(--color-warning);
+  --cursor-error: var(--color-error);
+  --cursor-info: var(--color-info);
+  
+  /* ========== 间距别名 ========== */
+  --cursor-spacing-xs: var(--spacing-xs);
+  --cursor-spacing-sm: var(--spacing-sm);
+  --cursor-spacing-md: var(--spacing-md);
+  --cursor-spacing-lg: var(--spacing-lg);
+  --cursor-spacing-xl: var(--spacing-xl);
+  
+  /* ========== 圆角别名 ========== */
+  --cursor-radius-sm: var(--radius-sm);
+  --cursor-radius-md: var(--radius-md);
+  --cursor-radius-lg: var(--radius-lg);
+  --cursor-radius-full: var(--radius-full);
+  
+  /* ========== 阴影别名 ========== */
+  --cursor-shadow-sm: var(--shadow-sm);
+  --cursor-shadow-md: var(--shadow-md);
+  --cursor-shadow-lg: var(--shadow-lg);
+  
+  /* ========== 动画别名 ========== */
+  --cursor-duration-fast: var(--duration-fast);
+  --cursor-duration-normal: var(--duration-normal);
+  --cursor-duration-slow: var(--duration-slow);
+  --cursor-easing: var(--easing-default);
+}

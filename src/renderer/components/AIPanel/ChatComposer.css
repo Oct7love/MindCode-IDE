@@ -3,7 +3,7 @@
 .chat-composer {
   display: flex;
   flex-direction: column;
-  background: var(--composer-bg, var(--color-bg-elevated, #151519));
+  background: var(--composer-bg, var(--color-bg-elevated, #252526));
   border: 1px solid var(--composer-border, var(--color-border-default, rgba(255, 255, 255, 0.06)));
   border-radius: var(--composer-radius, 14px);
   margin: var(--space-3, 12px) var(--space-4, 16px) var(--space-4, 16px);
@@ -146,7 +146,7 @@
   align-items: center;
   justify-content: center;
   background: #ef4444;
-  border: 2px solid var(--color-bg-elevated, #151519);
+  border: 2px solid var(--color-bg-elevated, #252526);
   border-radius: 50%;
   color: #fff;
   font-size: 10px;

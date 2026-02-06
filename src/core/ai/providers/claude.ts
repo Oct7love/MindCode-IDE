@@ -8,9 +8,9 @@ export class ClaudeProvider extends BaseAIProvider {
   displayName = 'Claude (Anthropic)';
 
   models: ModelInfo[] = [
-    { id: 'claude-opus-4-5-thinking', name: 'Claude Opus 4.5', contextWindow: 200000, inputPrice: 15, outputPrice: 75 },
-    { id: 'claude-sonnet-4-5-thinking', name: 'Claude Sonnet 4.5 (Thinking)', contextWindow: 200000, inputPrice: 3, outputPrice: 15 },
-    { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', contextWindow: 200000, inputPrice: 3, outputPrice: 15 },
+    { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5', contextWindow: 200000, inputPrice: 15, outputPrice: 75 },
+    { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', contextWindow: 200000, inputPrice: 3, outputPrice: 15 },
+    { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', contextWindow: 200000, inputPrice: 0.8, outputPrice: 4 },
   ];
 
   private apiKey: string;

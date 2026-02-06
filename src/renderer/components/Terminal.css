@@ -1,0 +1,343 @@
+/**
+ * Terminal - Cursor Premium 风格终端面板
+ * 现代化设计 + 精致交互
+ */
+
+/* 终端容器 */
+.terminal-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--cursor-bg-base, #09090b);
+  border-top: 1px solid var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+}
+
+/* 终端头部 */
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 8px 0 12px;
+  background: var(--cursor-bg-surface, #0c0c0f);
+  border-bottom: 1px solid var(--cursor-border-subtle, rgba(255, 255, 255, 0.04));
+}
+
+/* 终端标签区 */
+.terminal-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 终端标签 */
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--cursor-radius-md, 6px);
+  color: var(--cursor-text-muted, #52525b);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-tab:hover {
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--cursor-text-secondary, #a1a1aa);
+}
+
+.terminal-tab.active {
+  background: var(--cursor-bg-active, rgba(255, 255, 255, 0.07));
+  color: var(--cursor-text-primary, #fafafa);
+}
+
+.terminal-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.terminal-tab-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.terminal-tab-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.terminal-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--cursor-text-muted, #52525b);
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-tab:hover .terminal-tab-close {
+  opacity: 1;
+}
+
+.terminal-tab-close:hover {
+  background: var(--cursor-error-muted, rgba(239, 68, 68, 0.12));
+  color: var(--cursor-error, #ef4444);
+}
+
+.terminal-tab-close svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* 新建终端按钮 */
+.terminal-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: var(--cursor-radius-sm, 4px);
+  color: var(--cursor-text-muted, #52525b);
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-new:hover {
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--cursor-text-secondary, #a1a1aa);
+}
+
+.terminal-new svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 头部操作按钮组 */
+.terminal-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.terminal-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: var(--cursor-radius-sm, 4px);
+  color: var(--cursor-text-muted, #52525b);
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-action:hover {
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--cursor-text-secondary, #a1a1aa);
+}
+
+.terminal-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 终端内容区域 */
+.terminal-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* xterm.js 容器 */
+.terminal-xterm {
+  width: 100%;
+  height: 100%;
+  padding: 8px 12px;
+}
+
+/* xterm.js 自定义样式 */
+.xterm {
+  font-family: var(--cursor-font-mono, 'JetBrains Mono', monospace);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* 光标样式 */
+.xterm-cursor-layer .xterm-cursor {
+  background-color: var(--cursor-accent, #3b82f6) !important;
+}
+
+/* 选中文本样式 */
+.xterm .xterm-selection div {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* 终端空状态 */
+.terminal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  color: var(--cursor-text-muted, #52525b);
+}
+
+.terminal-empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.terminal-empty-text {
+  font-size: 13px;
+}
+
+.terminal-empty-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--cursor-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--cursor-radius-md, 6px);
+  color: var(--cursor-text-secondary, #a1a1aa);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-empty-action:hover {
+  background: var(--cursor-bg-active, rgba(255, 255, 255, 0.07));
+  border-color: var(--cursor-border-strong, rgba(255, 255, 255, 0.1));
+  color: var(--cursor-text-primary, #fafafa);
+}
+
+.terminal-empty-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 拖动调整大小 */
+.terminal-resizer {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 10;
+}
+
+.terminal-resizer::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: var(--cursor-accent, #3b82f6);
+  border-radius: var(--cursor-radius-full, 9999px);
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-resizer:hover::before {
+  width: 48px;
+}
+
+/* 终端下拉选择器 */
+.terminal-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--cursor-glass-bg, rgba(17, 17, 20, 0.95));
+  backdrop-filter: var(--cursor-glass-blur, blur(12px));
+  border: 1px solid var(--cursor-border-default, rgba(255, 255, 255, 0.06));
+  border-radius: var(--cursor-radius-lg, 8px);
+  box-shadow: var(--cursor-shadow-lg);
+  padding: 4px;
+  z-index: 100;
+  animation: dropdown-slide-down 0.15s var(--cursor-ease-out);
+}
+
+@keyframes dropdown-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.terminal-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--cursor-radius-md, 6px);
+  color: var(--cursor-text-secondary, #a1a1aa);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.terminal-dropdown-item:hover {
+  background: var(--cursor-bg-hover, rgba(255, 255, 255, 0.04));
+  color: var(--cursor-text-primary, #fafafa);
+}
+
+.terminal-dropdown-item svg {
+  width: 14px;
+  height: 14px;
+  color: var(--cursor-text-muted, #52525b);
+}

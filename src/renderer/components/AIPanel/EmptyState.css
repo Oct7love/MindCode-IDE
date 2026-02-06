@@ -1,0 +1,140 @@
+/* EmptyState - VS Code 色系 */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px 24px;
+  max-width: 420px;
+  margin: 0 auto;
+  animation: emptyIn 0.4s ease-out;
+  gap: 24px;
+}
+
+@keyframes emptyIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 品牌区域 */
+.empty-state-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.empty-state-logo-ring {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  margin-bottom: 4px;
+}
+
+.empty-state-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.empty-state-logo svg {
+  filter: drop-shadow(0 2px 6px rgba(139, 92, 246, 0.3));
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.empty-state-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+  font-size: 13px;
+  color: #808080;
+  margin: 0;
+  line-height: 1.5;
+  max-width: 300px;
+}
+
+/* 快捷操作网格 */
+.empty-state-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.empty-state-action-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 8px;
+  cursor: default;
+  transition: all 150ms ease;
+}
+
+.empty-state-action-card:hover {
+  background: #2d2d30;
+  border-color: #4a4a4a;
+}
+
+.empty-state-action-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.empty-state-action-text {
+  font-size: 12px;
+  color: #a0a0a0;
+  line-height: 1.3;
+}
+
+/* 底部键盘提示 */
+.empty-state-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6e6e6e;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.empty-state-hint-kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 5px;
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--font-family-code);
+  color: #a0a0a0;
+  line-height: 1;
+}
+
+.empty-state-hint-sep {
+  color: #3c3c3c;
+  margin: 0 2px;
+}
+
+@media (max-width: 380px) {
+  .empty-state { padding: 24px 12px 16px; }
+  .empty-state-actions { grid-template-columns: 1fr; }
+}

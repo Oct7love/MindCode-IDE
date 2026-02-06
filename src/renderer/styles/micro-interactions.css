@@ -1,0 +1,345 @@
+/**
+ * MindCode Micro-Interactions
+ * 微交互动画 + 精致过渡效果
+ */
+
+/* ============================================
+ * 🎯 通用过渡效果
+ * ============================================ */
+
+/* 所有可交互元素的基础过渡 */
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[tabindex]:not([tabindex="-1"]) {
+  transition: all var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+/* 点击反馈 - 缩放效果 */
+.click-scale:active {
+  transform: scale(0.97);
+}
+
+.click-scale-sm:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+ * ✨ 悬停动画
+ * ============================================ */
+
+/* 微妙的向上移动 */
+.hover-lift {
+  transition: transform var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* 发光效果 */
+.hover-glow {
+  transition: box-shadow var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+/* AI 光晕 */
+.hover-glow-ai:hover {
+  box-shadow: var(--cursor-glow-ai, 0 0 30px rgba(139, 92, 246, 0.2));
+}
+
+/* 边框高亮 */
+.hover-border {
+  transition: border-color var(--cursor-duration-fast, 100ms) var(--cursor-ease-out);
+}
+
+.hover-border:hover {
+  border-color: var(--cursor-border-strong, rgba(255, 255, 255, 0.1));
+}
+
+/* ============================================
+ * 🎪 进入/离开动画
+ * ============================================ */
+
+/* 淡入 */
+.animate-fade-in {
+  animation: cursor-fade-in var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+/* 从上滑入 */
+.animate-slide-down {
+  animation: cursor-slide-down var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+/* 从下滑入 */
+.animate-slide-up {
+  animation: cursor-slide-up var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+/* 缩放进入 */
+.animate-scale-in {
+  animation: cursor-scale-in var(--cursor-duration-normal, 150ms) var(--cursor-ease-out);
+}
+
+/* 弹性进入 */
+.animate-bounce-in {
+  animation: bounce-in 0.5s var(--cursor-ease-spring);
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+ * 💫 加载动画
+ * ============================================ */
+
+/* 旋转 */
+.animate-spin {
+  animation: cursor-spin 1s linear infinite;
+}
+
+/* 脉冲 */
+.animate-pulse {
+  animation: cursor-pulse 2s ease-in-out infinite;
+}
+
+/* 闪烁光点 */
+.animate-dot-pulse {
+  animation: dot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 打字光标 */
+.animate-cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* 骨架屏闪烁 */
+.animate-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--cursor-bg-muted, rgba(255, 255, 255, 0.02)) 25%,
+    var(--cursor-bg-hover, rgba(255, 255, 255, 0.04)) 50%,
+    var(--cursor-bg-muted, rgba(255, 255, 255, 0.02)) 75%
+  );
+  background-size: 200% 100%;
+  animation: cursor-shimmer 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+ * 🎨 特殊效果
+ * ============================================ */
+
+/* AI 渐变动画 */
+.animate-ai-gradient {
+  background: var(--cursor-ai-gradient);
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* 成功闪烁 */
+.animate-success-flash {
+  animation: success-flash 0.5s ease;
+}
+
+@keyframes success-flash {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: var(--cursor-success-muted, rgba(34, 197, 94, 0.12));
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* 错误抖动 */
+.animate-shake {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* ============================================
+ * 📱 页面过渡
+ * ============================================ */
+
+/* 面板展开 */
+.panel-expand {
+  animation: panel-expand 0.25s var(--cursor-ease-out);
+}
+
+@keyframes panel-expand {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 100vh;
+  }
+}
+
+/* 面板收起 */
+.panel-collapse {
+  animation: panel-collapse 0.2s var(--cursor-ease-in);
+}
+
+@keyframes panel-collapse {
+  from {
+    opacity: 1;
+    max-height: 100vh;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+  }
+}
+
+/* 侧边栏滑入 */
+.sidebar-slide-in {
+  animation: sidebar-slide-in 0.25s var(--cursor-ease-out);
+}
+
+@keyframes sidebar-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============================================
+ * 🔧 交互增强
+ * ============================================ */
+
+/* 聚焦态光环 */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--cursor-focus-ring, 0 0 0 2px var(--cursor-bg-base), 0 0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+/* 拖拽状态 */
+.dragging {
+  opacity: 0.8;
+  cursor: grabbing !important;
+  box-shadow: var(--cursor-shadow-lg);
+}
+
+/* 禁用状态 */
+.disabled,
+[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 加载中状态 */
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+/* ============================================
+ * 🖼️ 图片/媒体效果
+ * ============================================ */
+
+/* 图片加载效果 */
+.image-loading {
+  background: var(--cursor-bg-muted);
+  animation: cursor-shimmer 1.5s ease-in-out infinite;
+}
+
+/* 图片淡入 */
+.image-fade-in {
+  animation: image-fade-in 0.3s ease-out;
+}
+
+@keyframes image-fade-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* ============================================
+ * ⚡ 性能优化
+ * ============================================ */
+
+/* GPU 加速 */
+.gpu-accelerate {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* 减少动画（用户偏好） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

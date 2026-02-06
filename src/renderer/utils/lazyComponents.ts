@@ -3,7 +3,44 @@
  * 优化启动性能,按需加载组件
  */
 
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, createElement } from 'react';
+
+/**
+ * 默认加载占位符
+ */
+function LoadingFallback(): React.ReactElement {
+  return createElement('div', {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      color: 'var(--color-text-muted)',
+      fontSize: '12px'
+    }
+  }, createElement('div', {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '12px'
+    }
+  }, [
+    createElement('div', {
+      key: 'spinner',
+      className: 'spinner',
+      style: {
+        width: '24px',
+        height: '24px',
+        border: '2px solid transparent',
+        borderTopColor: 'var(--color-accent-blue)',
+        borderRadius: '50%',
+        animation: 'spin 0.6s linear infinite'
+      }
+    }),
+    createElement('span', { key: 'text' }, 'Loading...')
+  ]));
+}
 
 /**
  * 创建懒加载组件
@@ -14,44 +51,13 @@ export function createLazyComponent<T extends React.ComponentType<any>>(
 ) {
   const LazyComponent = lazy(loader);
 
-  return (props: React.ComponentProps<T>) => (
-    <Suspense fallback={fallback || <LoadingFallback />}>
-      <LazyComponent {...props} />
-    </Suspense>
-  );
-}
-
-/**
- * 默认加载占位符
- */
-function LoadingFallback() {
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      color: 'var(--color-text-muted)',
-      fontSize: '12px'
-    }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
-        <div className="spinner" style={{
-          width: '24px',
-          height: '24px',
-          border: '2px solid transparent',
-          borderTopColor: 'var(--color-accent-blue)',
-          borderRadius: '50%',
-          animation: 'spin 0.6s linear infinite'
-        }} />
-        <span>Loading...</span>
-      </div>
-    </div>
-  );
+  return function LazyWrapper(props: React.ComponentProps<T>) {
+    return createElement(
+      Suspense,
+      { fallback: fallback || createElement(LoadingFallback) },
+      createElement(LazyComponent, props as any)
+    );
+  };
 }
 
 /**

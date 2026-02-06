@@ -71,7 +71,7 @@
   right: 0;
   min-width: 180px;
   padding: 3px;
-  background: var(--color-bg-elevated, #151519);
+  background: var(--color-bg-elevated, #252526);
   border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.04));
   border-radius: var(--radius-md, 6px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);

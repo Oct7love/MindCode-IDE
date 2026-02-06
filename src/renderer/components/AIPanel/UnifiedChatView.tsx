@@ -6,7 +6,6 @@
 import React, { useState, useCallback, useRef, useEffect, memo, ImgHTMLAttributes } from 'react';
 import { useAIStore, AIMode, ToolCallStatus, ImageAttachment } from '../../stores';
 import { useChatEngine, useComposerState, useScrollAnchor } from './hooks';
-import { ChatHeader } from './ChatHeader';
 import { ConfirmDialog } from './ConfirmDialog';
 import { QueueIndicator } from './QueueIndicator';
 import { EmptyState } from './EmptyState';
@@ -17,7 +16,6 @@ import { MarkdownRenderer } from '../MarkdownRenderer';
 import { ToolBlock, ToolStatus } from './ToolBlock';
 import { TypingIndicator } from './TypingIndicator';
 import { useCopyFeedback } from './CopyFeedback';
-import { ConversationList } from './ConversationList';
 import { AssistantMessage } from './AssistantMessage';
 import { MessageActions } from './MessageActions';
 import '../../styles/chat-tokens.css';
@@ -31,33 +29,51 @@ const MODE_OPTIONS: { mode: AIMode; icon: string; label: string; shortcut?: stri
   { mode: 'chat', icon: '◇', label: 'Ask' },
 ];
 
-// 图片预览组件 - 处理加载状态和错误
+// 支持图片的模型列表
+const VISION_CAPABLE_MODELS = [
+  'claude-opus-4-5-20251101',
+  'claude-sonnet-4-5-20250929', 
+  'claude-haiku-4-5-20251001',
+  'codesuc-opus',
+  'codesuc-sonnet',
+  'codesuc-haiku',
+];
+
+// 图片预览组件 - 处理加载状态和错误，支持自动回退
 const ImagePreview: React.FC<{
-  src: string; // data URL 或 blob URL
-  blobUrl?: string; // 优先使用的 blob URL
+  src: string; // data URL (base64) - 作为备用
+  blobUrl?: string; // blob URL - 优先使用（但可能失效）
   alt?: string;
   className?: string;
   onClick?: () => void;
 }> = memo(({ src, blobUrl, alt, className, onClick }) => {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [useFallback, setUseFallback] = useState(false); // 是否使用 data URL 作为回退
   
-  // 优先使用 blobUrl，否则使用 data URL
-  const imgSrc = blobUrl || src;
+  // 优先使用 blobUrl，如果失败则回退到 data URL (src)
+  const imgSrc = useFallback ? src : (blobUrl || src);
   
   const handleLoad = useCallback(() => {
-    console.log('[ImagePreview] Image loaded successfully');
     setStatus('loaded');
   }, []);
   
   const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.error('[ImagePreview] Image load error, src type:', imgSrc?.slice(0, 20));
-    setStatus('error');
-  }, [imgSrc]);
+    // 如果 blob URL 加载失败，且有 data URL 可用，则回退
+    if (!useFallback && blobUrl && src && src.startsWith('data:')) {
+      console.log('[ImagePreview] Blob URL failed, falling back to data URL');
+      setUseFallback(true);
+      setStatus('loading');
+    } else {
+      console.error('[ImagePreview] Image load error, no fallback available');
+      setStatus('error');
+    }
+  }, [useFallback, blobUrl, src]);
   
-  // 重置状态当 src 改变
+  // 重置状态当原始 src 改变（新图片）
   useEffect(() => {
     setStatus('loading');
-  }, [imgSrc]);
+    setUseFallback(false);
+  }, [src, blobUrl]);
   
   if (!imgSrc) {
     return (
@@ -104,7 +120,6 @@ interface UnifiedChatViewProps {
 export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizing }) => {
   const { mode, setMode, model, setModel, getCurrentConversation, contexts, removeContext, createConversation } = useAIStore();
   const [showModeMenu, setShowModeMenu] = useState(false);
-  const [showConvList, setShowConvList] = useState(false);
   const [pickerPos, setPickerPos] = useState<{ x: number; y: number } | undefined>();
   const [pendingConfirm, setPendingConfirm] = useState<{ call: ToolCallStatus; resolve: (ok: boolean) => void } | null>(null);
   const [images, setImages] = useState<ImageAttachment[]>([]);
@@ -146,6 +161,9 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
     }
   }, [input, images, engineSend, setInput]);
 
+  // 检查当前模型是否支持图片
+  const supportsVision = VISION_CAPABLE_MODELS.includes(model);
+
   // 处理粘贴图片 - 使用 Blob URL
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -155,6 +173,14 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
       const item = items[i];
       if (item.type.startsWith('image/')) {
         e.preventDefault();
+        
+        // 检查模型是否支持图片
+        if (!VISION_CAPABLE_MODELS.includes(model)) {
+          console.warn('[ImagePaste] 当前模型不支持图片:', model);
+          alert(`当前模型 (${MODELS.find(m => m.id === model)?.name || model}) 不支持图片识别。\n\n请切换到 Claude 模型后再上传图片。`);
+          return;
+        }
+        
         const file = item.getAsFile();
         if (file) {
           // 使用 Blob URL 而不是 data URL
@@ -185,7 +211,7 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
         }
       }
     }
-  }, [images]);
+  }, [images, model]);
 
   // 移除图片（保存历史用于撤销）
   const removeImage = useCallback((id: string) => {
@@ -259,8 +285,6 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
 
   return (
     <div className="unified-chat-view">
-      <ChatHeader onNewChat={createConversation} onShowHistory={() => setShowConvList(true)} />
-
       <div className="unified-messages" role="log" ref={containerRef}>
         {displayMessages.length <= 1 && <EmptyState mode={mode} icon={currentModeOption.icon} label={currentModeOption.label} />}
         {displayMessages.slice(1).map((msg, idx) => (
@@ -401,7 +425,6 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
       <ContextPicker isOpen={showPicker} onClose={closePicker} position={pickerPos} inputRef={textareaRef} />
       {pendingConfirm && <ConfirmDialog call={pendingConfirm.call} onConfirm={() => handleConfirm(true)} onCancel={() => handleConfirm(false)} />}
       {FeedbackComponent}
-      <ConversationList isOpen={showConvList} onClose={() => setShowConvList(false)} />
     </div>
   );
 });

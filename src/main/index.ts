@@ -25,7 +25,9 @@ let mainWindow: BrowserWindow | null = null;
 const isDev = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
 // 懒加载 AI Providers - 延迟到首次使用时初始化
-let _providers: Record<string, any> | null = null;
+import type { AIProvider } from '../shared/types/ai';
+
+let _providers: Record<string, AIProvider> | null = null;
 let _llmClient: LLMClient | null = null;
 
 function getProviders() {
@@ -517,6 +519,53 @@ ipcMain.handle('ai-stats', () => getLLMClient().getStats());
 
 // ==================== 文件系统操作 ====================
 
+// 当前工作区路径（用于路径验证）
+let currentWorkspacePath: string | null = null;
+
+// 验证路径是否在允许的范围内（防止路径遍历攻击）
+function isPathAllowed(targetPath: string, basePath?: string): boolean {
+  try {
+    // 规范化路径
+    const normalizedTarget = path.resolve(targetPath);
+    
+    // 如果提供了基础路径，检查是否在其内
+    if (basePath) {
+      const normalizedBase = path.resolve(basePath);
+      return normalizedTarget.startsWith(normalizedBase + path.sep) || normalizedTarget === normalizedBase;
+    }
+    
+    // 如果有工作区，检查是否在工作区内
+    if (currentWorkspacePath) {
+      const normalizedWorkspace = path.resolve(currentWorkspacePath);
+      return normalizedTarget.startsWith(normalizedWorkspace + path.sep) || normalizedTarget === normalizedWorkspace;
+    }
+    
+    // 检查是否尝试访问系统关键目录
+    const dangerousPaths = process.platform === 'win32'
+      ? ['C:\\Windows', 'C:\\Program Files', 'C:\\Program Files (x86)', 'C:\\ProgramData']
+      : ['/etc', '/usr', '/bin', '/sbin', '/var', '/root', '/boot', '/sys', '/proc'];
+    
+    for (const dangerous of dangerousPaths) {
+      if (normalizedTarget.toLowerCase().startsWith(dangerous.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// 设置工作区路径
+ipcMain.handle('fs:setWorkspace', async (_event, workspacePath: string) => {
+  if (workspacePath && fs.existsSync(workspacePath)) {
+    currentWorkspacePath = path.resolve(workspacePath);
+    return { success: true };
+  }
+  return { success: false, error: '无效的工作区路径' };
+});
+
 // 打开文件夹对话框
 ipcMain.handle('fs:openFolder', async () => {
   const result = await dialog.showOpenDialog(mainWindow!, {
@@ -550,9 +599,13 @@ ipcMain.handle('fs:readDir', async (_event, dirPath: string) => {
   }
 });
 
-// 读取文件内容（支持多编码）
+// 读取文件内容（支持多编码）- 带路径验证
 ipcMain.handle('fs:readFile', async (_event, filePath: string, encoding?: EncodingId) => {
   try {
+    // 路径安全检查
+    if (!isPathAllowed(filePath)) {
+      return { success: false, error: '访问被拒绝：路径不在允许范围内' };
+    }
     const result = readFileWithEncoding(filePath, encoding);
     return { success: true, data: result.content, encoding: result.encoding };
   } catch (error: any) {
@@ -593,9 +646,13 @@ ipcMain.handle('fs:getLineCount', async (_event, filePath: string) => {
   } catch (error: any) { return { success: false, error: error.message }; }
 });
 
-// 写入文件（支持多编码）
+// 写入文件（支持多编码）- 带路径验证
 ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string, encoding: EncodingId = 'utf8') => {
   try {
+    // 路径安全检查
+    if (!isPathAllowed(filePath)) {
+      return { success: false, error: '访问被拒绝：路径不在允许范围内' };
+    }
     writeFileWithEncoding(filePath, content, encoding);
     // 通知渲染进程文件系统已变更
     mainWindow?.webContents.send('fs:fileChanged', { filePath, type: 'write' });
@@ -796,9 +853,13 @@ ipcMain.handle('fs:createFile', async (_event, filePath: string, content: string
   }
 });
 
-// 删除文件或文件夹
+// 删除文件或文件夹 - 带路径验证
 ipcMain.handle('fs:delete', async (_event, targetPath: string) => {
   try {
+    // 路径安全检查（删除操作更严格，必须在工作区内）
+    if (!currentWorkspacePath || !isPathAllowed(targetPath, currentWorkspacePath)) {
+      return { success: false, error: '访问被拒绝：只能删除工作区内的文件' };
+    }
     if (!fs.existsSync(targetPath)) {
       return { success: false, error: '目标不存在' };
     }
@@ -859,14 +920,76 @@ ipcMain.handle('fs:exists', async (_event, targetPath: string) => {
 
 // ==================== 终端操作 ====================
 
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-// 执行命令
+// 安全的命令白名单 - 允许的命令前缀
+const ALLOWED_COMMAND_PREFIXES = [
+  'npm', 'npx', 'node', 'yarn', 'pnpm',
+  'git', 'python', 'python3', 'pip', 'pip3',
+  'cargo', 'rustc', 'go', 'java', 'javac', 'mvn', 'gradle',
+  'dotnet', 'make', 'cmake',
+  'ls', 'dir', 'cd', 'pwd', 'echo', 'cat', 'type', 'mkdir', 'rmdir', 'cp', 'mv', 'rm',
+  'curl', 'wget', 'tar', 'unzip', 'zip',
+  'tsc', 'eslint', 'prettier', 'jest', 'vitest', 'mocha',
+  'docker', 'docker-compose',
+  'code', 'cursor'
+];
+
+// 危险命令黑名单 - 绝对禁止的命令
+const DANGEROUS_COMMANDS = [
+  'rm -rf /', 'rm -rf /*', 'del /f /s /q c:\\',
+  'format', 'fdisk', 'mkfs',
+  ':(){:|:&};:', // fork bomb
+  'dd if=/dev/zero', 'dd if=/dev/random',
+  '> /dev/sda', '> /dev/hda',
+  'chmod -R 777 /', 'chmod -R 000 /',
+  'shutdown', 'reboot', 'halt', 'poweroff',
+  'wget -O- | sh', 'curl | sh', 'curl | bash'
+];
+
+// 验证命令安全性
+function isCommandSafe(command: string): { safe: boolean; reason?: string } {
+  const trimmedCmd = command.trim().toLowerCase();
+  
+  // 检查危险命令
+  for (const dangerous of DANGEROUS_COMMANDS) {
+    if (trimmedCmd.includes(dangerous.toLowerCase())) {
+      return { safe: false, reason: `危险命令被阻止: ${dangerous}` };
+    }
+  }
+  
+  // 提取命令名（第一个词）
+  const cmdParts = trimmedCmd.split(/\s+/);
+  const cmdName = cmdParts[0].replace(/^\.\//, '').replace(/\.exe$/i, '');
+  
+  // 检查白名单
+  const isAllowed = ALLOWED_COMMAND_PREFIXES.some(prefix => 
+    cmdName === prefix || cmdName.endsWith('/' + prefix) || cmdName.endsWith('\\' + prefix)
+  );
+  
+  if (!isAllowed) {
+    return { safe: false, reason: `命令不在白名单中: ${cmdName}` };
+  }
+  
+  return { safe: true };
+}
+
+// 执行命令（带安全检查）
 ipcMain.handle('terminal:execute', async (_event, command: string, cwd?: string) => {
   try {
+    // 安全检查
+    const safetyCheck = isCommandSafe(command);
+    if (!safetyCheck.safe) {
+      return {
+        success: false,
+        error: safetyCheck.reason,
+        data: { stdout: '', stderr: safetyCheck.reason || '命令被阻止' }
+      };
+    }
+    
     // 设置执行选项
     const options: { cwd?: string; shell?: string; env?: NodeJS.ProcessEnv; timeout?: number } = {
       timeout: 60000, // 60秒超时
@@ -942,16 +1065,36 @@ ipcMain.handle('terminal:pwd', async () => {
 
 // ==================== Git 操作 ====================
 
-// 执行 Git 命令的辅助函数
+// 执行 Git 命令的辅助函数 - 使用 spawn 避免 shell 注入
 async function execGit(args: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
-  const command = `git ${args.join(' ')}`;
-  const options = {
-    cwd,
-    timeout: 30000,
-    env: { ...process.env },
-    shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/bash'
-  };
-  return execAsync(command, options);
+  return new Promise((resolve, reject) => {
+    const proc = spawn('git', args, {
+      cwd,
+      env: { ...process.env },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      // 不使用 shell，直接执行 git，避免注入
+      shell: false,
+      timeout: 30000
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+    
+    proc.on('error', (err) => reject(err));
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        const error = new Error(`git exited with code ${code}: ${stderr}`);
+        (error as any).stdout = stdout;
+        (error as any).stderr = stderr;
+        reject(error);
+      }
+    });
+  });
 }
 
 // 检查是否是 Git 仓库
@@ -1033,10 +1176,15 @@ ipcMain.handle('git:unstage', async (_event, workspacePath: string, filePaths: s
   }
 });
 
-// 提交
+// 提交 - 直接传递消息参数，避免 shell 注入
 ipcMain.handle('git:commit', async (_event, workspacePath: string, message: string) => {
   try {
-    await execGit(['commit', '-m', `"${message.replace(/"/g, '\\"')}"`], workspacePath);
+    // 验证消息不为空
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return { success: false, error: '提交消息不能为空' };
+    }
+    // 直接将 message 作为参数传递给 spawn，无需转义
+    await execGit(['commit', '-m', message], workspacePath);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

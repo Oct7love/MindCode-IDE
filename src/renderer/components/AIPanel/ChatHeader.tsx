@@ -1,5 +1,6 @@
 /**
- * ChatHeader - 聊天面板顶部工具栏
+ * ChatHeader - 聊天面板顶部工具栏（优化版）
+ * 精致的渐变图标 + 清晰的标题 + 操作按钮
  */
 import React, { memo } from 'react';
 import { useAIStore } from '../../stores';
@@ -16,10 +17,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = memo(({ onNewChat, onShowHi
   return (
     <div className="unified-header">
       <div className="unified-header-left">
-        <span className="unified-header-title">{conversation?.title || '新对话'}</span>
+        <div className="unified-header-ai-icon">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="white">
+            <path d="M8 1L9.3 5.7 14 7l-4.7 1.3L8 13l-1.3-4.7L2 7l4.7-1.3L8 1z"/>
+          </svg>
+        </div>
+        <span className="unified-header-title">{conversation?.title || 'AI Chat'}</span>
       </div>
       <div className="unified-header-right">
-        <button className="unified-header-btn" onClick={onNewChat} title="新建对话">
+        <button className="unified-header-btn" onClick={onNewChat} title="新建对话 (Ctrl+N)">
           <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
             <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/>
           </svg>
