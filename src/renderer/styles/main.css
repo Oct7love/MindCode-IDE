@@ -6,12 +6,12 @@
 @import "tailwindcss";
 
 /* 核心设计系统 */
-@import './cursor-theme.css';        /* 新版 Cursor 主题变量 */
-@import './design-tokens.css';
-@import './chat-tokens.css';
-@import './cursor-premium.css';
-@import './theme-sync.css';
-@import './micro-interactions.css';  /* 微交互动画 */
+@import "./cursor-theme.css"; /* 新版 Cursor 主题变量 */
+@import "./design-tokens.css";
+@import "./chat-tokens.css";
+@import "./cursor-premium.css";
+@import "./theme-sync.css";
+@import "./micro-interactions.css"; /* 微交互动画 */
 
 /* Tailwind 主题映射 — 桥接现有 CSS 变量 */
 @theme {
@@ -51,13 +51,17 @@
  * CSS Reset & Base
  * ============================================ */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -74,7 +78,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 /* 选中文本 - 蓝色高亮 (Cursor 风格) */
@@ -97,12 +101,33 @@ body {
  * 滚动条 - 使用主题变量
  * ============================================ */
 
-::-webkit-scrollbar { width: 14px; height: 14px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-scrollbar, rgba(255, 255, 255, 0.08)); border: 4px solid transparent; background-clip: padding-box; border-radius: var(--radius-full); transition: background var(--duration-fast) var(--ease-out); }
-::-webkit-scrollbar-thumb:hover { background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.15)); border: 4px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:active { background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.2)); border: 4px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar, rgba(255, 255, 255, 0.08));
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.15));
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--color-scrollbar-hover, rgba(255, 255, 255, 0.2));
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
 
 /* 细滚动条 */
 .scrollbar-thin::-webkit-scrollbar {
@@ -123,50 +148,25 @@ body {
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: var(--color-bg-base);
+  background: var(--mc-bg-base, #1e1e1e);
   position: relative;
+  overflow: hidden;
 }
 
-/* 全局微光效果 */
+/* 去掉旧的微光效果，保持干净 */
 .workbench::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(139, 92, 246, 0.3) 50%,
-    transparent 100%
-  );
+  height: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%);
   pointer-events: none;
   z-index: var(--z-max);
 }
 
-/* ============================================
- * 标题栏 - Title Bar (Cursor Style)
- * ============================================ */
-
-.titlebar {
-  height: var(--size-titlebar);
-  min-height: var(--size-titlebar);
-  background: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-app-region: drag;
-  user-select: none;
-  position: relative;
-}
-
-.titlebar-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-  letter-spacing: var(--letter-spacing-normal);
-}
+/* 标题栏样式已迁移至 TitleBar.css */
 
 /* ============================================
  * 主内容区布局
@@ -231,7 +231,7 @@ body {
 
 /* 激活指示器 - 简洁的蓝色线条 */
 .activity-action.active::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -316,7 +316,7 @@ body {
 }
 
 .sidebar-resizer::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 50%;
@@ -324,7 +324,9 @@ body {
   width: 1px;
   height: 100%;
   background: var(--color-border-subtle);
-  transition: width 0.15s ease, background 0.15s ease;
+  transition:
+    width 0.15s ease,
+    background 0.15s ease;
 }
 
 .sidebar-resizer:hover::after,
@@ -429,7 +431,7 @@ body {
 }
 
 .tree-row::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 0;
@@ -573,7 +575,7 @@ body {
 
 /* 激活标签底部高亮线 */
 .tab.active::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -1px;
   left: 0;
@@ -622,7 +624,7 @@ body {
 
 /* 修改标记 - 圆点 */
 .tab.modified .tab-label::after {
-  content: '';
+  content: "";
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -691,17 +693,13 @@ body {
 }
 
 .diff-panel::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(139, 92, 246, 0.5) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.5) 50%, transparent 100%);
   pointer-events: none;
 }
 
@@ -740,10 +738,10 @@ body {
 
 /* 背景网格 */
 .welcome::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
   background-size: 60px 60px;
@@ -753,7 +751,7 @@ body {
 
 /* 背景光晕 */
 .welcome::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 35%;
   left: 50%;
@@ -772,8 +770,15 @@ body {
 }
 
 @keyframes glowPulse {
-  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
 }
 
 .welcome-logo {
@@ -790,8 +795,13 @@ body {
 }
 
 @keyframes logoFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .welcome h1 {
@@ -970,8 +980,12 @@ body {
  * ============================================ */
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideInUp {
@@ -997,13 +1011,22 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* 闪光加载效果 */
@@ -1019,27 +1042,127 @@ body {
 }
 
 /* ========== Extensions Panel ========== */
-.extensions-panel { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-.ext-search-box { padding: 8px 12px; border-bottom: 1px solid var(--color-border-subtle); flex-shrink: 0; }
-.ext-search-input { width: 100%; padding: 6px 10px; background: var(--color-bg-input); border: 1px solid var(--color-border-subtle); border-radius: 4px; color: var(--color-text-primary); font-size: 12px; }
-.ext-search-input:focus { outline: none; border-color: var(--color-accent-primary); }
-.ext-section { padding: 8px 0; border-bottom: 1px solid var(--color-border-subtle); }
-.ext-section-title { padding: 4px 12px 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); }
-.ext-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; transition: background 0.15s; }
-.ext-item:hover { background: var(--color-bg-hover); }
-.ext-item-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
-.ext-item-info { flex: 1; min-width: 0; overflow: hidden; }
-.ext-item-name { font-size: 12px; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ext-item-author, .ext-item-meta { font-size: 10px; color: var(--color-text-muted); }
-.ext-item-btn { padding: 3px 8px; border: none; border-radius: 4px; font-size: 10px; cursor: pointer; flex-shrink: 0; }
-.ext-item-btn.install { background: var(--color-accent-primary); color: white; }
-.ext-item-btn.install:hover { filter: brightness(1.1); }
-.ext-item-btn.uninstall { background: transparent; color: var(--color-text-muted); font-size: 14px; padding: 2px 6px; }
-.ext-item-btn.uninstall:hover { background: var(--color-error); color: white; }
-.ext-item-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.ext-item-installed { color: var(--color-success); font-size: 12px; flex-shrink: 0; }
-.ext-open-marketplace { width: calc(100% - 24px); margin: 12px; padding: 8px 12px; background: var(--color-bg-hover); border: 1px solid var(--color-border-subtle); border-radius: 6px; color: var(--color-text-primary); font-size: 12px; cursor: pointer; transition: all 0.15s; }
-.ext-open-marketplace:hover { background: var(--color-accent-primary); color: white; border-color: var(--color-accent-primary); }
+.extensions-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ext-search-box {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+.ext-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+}
+.ext-search-input:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+.ext-section {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.ext-section-title {
+  padding: 4px 12px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+.ext-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ext-item:hover {
+  background: var(--color-bg-hover);
+}
+.ext-item-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ext-item-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.ext-item-name {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ext-item-author,
+.ext-item-meta {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.ext-item-btn {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ext-item-btn.install {
+  background: var(--color-accent-primary);
+  color: white;
+}
+.ext-item-btn.install:hover {
+  filter: brightness(1.1);
+}
+.ext-item-btn.uninstall {
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  padding: 2px 6px;
+}
+.ext-item-btn.uninstall:hover {
+  background: var(--color-error);
+  color: white;
+}
+.ext-item-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ext-item-installed {
+  color: var(--color-success);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.ext-open-marketplace {
+  width: calc(100% - 24px);
+  margin: 12px;
+  padding: 8px 12px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ext-open-marketplace:hover {
+  background: var(--color-accent-primary);
+  color: white;
+  border-color: var(--color-accent-primary);
+}
 
 /* ========== Theme Extensions ========== */
 /* Dracula Theme */
@@ -1073,7 +1196,15 @@ body {
 }
 
 /* Bracket Pair Colorizer */
-.bracket-pair-enabled .mtk1 { color: inherit; }
-.bracket-pair-enabled .bracket-highlighting-0 { color: #ffd700 !important; }
-.bracket-pair-enabled .bracket-highlighting-1 { color: #da70d6 !important; }
-.bracket-pair-enabled .bracket-highlighting-2 { color: #87ceeb !important; }
+.bracket-pair-enabled .mtk1 {
+  color: inherit;
+}
+.bracket-pair-enabled .bracket-highlighting-0 {
+  color: #ffd700 !important;
+}
+.bracket-pair-enabled .bracket-highlighting-1 {
+  color: #da70d6 !important;
+}
+.bracket-pair-enabled .bracket-highlighting-2 {
+  color: #87ceeb !important;
+}

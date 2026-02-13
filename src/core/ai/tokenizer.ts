@@ -2,7 +2,8 @@
  * Token 计算服务 - 使用 tiktoken 进行准确计算
  */
 
-import { Tiktoken, TiktokenEncoding, get_encoding, encoding_for_model } from 'tiktoken';
+import type { Tiktoken, TiktokenEncoding } from "tiktoken";
+import { get_encoding, encoding_for_model } from "tiktoken";
 
 // 缓存编码器实例
 const encoderCache = new Map<string, Tiktoken>();
@@ -10,33 +11,33 @@ const encoderCache = new Map<string, Tiktoken>();
 // 模型到编码器的映射
 const modelEncodingMap: Record<string, TiktokenEncoding> = {
   // GPT-4 系列
-  'gpt-4': 'cl100k_base',
-  'gpt-4-turbo': 'cl100k_base',
-  'gpt-4o': 'o200k_base',
-  'gpt-4o-mini': 'o200k_base',
+  "gpt-4": "cl100k_base",
+  "gpt-4-turbo": "cl100k_base",
+  "gpt-4o": "o200k_base",
+  "gpt-4o-mini": "o200k_base",
   // GPT-3.5 系列
-  'gpt-3.5-turbo': 'cl100k_base',
+  "gpt-3.5-turbo": "cl100k_base",
   // Claude 系列 (使用 cl100k_base 作为近似)
-  'claude': 'cl100k_base',
-  'claude-opus': 'cl100k_base',
-  'claude-sonnet': 'cl100k_base',
+  claude: "cl100k_base",
+  "claude-opus": "cl100k_base",
+  "claude-sonnet": "cl100k_base",
   // 其他模型默认使用 cl100k_base
-  'default': 'cl100k_base',
+  default: "cl100k_base",
 };
 
 /**
  * 获取指定模型的编码器
  */
 function getEncoder(model?: string): Tiktoken {
-  const key = model || 'default';
-  
+  const key = model || "default";
+
   // 检查缓存
   if (encoderCache.has(key)) {
     return encoderCache.get(key)!;
   }
-  
+
   let encoder: Tiktoken;
-  
+
   try {
     // 尝试使用模型名获取编码器
     if (model) {
@@ -48,18 +49,18 @@ function getEncoder(model?: string): Tiktoken {
         // 如果模型名不支持，使用映射
       }
     }
-    
+
     // 使用映射表查找编码
-    const encodingName = modelEncodingMap[model || 'default'] || modelEncodingMap['default'];
+    const encodingName = modelEncodingMap[model || "default"] || modelEncodingMap["default"];
     encoder = get_encoding(encodingName);
     encoderCache.set(key, encoder);
     return encoder;
   } catch (error) {
     // 回退到默认编码器
-    if (!encoderCache.has('default')) {
-      encoderCache.set('default', get_encoding('cl100k_base'));
+    if (!encoderCache.has("default")) {
+      encoderCache.set("default", get_encoding("cl100k_base"));
     }
-    return encoderCache.get('default')!;
+    return encoderCache.get("default")!;
   }
 }
 
@@ -101,7 +102,7 @@ export function estimateTokens(text: string): number {
  */
 export function countTokensBatch(texts: string[], model?: string): number[] {
   const encoder = getEncoder(model);
-  return texts.map(text => {
+  return texts.map((text) => {
     try {
       return encoder.encode(text).length;
     } catch {
@@ -116,17 +117,17 @@ export function countTokensBatch(texts: string[], model?: string): number[] {
  */
 export function countMessageTokens(
   messages: Array<{ role: string; content: string }>,
-  model?: string
+  model?: string,
 ): number {
   const encoder = getEncoder(model);
-  
+
   // 每条消息有固定开销（role、分隔符等）
   const tokensPerMessage = 4;
   // 回复有额外开销
   const tokensPerReply = 3;
-  
+
   let totalTokens = 0;
-  
+
   for (const message of messages) {
     totalTokens += tokensPerMessage;
     try {
@@ -137,9 +138,9 @@ export function countMessageTokens(
       totalTokens += estimateTokens(message.content);
     }
   }
-  
+
   totalTokens += tokensPerReply;
-  
+
   return totalTokens;
 }
 
@@ -154,11 +155,11 @@ export function truncateToTokens(text: string, maxTokens: number, model?: string
   try {
     const encoder = getEncoder(model);
     const tokens = encoder.encode(text);
-    
+
     if (tokens.length <= maxTokens) {
       return text;
     }
-    
+
     const truncatedTokens = tokens.slice(0, maxTokens);
     const decoded = encoder.decode(truncatedTokens);
     // tiktoken decode 返回 Uint8Array，需要转换为字符串

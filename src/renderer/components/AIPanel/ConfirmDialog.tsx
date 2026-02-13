@@ -1,8 +1,8 @@
 /**
  * ConfirmDialog - 工具执行确认对话框
  */
-import React, { memo } from 'react';
-import { ToolCallStatus } from '../../stores';
+import React, { memo } from "react";
+import type { ToolCallStatus } from "../../stores";
 
 interface ConfirmDialogProps {
   call: ToolCallStatus;
@@ -19,11 +19,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = memo(({ call, onConfi
         <pre className="unified-confirm-args">{JSON.stringify(call.args, null, 2)}</pre>
         <div className="unified-confirm-actions">
           <button onClick={onCancel}>取消</button>
-          <button className="primary" onClick={onConfirm}>确认</button>
+          <button className="primary" onClick={onConfirm}>
+            确认
+          </button>
         </div>
       </div>
     </div>
   );
 });
 
-ConfirmDialog.displayName = 'ConfirmDialog';
+ConfirmDialog.displayName = "ConfirmDialog";

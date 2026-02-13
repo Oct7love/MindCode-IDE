@@ -9,8 +9,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
@@ -18,9 +18,14 @@
       "@/*": ["src/*"],
       "@core/*": ["src/core/*"],
       "@shared/*": ["src/shared/*"],
-      "@extensions/*": ["src/extensions/*"]
+      "@extensions/*": ["src/extensions/*"],
+      "@components/*": ["src/renderer/components/*"],
+      "@services/*": ["src/renderer/services/*"],
+      "@hooks/*": ["src/renderer/hooks/*"],
+      "@stores/*": ["src/renderer/stores/*"],
+      "@renderer/*": ["src/renderer/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "release"]
+  "exclude": ["node_modules", "dist", "release", "src/test"]
 }

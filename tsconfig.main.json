@@ -6,12 +6,13 @@
     "outDir": "dist/main",
     "rootDir": "src",
     "baseUrl": ".",
-    "noImplicitAny": false,
+    "jsx": "react-jsx",
     "paths": {
       "@shared/*": ["src/shared/*"],
-      "@core/*": ["src/core/*"]
+      "@core/*": ["src/core/*"],
+      "@/*": ["src/*"]
     }
   },
-  "include": ["src/main/**/*", "src/core/**/*", "src/shared/**/*"],
+  "include": ["src/main/**/*", "src/core/**/*", "src/shared/**/*", "src/types/**/*"],
   "exclude": ["src/renderer/**/*"]
 }

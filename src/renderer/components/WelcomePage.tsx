@@ -1,164 +1,131 @@
 /**
- * WelcomePage - Cursor 风格欢迎页
- * 精致的视觉设计 + 流畅的交互体验
+ * WelcomePage - 欢迎页组件
+ *
+ * 应用启动时或无文件打开时显示的欢迎页面。
+ * 包含：最近项目列表、快捷操作、版本信息。
  */
+import React, { useState } from "react";
+import { AppIcons } from "./icons";
+import { MindCodeLogo } from "./MindCodeLogo";
+import {
+  getRecentWorkspaces,
+  formatTimeAgo,
+  type RecentWorkspace,
+} from "../services/recentWorkspaces";
 
-import React from 'react';
-import { MindCodeLogo } from './MindCodeLogo';
-import './WelcomePage.css';
+/** 欢迎页最多显示的最近项目数 */
+const MAX_RECENT_PROJECTS = 5;
 
-interface WelcomePageProps {
-  onOpenFolder?: () => void;
-  onOpenFile?: () => void;
-  onOpenRecent?: () => void;
-  onOpenCommandPalette?: () => void;
-  onOpenAIChat?: () => void;
-  recentProjects?: { name: string; path: string }[];
-  onOpenProject?: (path: string) => void;
-  version?: string;
+/** 应用版本号 - 集中管理 */
+export const APP_VERSION = "v0.3.0";
+
+export interface WelcomePageProps {
+  onOpenAI: () => void;
+  onQuickOpen: () => void;
+  onOpenTerminal: () => void;
+  onOpenFolder: () => void;
+  onOpenRecentFolder: (path: string) => void;
 }
 
-// 图标组件
-const Icons = {
-  Folder: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    </svg>
-  ),
-  File: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-      <polyline points="14 2 14 8 20 8"/>
-    </svg>
-  ),
-  Command: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>
-    </svg>
-  ),
-  AI: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3Z"/>
-    </svg>
-  ),
-  Project: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 3v18h18"/>
-      <path d="m19 9-5 5-4-4-3 3"/>
-    </svg>
-  ),
-};
+export const WelcomePage: React.FC<WelcomePageProps> = React.memo(
+  ({ onOpenAI, onQuickOpen, onOpenTerminal, onOpenFolder, onOpenRecentFolder }) => {
+    const [recentWorkspaces] = useState<RecentWorkspace[]>(() => {
+      try {
+        return getRecentWorkspaces();
+      } catch (err) {
+        console.warn(
+          "[WelcomePage] Failed to load recent workspaces:",
+          err instanceof Error ? err.message : err,
+        );
+        return [];
+      }
+    });
 
-export const WelcomePage: React.FC<WelcomePageProps> = ({
-  onOpenFolder,
-  onOpenFile,
-  onOpenCommandPalette,
-  onOpenAIChat,
-  recentProjects = [],
-  onOpenProject,
-  version = '0.2.0'
-}) => {
-  const quickActions = [
-    {
-      icon: Icons.Folder,
-      title: '打开文件夹',
-      desc: '选择一个文件夹作为工作区',
-      shortcut: 'Ctrl+K Ctrl+O',
-      onClick: onOpenFolder
-    },
-    {
-      icon: Icons.File,
-      title: '打开文件',
-      desc: '打开单个文件进行编辑',
-      shortcut: 'Ctrl+O',
-      onClick: onOpenFile
-    },
-    {
-      icon: Icons.Command,
-      title: '命令面板',
-      desc: '快速执行任意命令',
-      shortcut: 'Ctrl+Shift+P',
-      onClick: onOpenCommandPalette
-    },
-    {
-      icon: Icons.AI,
-      title: 'AI 对话',
-      desc: '与 AI 助手交流',
-      shortcut: 'Ctrl+L',
-      onClick: onOpenAIChat
-    },
-  ];
+    return (
+      <div className="editor-scroll">
+        <div className="welcome">
+          <div className="welcome-logo-container">
+            <MindCodeLogo size={80} />
+          </div>
+          <h1>MindCode</h1>
+          <p className="welcome-subtitle">AI-NATIVE CODE EDITOR</p>
 
-  return (
-    <div className="welcome-page">
-      <div className="welcome-content">
-        {/* Logo */}
-        <div className="welcome-logo">
-          <MindCodeLogo size={80} animated={true} />
-        </div>
-
-        {/* 标题 */}
-        <h1 className="welcome-title">MindCode</h1>
-        <p className="welcome-subtitle">AI-Native Code Editor · v{version}</p>
-
-        {/* 快速操作 */}
-        <div className="welcome-actions">
-          {quickActions.map((action, idx) => (
-            <button
-              key={idx}
-              className="welcome-action"
-              onClick={action.onClick}
-            >
-              <div className="welcome-action-icon">
-                <action.icon />
+          {/* Recent Workspaces */}
+          {recentWorkspaces.length > 0 && (
+            <div className="welcome-recent-section">
+              <div className="welcome-recent-title">Recent Projects</div>
+              <div className="welcome-recent-list">
+                {recentWorkspaces.slice(0, MAX_RECENT_PROJECTS).map((w) => (
+                  <div
+                    key={w.path}
+                    className="welcome-recent-item"
+                    onClick={() => onOpenRecentFolder(w.path)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === "Enter" && onOpenRecentFolder(w.path)}
+                  >
+                    <span className="welcome-recent-icon">
+                      <AppIcons.Folder16 />
+                    </span>
+                    <div className="welcome-recent-info">
+                      <div className="welcome-recent-name">{w.name}</div>
+                      <div className="welcome-recent-path">{w.path}</div>
+                    </div>
+                    <span className="welcome-recent-time">{formatTimeAgo(w.lastOpened)}</span>
+                  </div>
+                ))}
               </div>
-              <div className="welcome-action-content">
-                <span className="welcome-action-title">{action.title}</span>
-                <span className="welcome-action-desc">{action.desc}</span>
-              </div>
-              <span className="welcome-action-shortcut">{action.shortcut}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* 最近项目 */}
-        {recentProjects.length > 0 && (
-          <div className="welcome-recent">
-            <div className="welcome-recent-header">
-              <span className="welcome-recent-title">最近项目</span>
-              <button className="welcome-recent-clear">清除</button>
             </div>
-            <div className="welcome-recent-list">
-              {recentProjects.slice(0, 5).map((project, idx) => (
-                <button
-                  key={idx}
-                  className="welcome-recent-item"
-                  onClick={() => onOpenProject?.(project.path)}
-                >
-                  <div className="welcome-recent-item-icon">
-                    <Icons.Project />
-                  </div>
-                  <div className="welcome-recent-item-content">
-                    <span className="welcome-recent-item-name">{project.name}</span>
-                    <span className="welcome-recent-item-path">{project.path}</span>
-                  </div>
-                </button>
-              ))}
+          )}
+
+          {/* Open Folder Button */}
+          <div className="welcome-open-folder">
+            <button className="welcome-open-btn" onClick={onOpenFolder}>
+              Open Folder
+            </button>
+          </div>
+
+          {/* Shortcuts */}
+          <div className="welcome-shortcuts">
+            <div className="shortcut" onClick={onOpenAI} role="button" tabIndex={0}>
+              <span className="shortcut-text">AI Chat</span>
+              <div className="shortcut-keys">
+                <kbd>Ctrl</kbd>
+                <kbd>L</kbd>
+              </div>
+            </div>
+            <div className="shortcut" role="button" tabIndex={0}>
+              <span className="shortcut-text">Inline Edit</span>
+              <div className="shortcut-keys">
+                <kbd>Ctrl</kbd>
+                <kbd>K</kbd>
+              </div>
+            </div>
+            <div className="shortcut" onClick={onQuickOpen} role="button" tabIndex={0}>
+              <span className="shortcut-text">Quick Open</span>
+              <div className="shortcut-keys">
+                <kbd>Ctrl</kbd>
+                <kbd>P</kbd>
+              </div>
+            </div>
+            <div className="shortcut" onClick={onOpenTerminal} role="button" tabIndex={0}>
+              <span className="shortcut-text">Terminal</span>
+              <div className="shortcut-keys">
+                <kbd>Ctrl</kbd>
+                <kbd>`</kbd>
+              </div>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* 底部信息 */}
-      <div className="welcome-footer">
-        <span>Powered by Claude</span>
-        <div className="welcome-footer-divider" />
-        <a href="#">文档</a>
-        <a href="#">反馈</a>
-        <a href="#">GitHub</a>
+          <div className="welcome-version">
+            <span>{APP_VERSION}</span>
+            <span className="welcome-dot">&#183;</span>
+            <span>Powered by Claude</span>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  },
+);
 
-export default WelcomePage;
+WelcomePage.displayName = "WelcomePage";

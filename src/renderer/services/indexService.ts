@@ -3,12 +3,12 @@
  * 渲染进程使用的索引 API
  */
 
-import { create } from 'zustand';
+import { create } from "zustand";
 
 /** 索引状态 */
 interface IndexState {
   /** 索引状态 */
-  status: 'idle' | 'scanning' | 'indexing' | 'complete' | 'error';
+  status: "idle" | "scanning" | "indexing" | "complete" | "error";
   /** 总文件数 */
   totalFiles: number;
   /** 已索引文件数 */
@@ -43,7 +43,7 @@ interface IndexStore extends IndexState {
 
 /** 索引状态 Store */
 export const useIndexStore = create<IndexStore>((set, get) => ({
-  status: 'idle',
+  status: "idle",
   totalFiles: 0,
   indexedFiles: 0,
   currentFile: undefined,
@@ -58,19 +58,19 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
 
   startIndexing: async (workspacePath: string) => {
     if (!window.mindcode?.index) {
-      console.warn('[IndexService] 索引服务不可用');
+      console.warn("[IndexService] 索引服务不可用");
       return;
     }
 
-    set({ status: 'scanning', error: undefined });
+    set({ status: "scanning", error: undefined });
 
     try {
       const result = await window.mindcode.index.indexWorkspace(workspacePath);
       if (!result.success) {
-        set({ status: 'error', error: result.error });
+        set({ status: "error", error: result.error });
       }
     } catch (err: any) {
-      set({ status: 'error', error: err.message });
+      set({ status: "error", error: err.message });
     }
   },
 
@@ -79,9 +79,9 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
 
     try {
       await window.mindcode.index.cancel();
-      set({ status: 'idle' });
+      set({ status: "idle" });
     } catch (err: any) {
-      console.error('[IndexService] 取消索引失败:', err);
+      console.error("[IndexService] 取消索引失败:", err);
     }
   },
 
@@ -91,7 +91,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
     try {
       await window.mindcode.index.clear();
       set({
-        status: 'idle',
+        status: "idle",
         totalFiles: 0,
         indexedFiles: 0,
         stats: {
@@ -103,7 +103,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
         },
       });
     } catch (err: any) {
-      console.error('[IndexService] 清空索引失败:', err);
+      console.error("[IndexService] 清空索引失败:", err);
     }
   },
 
@@ -118,7 +118,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
       const stats = await window.mindcode.index.getStats();
       set({ stats });
     } catch (err: any) {
-      console.error('[IndexService] 获取统计失败:', err);
+      console.error("[IndexService] 获取统计失败:", err);
     }
   },
 }));
@@ -126,7 +126,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
 /** 初始化索引服务监听器 */
 export function initIndexServiceListeners(): () => void {
   if (!window.mindcode?.index) {
-    console.warn('[IndexService] 索引服务不可用');
+    console.warn("[IndexService] 索引服务不可用");
     return () => {};
   }
 
@@ -135,7 +135,7 @@ export function initIndexServiceListeners(): () => void {
   // 监听进度
   const cleanupProgress = window.mindcode.index.onProgress((progress) => {
     store.updateProgress({
-      status: progress.status,
+      status: progress.status as IndexState["status"],
       totalFiles: progress.totalFiles,
       indexedFiles: progress.indexedFiles,
       currentFile: progress.currentFile,
@@ -144,9 +144,11 @@ export function initIndexServiceListeners(): () => void {
 
   // 监听完成
   const cleanupComplete = window.mindcode.index.onComplete((stats) => {
-    store.updateProgress({ status: 'complete' });
+    store.updateProgress({ status: "complete" });
     store.refreshStats();
-    console.log(`[IndexService] 索引完成: ${stats.files} 文件, ${stats.symbols} 符号, 耗时 ${stats.time}ms`);
+    console.log(
+      `[IndexService] 索引完成: ${stats.files} 文件, ${stats.symbols} 符号, 耗时 ${stats.time}ms`,
+    );
   });
 
   return () => {
@@ -158,12 +160,15 @@ export function initIndexServiceListeners(): () => void {
 // ============ 搜索 API ============
 
 /** 搜索代码 */
-export async function searchCode(query: string, options?: {
-  type?: 'symbol' | 'semantic' | 'hybrid';
-  limit?: number;
-  fileFilter?: string[];
-  kindFilter?: string[];
-}) {
+export async function searchCode(
+  query: string,
+  options?: {
+    type?: "symbol" | "semantic" | "hybrid";
+    limit?: number;
+    fileFilter?: string[];
+    kindFilter?: string[];
+  },
+) {
   if (!window.mindcode?.index) {
     return { items: [], totalCount: 0, timeTaken: 0, hasMore: false };
   }
@@ -224,11 +229,16 @@ export async function findReferences(symbolId: string) {
 }
 
 /** 获取相关代码（用于 @codebase） */
-export async function getRelatedCode(query: string, limit = 10): Promise<Array<{
-  filePath: string;
-  code: string;
-  relevance: number;
-}>> {
+export async function getRelatedCode(
+  query: string,
+  limit = 10,
+): Promise<
+  Array<{
+    filePath: string;
+    code: string;
+    relevance: number;
+  }>
+> {
   if (!window.mindcode?.index) {
     return [];
   }
@@ -267,7 +277,7 @@ export async function collectCodebaseContext(
   options?: {
     maxSnippets?: number;
     maxTokens?: number;
-  }
+  },
 ): Promise<CodebaseContext> {
   const maxSnippets = options?.maxSnippets || 10;
   const maxTokens = options?.maxTokens || 8000;
@@ -275,14 +285,14 @@ export async function collectCodebaseContext(
   // 并行获取相关代码和符号
   const [relatedCode, searchResults] = await Promise.all([
     getRelatedCode(query, maxSnippets),
-    searchCode(query, { type: 'hybrid', limit: 20 }),
+    searchCode(query, { type: "hybrid", limit: 20 }),
   ]);
 
   // 提取符号信息
   const symbols = searchResults.items
-    .filter(item => 'kind' in item.item)
+    .filter((item) => "kind" in item.item)
     .slice(0, 10)
-    .map(item => ({
+    .map((item) => ({
       name: item.item.name,
       kind: item.item.kind,
       filePath: item.item.filePath,
@@ -291,11 +301,11 @@ export async function collectCodebaseContext(
 
   // 估算 Token（粗略：4 字符 ≈ 1 Token）
   let estimatedTokens = 0;
-  const snippets: CodebaseContext['snippets'] = [];
+  const snippets: CodebaseContext["snippets"] = [];
 
   for (const snippet of relatedCode) {
     const snippetTokens = Math.ceil(snippet.code.length / 4);
-    
+
     if (estimatedTokens + snippetTokens > maxTokens) {
       break;
     }
@@ -319,28 +329,28 @@ export function formatCodebaseContext(context: CodebaseContext): string {
 
   // 添加相关符号摘要
   if (context.symbols.length > 0) {
-    parts.push('### 相关符号\n');
+    parts.push("### 相关符号\n");
     for (const symbol of context.symbols.slice(0, 5)) {
       parts.push(`- ${symbol.kind} \`${symbol.name}\` in \`${symbol.filePath}\``);
       if (symbol.signature) {
         parts.push(`  ${symbol.signature}`);
       }
     }
-    parts.push('');
+    parts.push("");
   }
 
   // 添加相关代码
   if (context.snippets.length > 0) {
-    parts.push('### 相关代码\n');
+    parts.push("### 相关代码\n");
     for (const snippet of context.snippets) {
-      const lang = snippet.filePath.split('.').pop() || 'text';
+      const lang = snippet.filePath.split(".").pop() || "text";
       parts.push(`**${snippet.filePath}** (相关度: ${(snippet.relevance * 100).toFixed(0)}%)`);
-      parts.push('```' + lang);
+      parts.push("```" + lang);
       parts.push(snippet.code);
-      parts.push('```');
-      parts.push('');
+      parts.push("```");
+      parts.push("");
     }
   }
 
-  return parts.join('\n');
+  return parts.join("\n");
 }

@@ -3,43 +3,52 @@
  * 优化启动性能,按需加载组件
  */
 
-import React, { lazy, Suspense, createElement } from 'react';
+import type React from "react";
+import { lazy, Suspense, createElement } from "react";
 
 /**
  * 默认加载占位符
  */
 function LoadingFallback(): React.ReactElement {
-  return createElement('div', {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      color: 'var(--color-text-muted)',
-      fontSize: '12px'
-    }
-  }, createElement('div', {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '12px'
-    }
-  }, [
-    createElement('div', {
-      key: 'spinner',
-      className: 'spinner',
+  return createElement(
+    "div",
+    {
       style: {
-        width: '24px',
-        height: '24px',
-        border: '2px solid transparent',
-        borderTopColor: 'var(--color-accent-blue)',
-        borderRadius: '50%',
-        animation: 'spin 0.6s linear infinite'
-      }
-    }),
-    createElement('span', { key: 'text' }, 'Loading...')
-  ]));
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        color: "var(--color-text-muted)",
+        fontSize: "12px",
+      },
+    },
+    createElement(
+      "div",
+      {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "12px",
+        },
+      },
+      [
+        createElement("div", {
+          key: "spinner",
+          className: "spinner",
+          style: {
+            width: "24px",
+            height: "24px",
+            border: "2px solid transparent",
+            borderTopColor: "var(--color-accent-blue)",
+            borderRadius: "50%",
+            animation: "spin 0.6s linear infinite",
+          },
+        }),
+        createElement("span", { key: "text" }, "Loading..."),
+      ],
+    ),
+  );
 }
 
 /**
@@ -47,7 +56,7 @@ function LoadingFallback(): React.ReactElement {
  */
 export function createLazyComponent<T extends React.ComponentType<any>>(
   loader: () => Promise<{ default: T }>,
-  fallback?: React.ReactNode
+  fallback?: React.ReactNode,
 ) {
   const LazyComponent = lazy(loader);
 
@@ -55,7 +64,7 @@ export function createLazyComponent<T extends React.ComponentType<any>>(
     return createElement(
       Suspense,
       { fallback: fallback || createElement(LoadingFallback) },
-      createElement(LazyComponent, props as any)
+      createElement(LazyComponent, props as any),
     );
   };
 }
@@ -65,20 +74,22 @@ export function createLazyComponent<T extends React.ComponentType<any>>(
  */
 export const LazyComponents = {
   // 重量级组件懒加载
-  ComposerPanel: createLazyComponent(() => import('../components/ComposerPanel')),
-  ExtensionMarketplace: createLazyComponent(() => import('../components/ExtensionMarketplace')),
-  DebugPanel: createLazyComponent(() => import('../components/Debugger/DebugPanel')),
-  GitPanel: createLazyComponent(() => import('../components/GitPanel')),
-  PluginPanel: createLazyComponent(() => import('../components/PluginPanel')),
-  
+  ComposerPanel: createLazyComponent(() => import("../components/ComposerPanel")),
+  ExtensionMarketplace: createLazyComponent(() => import("../components/ExtensionMarketplace")),
+  DebugPanel: createLazyComponent(() =>
+    import("../components/Debugger/DebugPanel").then((mod) => ({ default: mod.DebugPanel })),
+  ),
+  GitPanel: createLazyComponent(() => import("../components/GitPanel")),
+  PluginPanel: createLazyComponent(() => import("../components/PluginPanel")),
+
   // 设置相关
-  SettingsPanel: createLazyComponent(() => import('../components/SettingsPanel')),
-  ThemeManager: createLazyComponent(() => import('../components/ThemeManager')),
-  KeybindingManager: createLazyComponent(() => import('../components/KeybindingManager')),
-  
+  SettingsPanel: createLazyComponent(() => import("../components/SettingsPanel")),
+  ThemeManager: createLazyComponent(() => import("../components/ThemeManager")),
+  KeybindingManager: createLazyComponent(() => import("../components/KeybindingManager")),
+
   // 工具面板
-  PerformancePanel: createLazyComponent(() => import('../components/PerformancePanel')),
-  TaskRunner: createLazyComponent(() => import('../components/TaskRunner')),
+  PerformancePanel: createLazyComponent(() => import("../components/PerformancePanel")),
+  TaskRunner: createLazyComponent(() => import("../components/TaskRunner")),
 };
 
 /**
@@ -86,17 +97,17 @@ export const LazyComponents = {
  * 在空闲时预加载,提升后续体验
  */
 export function preloadCriticalComponents() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   // 使用requestIdleCallback在浏览器空闲时预加载
   const preload = () => {
     // 预加载常用组件
-    import('../components/GitPanel');
-    import('../components/PluginPanel');
-    import('../components/SettingsPanel');
+    import("../components/GitPanel");
+    import("../components/PluginPanel");
+    import("../components/SettingsPanel");
   };
 
-  if ('requestIdleCallback' in window) {
+  if ("requestIdleCallback" in window) {
     (window as any).requestIdleCallback(preload, { timeout: 2000 });
   } else {
     setTimeout(preload, 1000);
@@ -107,14 +118,14 @@ export function preloadCriticalComponents() {
  * 预加载AI相关组件
  */
 export function preloadAIComponents() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   const preload = () => {
-    import('../components/ComposerPanel');
-    import('../components/AIPanel');
+    import("../components/ComposerPanel");
+    import("../components/AIPanel");
   };
 
-  if ('requestIdleCallback' in window) {
+  if ("requestIdleCallback" in window) {
     (window as any).requestIdleCallback(preload, { timeout: 3000 });
   } else {
     setTimeout(preload, 1500);

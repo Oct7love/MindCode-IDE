@@ -1,0 +1,148 @@
+/**
+ * MindCode Design Tokens v4.0 — Single Source of Truth
+ * 
+ * 规则:
+ * 1. 所有颜色/间距/圆角/字体/动效都从这里取
+ * 2. 背景层级: base < surface < elevated < overlay
+ * 3. 文本层级: primary > secondary > tertiary > muted > disabled
+ * 4. 间距: 8px grid (2/4/6/8/12/16/20/24/32/40)
+ * 5. 圆角: 统一 0/4/6/8 四档
+ * 6. 动效: 120ms ease-out (micro), 200ms (normal), 300ms (emphasis)
+ */
+
+:root {
+  /* =============================================
+   * 背景层级 — VS Code Dark+ 色系
+   * ============================================= */
+  --mc-bg-base: #1e1e1e; /* 编辑器/主背景 */
+  --mc-bg-surface: #252526; /* 面板/侧边栏 */
+  --mc-bg-elevated: #2d2d30; /* 浮层/卡片/菜单 */
+  --mc-bg-wash: #333333; /* hover/active 填充 */
+  --mc-bg-overlay: rgba(0, 0, 0, 0.5);
+  --mc-bg-input: #3c3c3c; /* 输入框 */
+
+  /* =============================================
+   * 文本层级
+   * ============================================= */
+  --mc-text-primary: #cccccc; /* 主文本 */
+  --mc-text-secondary: #969696; /* 次要文本 */
+  --mc-text-tertiary: #6e6e6e; /* 辅助/placeholder */
+  --mc-text-muted: #4e4e4e; /* 禁用/极弱 */
+  --mc-text-inverse: #1e1e1e; /* 反色(亮背景上) */
+  --mc-text-link: #4fc1ff; /* 链接 */
+
+  /* =============================================
+   * 边框 — 默认尽量不用描边，用层级差代替
+   * ============================================= */
+  --mc-border: #3c3c3c; /* 标准分割线 */
+  --mc-border-subtle: #2d2d30; /* 微弱分割 */
+  --mc-border-strong: #505050; /* 强调边框 */
+  --mc-border-focus: #007fd4; /* 聚焦 */
+
+  /* =============================================
+   * 强调色
+   * ============================================= */
+  --mc-accent: #007fd4; /* 主强调(VS Code 蓝) */
+  --mc-accent-hover: #1a8ae6;
+  --mc-accent-muted: rgba(0, 127, 212, 0.15);
+  --mc-accent-ai: #8b5cf6; /* AI 紫 */
+  --mc-accent-ai-hover: #a78bfa;
+
+  /* =============================================
+   * 语义色
+   * ============================================= */
+  --mc-success: #4ec9b0;
+  --mc-success-bg: rgba(78, 201, 176, 0.1);
+  --mc-warning: #cca700;
+  --mc-warning-bg: rgba(204, 167, 0, 0.1);
+  --mc-error: #f14c4c;
+  --mc-error-bg: rgba(241, 76, 76, 0.1);
+  --mc-info: #75beff;
+  --mc-info-bg: rgba(117, 190, 255, 0.1);
+
+  /* =============================================
+   * 圆角 — 4 档，全局统一
+   * ============================================= */
+  --mc-radius-none: 0;
+  --mc-radius-sm: 4px; /* 输入框/按钮/标签 */
+  --mc-radius-md: 6px; /* 卡片/面板/菜单 */
+  --mc-radius-lg: 8px; /* 对话框/浮层 */
+
+  /* =============================================
+   * 间距 — 8px grid
+   * ============================================= */
+  --mc-space-1: 2px;
+  --mc-space-2: 4px;
+  --mc-space-3: 6px;
+  --mc-space-4: 8px;
+  --mc-space-5: 10px;
+  --mc-space-6: 12px;
+  --mc-space-8: 16px;
+  --mc-space-10: 20px;
+  --mc-space-12: 24px;
+  --mc-space-16: 32px;
+  --mc-space-20: 40px;
+
+  /* =============================================
+   * 字体
+   * ============================================= */
+  --mc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mc-font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+
+  /* 字号/行高/字重 — 3 档 */
+  --mc-text-xs: 11px; /* 标签/快捷键/meta */
+  --mc-text-sm: 12px; /* 次要内容/侧边栏 */
+  --mc-text-base: 13px; /* 正文/消息 */
+  --mc-text-lg: 14px; /* 标题/强调 */
+  --mc-text-xl: 16px; /* 页面标题 */
+  --mc-lh-tight: 1.3;
+  --mc-lh-normal: 1.5;
+  --mc-lh-relaxed: 1.65;
+  --mc-fw-normal: 400;
+  --mc-fw-medium: 500;
+  --mc-fw-bold: 600;
+
+  /* =============================================
+   * 尺寸约束
+   * ============================================= */
+  --mc-control-h: 28px; /* 按钮/输入框统一高度 */
+  --mc-control-h-sm: 24px; /* 紧凑按钮 */
+  --mc-titlebar-h: 36px; /* 标题栏高度 */
+  --mc-statusbar-h: 24px; /* 状态栏高度 */
+  --mc-sidebar-w: 48px; /* 活动栏宽度 */
+  --mc-panel-min-w: 280px; /* AI 面板最小宽度 */
+
+  /* =============================================
+   * 阴影 — 慎用，只用于浮层
+   * ============================================= */
+  --mc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --mc-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --mc-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --mc-shadow-menu: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* =============================================
+   * 动效
+   * ============================================= */
+  --mc-ease: cubic-bezier(0.2, 0, 0, 1); /* Material 3 standard */
+  --mc-dur-micro: 80ms; /* hover/focus 即时反馈 */
+  --mc-dur-fast: 120ms; /* 按钮/切换 */
+  --mc-dur-normal: 200ms; /* 面板展开/折叠 */
+  --mc-dur-slow: 300ms; /* 页面过渡 */
+}
+
+/* =============================================
+ * Light Theme Override (备用)
+ * ============================================= */
+[data-theme="light"] {
+  --mc-bg-base: #ffffff;
+  --mc-bg-surface: #f3f3f3;
+  --mc-bg-elevated: #ffffff;
+  --mc-bg-wash: #e8e8e8;
+  --mc-bg-input: #ffffff;
+  --mc-text-primary: #333333;
+  --mc-text-secondary: #616161;
+  --mc-text-tertiary: #888888;
+  --mc-border: #d4d4d4;
+  --mc-border-subtle: #e8e8e8;
+  --mc-border-strong: #c4c4c4;
+}

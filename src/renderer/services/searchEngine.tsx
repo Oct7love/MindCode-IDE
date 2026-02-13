@@ -2,10 +2,30 @@
  * SearchEngine - 搜索引擎服务
  */
 
-export interface SearchOptions { caseSensitive?: boolean; wholeWord?: boolean; regex?: boolean; include?: string; exclude?: string; maxResults?: number; }
-export interface SearchMatch { line: number; column: number; length: number; text: string; before?: string; after?: string; }
-export interface SearchResult { file: string; matches: SearchMatch[]; }
-export interface ReplaceResult { file: string; replacements: number; }
+export interface SearchOptions {
+  caseSensitive?: boolean;
+  wholeWord?: boolean;
+  regex?: boolean;
+  include?: string;
+  exclude?: string;
+  maxResults?: number;
+}
+export interface SearchMatch {
+  line: number;
+  column: number;
+  length: number;
+  text: string;
+  before?: string;
+  after?: string;
+}
+export interface SearchResult {
+  file: string;
+  matches: SearchMatch[];
+}
+export interface ReplaceResult {
+  file: string;
+  replacements: number;
+}
 
 const win = window as any;
 
@@ -18,31 +38,55 @@ class SearchEngine {
     this.abort(); // 取消之前的搜索
     this.abortController = new AbortController();
 
-    const { caseSensitive = false, wholeWord = false, regex = false, include, exclude, maxResults = 1000 } = options;
+    const {
+      caseSensitive = false,
+      wholeWord = false,
+      regex = false,
+      include,
+      exclude,
+      maxResults = 1000,
+    } = options;
 
     try {
       // 构建正则
       let pattern: RegExp;
       if (regex) {
-        try { pattern = new RegExp(query, caseSensitive ? 'g' : 'gi'); }
-        catch { return []; }
+        try {
+          pattern = new RegExp(query, caseSensitive ? "g" : "gi");
+        } catch (err) {
+          console.warn(
+            "[SearchEngine] Invalid regex pattern:",
+            err instanceof Error ? err.message : err,
+          );
+          return [];
+        }
       } else {
-        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const wordBoundary = wholeWord ? '\\b' : '';
-        pattern = new RegExp(`${wordBoundary}${escaped}${wordBoundary}`, caseSensitive ? 'g' : 'gi');
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const wordBoundary = wholeWord ? "\\b" : "";
+        pattern = new RegExp(
+          `${wordBoundary}${escaped}${wordBoundary}`,
+          caseSensitive ? "g" : "gi",
+        );
       }
 
       // 调用后端搜索
       if (win.mindcode?.search?.files) {
-        const results = await win.mindcode.search.files(query, { caseSensitive, wholeWord, regex, include, exclude, maxResults });
+        const results = await win.mindcode.search.files(query, {
+          caseSensitive,
+          wholeWord,
+          regex,
+          include,
+          exclude,
+          maxResults,
+        });
         return results || [];
       }
 
       // 本地模拟搜索（仅供测试）
       return this.localSearch(pattern, options);
     } catch (e) {
-      if ((e as Error).name === 'AbortError') return [];
-      console.error('[SearchEngine] Search failed:', e);
+      if ((e as Error).name === "AbortError") return [];
+      console.error("[SearchEngine] Search failed:", e);
       return [];
     }
   }
@@ -55,15 +99,24 @@ class SearchEngine {
     let pattern: RegExp;
     try {
       if (regex) {
-        pattern = new RegExp(query, caseSensitive ? 'g' : 'gi');
+        pattern = new RegExp(query, caseSensitive ? "g" : "gi");
       } else {
-        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const wordBoundary = wholeWord ? '\\b' : '';
-        pattern = new RegExp(`${wordBoundary}${escaped}${wordBoundary}`, caseSensitive ? 'g' : 'gi');
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const wordBoundary = wholeWord ? "\\b" : "";
+        pattern = new RegExp(
+          `${wordBoundary}${escaped}${wordBoundary}`,
+          caseSensitive ? "g" : "gi",
+        );
       }
-    } catch { return []; }
+    } catch (err) {
+      console.warn(
+        "[SearchEngine] Invalid search pattern:",
+        err instanceof Error ? err.message : err,
+      );
+      return [];
+    }
 
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       let match;
@@ -84,7 +137,11 @@ class SearchEngine {
   }
 
   /** 替换 */
-  async replace(query: string, replacement: string, options: SearchOptions = {}): Promise<ReplaceResult[]> {
+  async replace(
+    query: string,
+    replacement: string,
+    options: SearchOptions = {},
+  ): Promise<ReplaceResult[]> {
     const searchResults = await this.search(query, options);
     const results: ReplaceResult[] = [];
 
@@ -98,25 +155,41 @@ class SearchEngine {
             results.push({ file: result.file, replacements: result.matches.length });
           }
         }
-      } catch (e) { console.error(`[SearchEngine] Replace failed in ${result.file}:`, e); }
+      } catch (e) {
+        console.error(`[SearchEngine] Replace failed in ${result.file}:`, e);
+      }
     }
     return results;
   }
 
   /** 在内容中替换 */
-  replaceInContent(content: string, query: string, replacement: string, options: SearchOptions = {}): string {
+  replaceInContent(
+    content: string,
+    query: string,
+    replacement: string,
+    options: SearchOptions = {},
+  ): string {
     const { caseSensitive = false, wholeWord = false, regex = false } = options;
 
     let pattern: RegExp;
     try {
       if (regex) {
-        pattern = new RegExp(query, caseSensitive ? 'g' : 'gi');
+        pattern = new RegExp(query, caseSensitive ? "g" : "gi");
       } else {
-        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const wordBoundary = wholeWord ? '\\b' : '';
-        pattern = new RegExp(`${wordBoundary}${escaped}${wordBoundary}`, caseSensitive ? 'g' : 'gi');
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const wordBoundary = wholeWord ? "\\b" : "";
+        pattern = new RegExp(
+          `${wordBoundary}${escaped}${wordBoundary}`,
+          caseSensitive ? "g" : "gi",
+        );
       }
-    } catch { return content; }
+    } catch (err) {
+      console.warn(
+        "[SearchEngine] Invalid replace pattern:",
+        err instanceof Error ? err.message : err,
+      );
+      return content;
+    }
 
     return content.replace(pattern, replacement);
   }
@@ -132,7 +205,8 @@ class SearchEngine {
     for (let i = 0; i < textLower.length && queryIndex < queryLower.length; i++) {
       if (textLower[i] === queryLower[queryIndex]) {
         indices.push(i);
-        score += (i === 0 || text[i - 1] === '/' || text[i - 1] === '\\' || text[i - 1] === '.') ? 10 : 1; // 边界加分
+        score +=
+          i === 0 || text[i - 1] === "/" || text[i - 1] === "\\" || text[i - 1] === "." ? 10 : 1; // 边界加分
         if (queryIndex > 0 && indices[queryIndex - 1] === i - 1) score += 5; // 连续加分
         queryIndex++;
       }
@@ -162,7 +236,11 @@ export const highlightMatches = (text: string, indices: number[]): React.ReactNo
 
   for (const i of indices) {
     if (i > lastIndex) result.push(text.slice(lastIndex, i));
-    result.push(<mark key={i} className="bg-[var(--color-accent-primary)] bg-opacity-30 text-inherit">{text[i]}</mark>);
+    result.push(
+      <mark key={i} className="bg-[var(--color-accent-primary)] bg-opacity-30 text-inherit">
+        {text[i]}
+      </mark>,
+    );
     lastIndex = i + 1;
   }
   if (lastIndex < text.length) result.push(text.slice(lastIndex));

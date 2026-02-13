@@ -33,9 +33,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run test
-        continue-on-error: true
 
   build:
+    needs: [lint, test]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -48,6 +48,26 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+
+      # 验证构建产物完整性
+      - name: Verify build output (main process)
+        shell: bash
+        run: |
+          if [ ! -f "dist/main/main/index.js" ]; then
+            echo "ERROR: Main process entry point not found at dist/main/main/index.js"
+            exit 1
+          fi
+          echo "Main process build verified."
+
+      - name: Verify build output (renderer)
+        shell: bash
+        run: |
+          if [ ! -f "dist/renderer/index.html" ]; then
+            echo "ERROR: Renderer index.html not found at dist/renderer/index.html"
+            exit 1
+          fi
+          echo "Renderer build verified."
+
       - uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}

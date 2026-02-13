@@ -1,5 +1,17 @@
-import { AIProvider, AIProviderType, AIProviderConfig, ChatMessage, StreamCallbacks } from '@shared/types/ai';
-import { ClaudeProvider, OpenAIProvider, GeminiProvider, DeepSeekProvider, GLMProvider } from './providers';
+import type {
+  AIProvider,
+  AIProviderType,
+  AIProviderConfig,
+  ChatMessage,
+  StreamCallbacks,
+} from "@shared/types/ai";
+import {
+  ClaudeProvider,
+  OpenAIProvider,
+  GeminiProvider,
+  DeepSeekProvider,
+  GLMProvider,
+} from "./providers";
 
 export interface ProviderRegistry {
   claude?: AIProviderConfig;
@@ -11,16 +23,18 @@ export interface ProviderRegistry {
 
 export class AIRouter {
   private providers: Map<AIProviderType, AIProvider> = new Map();
-  private defaultProvider: AIProviderType = 'claude';
+  private defaultProvider: AIProviderType = "claude";
 
-  constructor(registry: ProviderRegistry) { this.initializeProviders(registry); }
+  constructor(registry: ProviderRegistry) {
+    this.initializeProviders(registry);
+  }
 
   private initializeProviders(registry: ProviderRegistry): void {
-    if (registry.claude) this.providers.set('claude', new ClaudeProvider(registry.claude));
-    if (registry.openai) this.providers.set('openai', new OpenAIProvider(registry.openai));
-    if (registry.gemini) this.providers.set('gemini', new GeminiProvider(registry.gemini));
-    if (registry.deepseek) this.providers.set('deepseek', new DeepSeekProvider(registry.deepseek));
-    if (registry.glm) this.providers.set('glm', new GLMProvider(registry.glm));
+    if (registry.claude) this.providers.set("claude", new ClaudeProvider(registry.claude));
+    if (registry.openai) this.providers.set("openai", new OpenAIProvider(registry.openai));
+    if (registry.gemini) this.providers.set("gemini", new GeminiProvider(registry.gemini));
+    if (registry.deepseek) this.providers.set("deepseek", new DeepSeekProvider(registry.deepseek));
+    if (registry.glm) this.providers.set("glm", new GLMProvider(registry.glm));
   }
 
   setDefaultProvider(provider: AIProviderType): void {
@@ -43,7 +57,11 @@ export class AIRouter {
     return p.chat(messages);
   }
 
-  async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks, provider?: AIProviderType): Promise<void> {
+  async chatStream(
+    messages: ChatMessage[],
+    callbacks: StreamCallbacks,
+    provider?: AIProviderType,
+  ): Promise<void> {
     const p = this.getProvider(provider);
     if (!p) throw new Error(`Provider ${provider || this.defaultProvider} not configured`);
     return p.chatStream(messages, callbacks);

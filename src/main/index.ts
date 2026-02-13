@@ -1,1775 +1,481 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, shell, MenuItemConstructorOptions } from 'electron';
-import * as path from 'path';
-import * as fs from 'fs';
-import { ClaudeProvider } from '../core/ai/providers/claude';
-import { OpenAIProvider } from '../core/ai/providers/openai';
-import { DeepSeekProvider } from '../core/ai/providers/deepseek';
-import { GeminiProvider } from '../core/ai/providers/gemini';
-import { GLMProvider } from '../core/ai/providers/glm';
-import { CodesucProvider } from '../core/ai/providers/codesuc';
-import { defaultAIConfig } from '../core/ai/config';
-import { LLMClient, classifyError, getUserFriendlyError } from '../core/ai/llm-client';
-import { startupTracker, markStartup, logStartupReport } from '../core/performance';
-import { warmupConnections, StreamBuffer } from '../core/ai/request-optimizer';
-import { readFileWithEncoding, writeFileWithEncoding, detectEncoding, SUPPORTED_ENCODINGS, EncodingId } from '../core/encoding';
-import { getRequestPipeline } from '../core/ai/request-pipeline';
+/**
+ * MindCode Main Process Entry Point
+ *
+ * Electron 主进程入口。负责：
+ * - 创建应用窗口
+ * - 注册应用菜单
+ * - 注册所有 IPC 处理器（模块化）
+ * - 启动性能追踪
+ */
+import type { MenuItemConstructorOptions } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, Menu } from "electron";
+import * as path from "path";
+import { markStartup } from "../core/performance";
+import {
+  registerFSHandlers,
+  registerAIHandlers,
+  registerGitHandlers,
+  registerTerminalHandlers,
+  registerSettingsHandlers,
+  registerDebugHandlers,
+  registerLSPHandlers,
+  registerIndexHandlers,
+  warmupAIProviders,
+  type IPCContext,
+} from "./ipc";
 
-markStartup('main_start');
-
-// 初始化请求管道
-const aiPipeline = getRequestPipeline();
-aiPipeline.setMaxConcurrent(2); // 限制AI并发数为2,避免过载
+markStartup("main_start");
 
 let mainWindow: BrowserWindow | null = null;
 
-const isDev = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
+const isDev = process.argv.includes("--dev") || process.env.NODE_ENV === "development";
 
-// 懒加载 AI Providers - 延迟到首次使用时初始化
-import type { AIProvider } from '../shared/types/ai';
+/** 开发模式下的加载重试配置 */
+const DEV_SERVER_URL = "http://localhost:5173";
+const MAX_LOAD_RETRIES = 10;
+const RETRY_BASE_DELAY_MS = 500;
+const RETRY_MAX_DELAY_MS = 3000;
 
-let _providers: Record<string, AIProvider> | null = null;
-let _llmClient: LLMClient | null = null;
+/** 窗口默认尺寸 */
+const DEFAULT_WINDOW_WIDTH = 1400;
+const DEFAULT_WINDOW_HEIGHT = 900;
+const MIN_WINDOW_WIDTH = 800;
+const MIN_WINDOW_HEIGHT = 600;
 
-function getProviders() {
-  if (!_providers) {
-    markStartup('providers_init_start');
-    _providers = {
-      claude: new ClaudeProvider({ apiKey: defaultAIConfig.claude.apiKey, baseUrl: defaultAIConfig.claude.baseUrl, model: defaultAIConfig.claude.model }),
-      openai: new OpenAIProvider({ apiKey: defaultAIConfig.openai.apiKey, baseUrl: defaultAIConfig.openai.baseUrl, model: defaultAIConfig.openai.model }),
-      gpt4: new OpenAIProvider({ apiKey: defaultAIConfig.openai.apiKey, baseUrl: defaultAIConfig.openai.baseUrl, model: defaultAIConfig.openai.model }),
-      gemini: new GeminiProvider({ apiKey: defaultAIConfig.gemini.apiKey, baseUrl: defaultAIConfig.gemini.baseUrl, model: defaultAIConfig.gemini.model }),
-      deepseek: new DeepSeekProvider({ apiKey: defaultAIConfig.deepseek.apiKey, baseUrl: defaultAIConfig.deepseek.baseUrl, model: defaultAIConfig.deepseek.model }),
-      glm: new GLMProvider({ apiKey: defaultAIConfig.glm.apiKey, baseUrl: defaultAIConfig.glm.baseUrl, model: defaultAIConfig.glm.model }),
-      codesuc: new CodesucProvider({ apiKey: defaultAIConfig.codesuc.apiKey, baseUrl: defaultAIConfig.codesuc.baseUrl, model: defaultAIConfig.codesuc.model })
-    };
-    markStartup('providers_init_end');
-    // 后台探测能力（不阻塞）
-    (_providers.codesuc as CodesucProvider).probeCapabilities().then(cap => console.log(`[LLM] Codesuc: tools=${cap.tools}, stream=${cap.stream}`)).catch(() => {});
-  }
-  return _providers;
-}
+// ==================== IPC Context ====================
+const ipcContext: IPCContext = {
+  getMainWindow: () => mainWindow,
+  isDev,
+};
 
-function getLLMClient(): LLMClient {
-  if (!_llmClient) {
-    const providers = getProviders();
-    _llmClient = new LLMClient(new Map(Object.entries(providers)));
-    _llmClient.on('fallback', (from, to) => console.log(`[LLM] 降级: ${from} -> ${to}`));
-  }
-  return _llmClient;
-}
-
+// ==================== Window Management ====================
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 800,
-    minHeight: 600,
-    title: 'MindCode',
+    width: DEFAULT_WINDOW_WIDTH,
+    height: DEFAULT_WINDOW_HEIGHT,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
+    title: "MindCode",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, "preload.js"),
     },
-    frame: true,
-    backgroundColor: '#1e1e1e'
+    frame: false,
+    titleBarStyle: "hidden",
+    backgroundColor: "#1e1e1e",
   });
 
   if (isDev) {
-    console.log('开发模式：加载 http://localhost:5173');
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL(DEV_SERVER_URL);
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     mainWindow = null;
   });
 
+  // 开发模式下自动重试加载
   let retryCount = 0;
-  mainWindow.webContents.on('did-fail-load', () => {
-    if (isDev && retryCount < 10) {
+  mainWindow.webContents.on("did-fail-load", () => {
+    if (isDev && retryCount < MAX_LOAD_RETRIES) {
       retryCount++;
-      const delay = Math.min(500 * retryCount, 3000); // 500ms, 1s, 1.5s... 最大 3s
-      console.log(`页面加载失败，${delay}ms 后重试 (${retryCount}/10)...`);
-      setTimeout(() => mainWindow?.loadURL('http://localhost:5173'), delay);
+      const delay = Math.min(RETRY_BASE_DELAY_MS * retryCount, RETRY_MAX_DELAY_MS);
+      setTimeout(() => mainWindow?.loadURL(DEV_SERVER_URL), delay);
     }
   });
 }
 
-app.whenReady().then(() => {
-  markStartup('app_ready');
-  createMenu();
-  createWindow(); // 立即创建窗口，开发模式下 did-fail-load 会自动重试
-  // 并行预热 Provider 和连接（无延迟）
-  Promise.resolve().then(() => {
-    getProviders();
-    markStartup('providers_preloaded');
-    warmupConnections().then(() => markStartup('connections_warmed'));
-  });
+// ==================== Window Control IPC ====================
+ipcMain.on("window:minimize", () => mainWindow?.minimize());
+ipcMain.on("window:maximize", () => {
+  if (mainWindow?.isMaximized()) mainWindow.unmaximize();
+  else mainWindow?.maximize();
+});
+ipcMain.on("window:close", () => mainWindow?.close());
+ipcMain.handle("window:isMaximized", () => mainWindow?.isMaximized() ?? false);
+ipcMain.on("window:showMenu", (_event, x: number, y: number) => {
+  const menu = Menu.getApplicationMenu();
+  if (menu && mainWindow) menu.popup({ window: mainWindow, x: Math.round(x), y: Math.round(y) });
 });
 
-// 创建应用菜单
-function createMenu() {
+// ==================== Application Menu ====================
+function createMenu(): void {
   const template: MenuItemConstructorOptions[] = [
     {
-      label: 'File',
+      label: "File",
       submenu: [
+        { label: "New Window", accelerator: "CmdOrCtrl+Shift+N", click: () => createWindow() },
         {
-          label: 'New Window',
-          accelerator: 'CmdOrCtrl+Shift+N',
-          click: () => createWindow()
+          label: "New File",
+          accelerator: "CmdOrCtrl+N",
+          click: () => mainWindow?.webContents.send("menu:newFile"),
         },
+        { type: "separator" },
         {
-          label: 'New File',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => mainWindow?.webContents.send('menu:newFile')
-        },
-        { type: 'separator' },
-        {
-          label: 'Open File...',
-          accelerator: 'CmdOrCtrl+O',
+          label: "Open File...",
+          accelerator: "CmdOrCtrl+O",
           click: async () => {
             const result = await dialog.showOpenDialog(mainWindow!, {
-              properties: ['openFile'],
+              properties: ["openFile"],
               filters: [
-                { name: 'All Files', extensions: ['*'] },
-                { name: 'TypeScript', extensions: ['ts', 'tsx'] },
-                { name: 'JavaScript', extensions: ['js', 'jsx'] },
-                { name: 'JSON', extensions: ['json'] },
-              ]
+                { name: "All Files", extensions: ["*"] },
+                { name: "TypeScript", extensions: ["ts", "tsx"] },
+                { name: "JavaScript", extensions: ["js", "jsx"] },
+                { name: "JSON", extensions: ["json"] },
+              ],
             });
             if (!result.canceled && result.filePaths.length > 0) {
-              mainWindow?.webContents.send('menu:openFile', result.filePaths[0]);
+              mainWindow?.webContents.send("menu:openFile", result.filePaths[0]);
             }
-          }
+          },
         },
         {
-          label: 'Open Folder...',
-          accelerator: 'CmdOrCtrl+K CmdOrCtrl+O',
+          label: "Open Folder...",
+          accelerator: "CmdOrCtrl+K CmdOrCtrl+O",
           click: async () => {
             const result = await dialog.showOpenDialog(mainWindow!, {
-              properties: ['openDirectory']
+              properties: ["openDirectory"],
             });
             if (!result.canceled && result.filePaths.length > 0) {
-              mainWindow?.webContents.send('menu:openFolder', result.filePaths[0]);
+              mainWindow?.webContents.send("menu:openFolder", result.filePaths[0]);
             }
-          }
+          },
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
-          label: 'Save',
-          accelerator: 'CmdOrCtrl+S',
-          click: () => mainWindow?.webContents.send('menu:save')
-        },
-        {
-          label: 'Save As...',
-          accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => mainWindow?.webContents.send('menu:saveAs')
-        },
-        { type: 'separator' },
-        {
-          label: 'Close Editor',
-          accelerator: 'CmdOrCtrl+W',
-          click: () => mainWindow?.webContents.send('menu:closeEditor')
+          label: "Save",
+          accelerator: "CmdOrCtrl+S",
+          click: () => mainWindow?.webContents.send("menu:save"),
         },
         {
-          label: 'Close Window',
-          accelerator: 'CmdOrCtrl+Shift+W',
-          click: () => mainWindow?.close()
+          label: "Save As...",
+          accelerator: "CmdOrCtrl+Shift+S",
+          click: () => mainWindow?.webContents.send("menu:saveAs"),
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
-          label: 'Exit',
-          accelerator: 'Alt+F4',
-          click: () => app.quit()
-        }
-      ]
+          label: "Close Editor",
+          accelerator: "CmdOrCtrl+W",
+          click: () => mainWindow?.webContents.send("menu:closeEditor"),
+        },
+        {
+          label: "Close Window",
+          accelerator: "CmdOrCtrl+Shift+W",
+          click: () => mainWindow?.close(),
+        },
+        { type: "separator" },
+        { label: "Exit", accelerator: "Alt+F4", click: () => app.quit() },
+      ],
     },
     {
-      label: 'Edit',
+      label: "Edit",
       submenu: [
-        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-        { label: 'Redo', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
-        { type: 'separator' },
-        { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
-        { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
-        { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
-        { type: 'separator' },
+        { label: "Undo", accelerator: "CmdOrCtrl+Z", role: "undo" },
+        { label: "Redo", accelerator: "CmdOrCtrl+Y", role: "redo" },
+        { type: "separator" },
+        { label: "Cut", accelerator: "CmdOrCtrl+X", role: "cut" },
+        { label: "Copy", accelerator: "CmdOrCtrl+C", role: "copy" },
+        { label: "Paste", accelerator: "CmdOrCtrl+V", role: "paste" },
+        { type: "separator" },
         {
-          label: 'Find',
-          accelerator: 'CmdOrCtrl+F',
-          click: () => mainWindow?.webContents.send('menu:find')
+          label: "Find",
+          accelerator: "CmdOrCtrl+F",
+          click: () => mainWindow?.webContents.send("menu:find"),
         },
         {
-          label: 'Find in Files',
-          accelerator: 'CmdOrCtrl+Shift+F',
-          click: () => mainWindow?.webContents.send('menu:findInFiles')
+          label: "Find in Files",
+          accelerator: "CmdOrCtrl+Shift+F",
+          click: () => mainWindow?.webContents.send("menu:findInFiles"),
         },
         {
-          label: 'Replace',
-          accelerator: 'CmdOrCtrl+H',
-          click: () => mainWindow?.webContents.send('menu:replace')
-        }
-      ]
+          label: "Replace",
+          accelerator: "CmdOrCtrl+H",
+          click: () => mainWindow?.webContents.send("menu:replace"),
+        },
+      ],
     },
     {
-      label: 'View',
+      label: "View",
       submenu: [
         {
-          label: 'Command Palette...',
-          accelerator: 'CmdOrCtrl+Shift+P',
-          click: () => mainWindow?.webContents.send('menu:commandPalette')
+          label: "Command Palette...",
+          accelerator: "CmdOrCtrl+Shift+P",
+          click: () => mainWindow?.webContents.send("menu:commandPalette"),
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
-          label: 'Explorer',
-          accelerator: 'CmdOrCtrl+Shift+E',
-          click: () => mainWindow?.webContents.send('menu:showExplorer')
-        },
-        {
-          label: 'Search',
-          accelerator: 'CmdOrCtrl+Shift+F',
-          click: () => mainWindow?.webContents.send('menu:showSearch')
+          label: "Explorer",
+          accelerator: "CmdOrCtrl+Shift+E",
+          click: () => mainWindow?.webContents.send("menu:showExplorer"),
         },
         {
-          label: 'Source Control',
-          accelerator: 'CmdOrCtrl+Shift+G',
-          click: () => mainWindow?.webContents.send('menu:showGit')
-        },
-        { type: 'separator' },
-        {
-          label: 'Terminal',
-          accelerator: 'CmdOrCtrl+`',
-          click: () => mainWindow?.webContents.send('menu:toggleTerminal')
+          label: "Search",
+          accelerator: "CmdOrCtrl+Shift+F",
+          click: () => mainWindow?.webContents.send("menu:showSearch"),
         },
         {
-          label: 'AI Chat',
-          accelerator: 'CmdOrCtrl+L',
-          click: () => mainWindow?.webContents.send('menu:toggleAI')
+          label: "Source Control",
+          accelerator: "CmdOrCtrl+Shift+G",
+          click: () => mainWindow?.webContents.send("menu:showGit"),
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
-          label: 'Reload',
-          accelerator: 'CmdOrCtrl+R',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.reload();
-            }
-          }
+          label: "Terminal",
+          accelerator: "CmdOrCtrl+`",
+          click: () => mainWindow?.webContents.send("menu:toggleTerminal"),
         },
-        { type: 'separator' },
         {
-          label: 'Theme',
+          label: "AI Chat",
+          accelerator: "CmdOrCtrl+L",
+          click: () => mainWindow?.webContents.send("menu:toggleAI"),
+        },
+        { type: "separator" },
+        {
+          label: "Reload",
+          accelerator: "CmdOrCtrl+R",
+          click: () => mainWindow?.webContents.reload(),
+        },
+        { type: "separator" },
+        {
+          label: "Theme",
           submenu: [
             {
-              label: '🌙 Dark Themes',
+              label: "Dark Themes",
               submenu: [
-                { label: 'MindCode Dark', click: () => mainWindow?.webContents.send('theme:change', 'mindcode-dark') },
-                { label: 'Dark+ (VS Code)', click: () => mainWindow?.webContents.send('theme:change', 'dark-plus') },
-                { type: 'separator' },
-                { label: 'Catppuccin Mocha', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-mocha') },
-                { label: 'Catppuccin Macchiato', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-macchiato') },
-                { label: 'Catppuccin Frappé', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-frappe') },
-                { type: 'separator' },
-                { label: 'Tokyo Night', click: () => mainWindow?.webContents.send('theme:change', 'tokyo-night') },
-                { label: 'Tokyo Night Storm', click: () => mainWindow?.webContents.send('theme:change', 'tokyo-night-storm') },
-                { type: 'separator' },
-                { label: 'Kanagawa Wave', click: () => mainWindow?.webContents.send('theme:change', 'kanagawa-wave') },
-                { label: 'Kanagawa Dragon', click: () => mainWindow?.webContents.send('theme:change', 'kanagawa-dragon') },
-                { type: 'separator' },
-                { label: 'Everforest Dark', click: () => mainWindow?.webContents.send('theme:change', 'everforest-dark') },
-                { label: 'Everforest Dark Hard', click: () => mainWindow?.webContents.send('theme:change', 'everforest-dark-hard') },
-                { type: 'separator' },
-                { label: 'Material Ocean', click: () => mainWindow?.webContents.send('theme:change', 'material-ocean') },
-                { label: 'Material Palenight', click: () => mainWindow?.webContents.send('theme:change', 'material-palenight') },
-                { label: 'Material Darker', click: () => mainWindow?.webContents.send('theme:change', 'material-darker') },
-                { type: 'separator' },
-                { label: 'Dracula', click: () => mainWindow?.webContents.send('theme:change', 'dracula') },
-                { label: 'One Dark Pro', click: () => mainWindow?.webContents.send('theme:change', 'one-dark-pro') },
-                { label: 'Atom One Dark', click: () => mainWindow?.webContents.send('theme:change', 'atom-one-dark') },
-                { label: 'Monokai', click: () => mainWindow?.webContents.send('theme:change', 'monokai') },
-                { type: 'separator' },
-                { label: 'GitHub Dark', click: () => mainWindow?.webContents.send('theme:change', 'github-dark') },
-                { label: 'GitHub Dark Dimmed', click: () => mainWindow?.webContents.send('theme:change', 'github-dark-dimmed') },
-                { type: 'separator' },
-                { label: 'Nord', click: () => mainWindow?.webContents.send('theme:change', 'nord') },
-                { label: 'Gruvbox Dark', click: () => mainWindow?.webContents.send('theme:change', 'gruvbox-dark') },
-                { label: 'Solarized Dark', click: () => mainWindow?.webContents.send('theme:change', 'solarized-dark') },
-                { type: 'separator' },
-                { label: 'Rosé Pine', click: () => mainWindow?.webContents.send('theme:change', 'rose-pine') },
-                { label: 'Rosé Pine Moon', click: () => mainWindow?.webContents.send('theme:change', 'rose-pine-moon') },
-                { type: 'separator' },
-                { label: 'Night Owl', click: () => mainWindow?.webContents.send('theme:change', 'night-owl') },
-                { label: 'Cobalt2', click: () => mainWindow?.webContents.send('theme:change', 'cobalt2') },
-                { label: 'Palenight', click: () => mainWindow?.webContents.send('theme:change', 'palenight') },
-                { label: 'Panda Syntax', click: () => mainWindow?.webContents.send('theme:change', 'panda') },
-                { type: 'separator' },
-                { label: 'Ayu Dark', click: () => mainWindow?.webContents.send('theme:change', 'ayu-dark') },
-                { label: 'Vitesse Dark', click: () => mainWindow?.webContents.send('theme:change', 'vitesse-dark') },
-                { label: 'Andromeda', click: () => mainWindow?.webContents.send('theme:change', 'andromeda') },
-                { label: 'Moonlight II', click: () => mainWindow?.webContents.send('theme:change', 'moonlight') },
-                { type: 'separator' },
-                { label: "Synthwave '84", click: () => mainWindow?.webContents.send('theme:change', 'synthwave-84') },
-                { label: 'Horizon Dark', click: () => mainWindow?.webContents.send('theme:change', 'horizon-dark') },
-                { label: 'Shades of Purple', click: () => mainWindow?.webContents.send('theme:change', 'shades-of-purple') },
-                { label: 'Laserwave', click: () => mainWindow?.webContents.send('theme:change', 'laserwave') },
-                { label: 'Aura Dark', click: () => mainWindow?.webContents.send('theme:change', 'aura-dark') },
-                { type: 'separator' },
-                { label: 'Bluloco Dark', click: () => mainWindow?.webContents.send('theme:change', 'bluloco-dark') },
-                { label: 'Bearded Arc', click: () => mainWindow?.webContents.send('theme:change', 'bearded-arc') },
-                { label: 'Slack Dark', click: () => mainWindow?.webContents.send('theme:change', 'slack-dark') },
-                { label: 'Min Dark', click: () => mainWindow?.webContents.send('theme:change', 'min-dark') }
-              ]
+                {
+                  label: "MindCode Dark",
+                  click: () => mainWindow?.webContents.send("theme:change", "mindcode-dark"),
+                },
+                {
+                  label: "Dark+ (VS Code)",
+                  click: () => mainWindow?.webContents.send("theme:change", "dark-plus"),
+                },
+                { type: "separator" },
+                {
+                  label: "Catppuccin Mocha",
+                  click: () => mainWindow?.webContents.send("theme:change", "catppuccin-mocha"),
+                },
+                {
+                  label: "Catppuccin Macchiato",
+                  click: () => mainWindow?.webContents.send("theme:change", "catppuccin-macchiato"),
+                },
+                {
+                  label: "Catppuccin Frappé",
+                  click: () => mainWindow?.webContents.send("theme:change", "catppuccin-frappe"),
+                },
+                { type: "separator" },
+                {
+                  label: "Tokyo Night",
+                  click: () => mainWindow?.webContents.send("theme:change", "tokyo-night"),
+                },
+                {
+                  label: "Tokyo Night Storm",
+                  click: () => mainWindow?.webContents.send("theme:change", "tokyo-night-storm"),
+                },
+                { type: "separator" },
+                {
+                  label: "Kanagawa Wave",
+                  click: () => mainWindow?.webContents.send("theme:change", "kanagawa-wave"),
+                },
+                {
+                  label: "Kanagawa Dragon",
+                  click: () => mainWindow?.webContents.send("theme:change", "kanagawa-dragon"),
+                },
+                { type: "separator" },
+                {
+                  label: "Dracula",
+                  click: () => mainWindow?.webContents.send("theme:change", "dracula"),
+                },
+                {
+                  label: "One Dark Pro",
+                  click: () => mainWindow?.webContents.send("theme:change", "one-dark-pro"),
+                },
+                {
+                  label: "Monokai",
+                  click: () => mainWindow?.webContents.send("theme:change", "monokai"),
+                },
+                { type: "separator" },
+                {
+                  label: "GitHub Dark",
+                  click: () => mainWindow?.webContents.send("theme:change", "github-dark"),
+                },
+                {
+                  label: "Nord",
+                  click: () => mainWindow?.webContents.send("theme:change", "nord"),
+                },
+                {
+                  label: "Gruvbox Dark",
+                  click: () => mainWindow?.webContents.send("theme:change", "gruvbox-dark"),
+                },
+                {
+                  label: "Solarized Dark",
+                  click: () => mainWindow?.webContents.send("theme:change", "solarized-dark"),
+                },
+                { type: "separator" },
+                {
+                  label: "Rosé Pine",
+                  click: () => mainWindow?.webContents.send("theme:change", "rose-pine"),
+                },
+                {
+                  label: "Night Owl",
+                  click: () => mainWindow?.webContents.send("theme:change", "night-owl"),
+                },
+                {
+                  label: "Material Ocean",
+                  click: () => mainWindow?.webContents.send("theme:change", "material-ocean"),
+                },
+                {
+                  label: "Ayu Dark",
+                  click: () => mainWindow?.webContents.send("theme:change", "ayu-dark"),
+                },
+              ],
             },
             {
-              label: '☀️ Light Themes',
+              label: "Light Themes",
               submenu: [
-                { label: 'Light+ (default light)', click: () => mainWindow?.webContents.send('theme:change', 'light-plus') },
-                { label: 'GitHub Light', click: () => mainWindow?.webContents.send('theme:change', 'github-light') },
-                { label: 'Quiet Light', click: () => mainWindow?.webContents.send('theme:change', 'quiet-light') },
-                { type: 'separator' },
-                { label: 'Catppuccin Latte', click: () => mainWindow?.webContents.send('theme:change', 'catppuccin-latte') },
-                { label: 'Tokyo Night Day', click: () => mainWindow?.webContents.send('theme:change', 'tokyo-night-day') },
-                { type: 'separator' },
-                { label: 'Everforest Light', click: () => mainWindow?.webContents.send('theme:change', 'everforest-light') },
-                { label: 'Kanagawa Lotus', click: () => mainWindow?.webContents.send('theme:change', 'kanagawa-lotus') },
-                { type: 'separator' },
-                { label: 'Solarized Light', click: () => mainWindow?.webContents.send('theme:change', 'solarized-light') },
-                { label: 'Ayu Light', click: () => mainWindow?.webContents.send('theme:change', 'ayu-light') },
-                { label: 'One Light', click: () => mainWindow?.webContents.send('theme:change', 'one-light') },
-                { type: 'separator' },
-                { label: 'Rosé Pine Dawn', click: () => mainWindow?.webContents.send('theme:change', 'rose-pine-dawn') },
-                { label: 'Vitesse Light', click: () => mainWindow?.webContents.send('theme:change', 'vitesse-light') },
-                { label: 'Night Owl Light', click: () => mainWindow?.webContents.send('theme:change', 'night-owl-light') },
-                { label: 'Material Light', click: () => mainWindow?.webContents.send('theme:change', 'material-light') },
-                { type: 'separator' },
-                { label: 'Material Lighter', click: () => mainWindow?.webContents.send('theme:change', 'material-lighter') },
-                { label: 'Bluloco Light', click: () => mainWindow?.webContents.send('theme:change', 'bluloco-light') },
-                { label: 'Min Light', click: () => mainWindow?.webContents.send('theme:change', 'min-light') },
-                { label: 'Horizon Light', click: () => mainWindow?.webContents.send('theme:change', 'horizon-light') },
-                { label: 'Bearded Antique', click: () => mainWindow?.webContents.send('theme:change', 'bearded-antique') },
-                { label: 'Slack Ochin', click: () => mainWindow?.webContents.send('theme:change', 'slack-ochin') }
-              ]
+                {
+                  label: "Light+ (default light)",
+                  click: () => mainWindow?.webContents.send("theme:change", "light-plus"),
+                },
+                {
+                  label: "GitHub Light",
+                  click: () => mainWindow?.webContents.send("theme:change", "github-light"),
+                },
+                {
+                  label: "Quiet Light",
+                  click: () => mainWindow?.webContents.send("theme:change", "quiet-light"),
+                },
+                { type: "separator" },
+                {
+                  label: "Catppuccin Latte",
+                  click: () => mainWindow?.webContents.send("theme:change", "catppuccin-latte"),
+                },
+                {
+                  label: "Solarized Light",
+                  click: () => mainWindow?.webContents.send("theme:change", "solarized-light"),
+                },
+                {
+                  label: "One Light",
+                  click: () => mainWindow?.webContents.send("theme:change", "one-light"),
+                },
+                {
+                  label: "Rosé Pine Dawn",
+                  click: () => mainWindow?.webContents.send("theme:change", "rose-pine-dawn"),
+                },
+              ],
             },
             {
-              label: '🔲 High Contrast',
+              label: "High Contrast",
               submenu: [
-                { label: 'Dark High Contrast', click: () => mainWindow?.webContents.send('theme:change', 'hc-black') },
-                { label: 'Light High Contrast', click: () => mainWindow?.webContents.send('theme:change', 'hc-light') }
-              ]
+                {
+                  label: "Dark High Contrast",
+                  click: () => mainWindow?.webContents.send("theme:change", "hc-black"),
+                },
+                {
+                  label: "Light High Contrast",
+                  click: () => mainWindow?.webContents.send("theme:change", "hc-light"),
+                },
+              ],
             },
-            { type: 'separator' },
-            { label: 'Follow System', click: () => mainWindow?.webContents.send('theme:change', 'system') }
-          ]
+            { type: "separator" },
+            {
+              label: "Follow System",
+              click: () => mainWindow?.webContents.send("theme:change", "system"),
+            },
+          ],
         },
-        { type: 'separator' },
-        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', role: 'zoomIn' },
-        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
-        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
-        { type: 'separator' },
-        { label: 'Toggle Full Screen', accelerator: 'F11', role: 'togglefullscreen' }
-      ]
+        { type: "separator" },
+        { label: "Zoom In", accelerator: "CmdOrCtrl+=", role: "zoomIn" },
+        { label: "Zoom Out", accelerator: "CmdOrCtrl+-", role: "zoomOut" },
+        { label: "Reset Zoom", accelerator: "CmdOrCtrl+0", role: "resetZoom" },
+        { type: "separator" },
+        { label: "Toggle Full Screen", accelerator: "F11", role: "togglefullscreen" },
+      ],
     },
     {
-      label: 'Go',
+      label: "Go",
       submenu: [
         {
-          label: 'Go to File...',
-          accelerator: 'CmdOrCtrl+P',
-          click: () => mainWindow?.webContents.send('menu:goToFile')
+          label: "Go to File...",
+          accelerator: "CmdOrCtrl+P",
+          click: () => mainWindow?.webContents.send("menu:goToFile"),
         },
         {
-          label: 'Go to Line...',
-          accelerator: 'CmdOrCtrl+G',
-          click: () => mainWindow?.webContents.send('menu:goToLine')
-        }
-      ]
-    },
-    {
-      label: 'Terminal',
-      submenu: [
-        {
-          label: 'New Terminal',
-          accelerator: 'CmdOrCtrl+Shift+`',
-          click: () => mainWindow?.webContents.send('menu:newTerminal')
-        }
-      ]
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'Toggle Developer Tools',
-          accelerator: 'F12',
-          click: () => mainWindow?.webContents.toggleDevTools()
+          label: "Go to Line...",
+          accelerator: "CmdOrCtrl+G",
+          click: () => mainWindow?.webContents.send("menu:goToLine"),
         },
-        { type: 'separator' },
+      ],
+    },
+    {
+      label: "Terminal",
+      submenu: [
         {
-          label: 'About MindCode',
+          label: "New Terminal",
+          accelerator: "CmdOrCtrl+Shift+`",
+          click: () => mainWindow?.webContents.send("menu:newTerminal"),
+        },
+      ],
+    },
+    {
+      label: "Help",
+      submenu: [
+        {
+          label: "Toggle Developer Tools",
+          accelerator: "F12",
+          click: () => mainWindow?.webContents.toggleDevTools(),
+        },
+        { type: "separator" },
+        {
+          label: "About MindCode",
           click: () => {
             dialog.showMessageBox(mainWindow!, {
-              type: 'info',
-              title: 'About MindCode',
-              message: 'MindCode',
-              detail: 'AI-Native Code Editor\nVersion 0.1.0\n\nBuilt with Electron + React + TypeScript'
+              type: "info",
+              title: "About MindCode",
+              message: "MindCode",
+              detail:
+                "AI-Native Code Editor\nVersion 0.3.0\n\nBuilt with Electron + React + TypeScript",
             });
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
 
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+// ==================== App Lifecycle ====================
+app.whenReady().then(() => {
+  markStartup("app_ready");
+  createMenu();
+  createWindow();
+
+  // 注册所有 IPC 处理器
+  registerFSHandlers(ipcContext);
+  registerAIHandlers(ipcContext);
+  registerGitHandlers(ipcContext);
+  registerTerminalHandlers(ipcContext);
+  registerSettingsHandlers(ipcContext);
+  registerDebugHandlers(ipcContext);
+  registerLSPHandlers(ipcContext);
+  registerIndexHandlers(ipcContext);
+
+  // 并行预热 AI Provider
+  warmupAIProviders();
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
-  }
-});
-
-// ==================== IPC 处理器 ====================
-
-ipcMain.handle('get-app-version', () => app.getVersion());
-
-// 根据模型名选择 Provider (保留兼容)
-function getProviderForModel(model: string) {
-  const providers = getProviders();
-  if (model.startsWith('codesuc-')) return providers.codesuc;
-  if (model.startsWith('claude-')) return providers.claude;
-  if (model.startsWith('gemini-')) return providers.gemini;
-  if (model.startsWith('deepseek-')) return providers.deepseek;
-  if (model.startsWith('glm-')) return providers.glm;
-  if (model.startsWith('gpt-')) return providers.openai;
-  return providers.codesuc;
-}
-
-// AI 聊天（非流式）- 使用 LLM 客户端 + 请求管道
-ipcMain.handle('ai-chat', async (_event, { model, messages }) => {
-  console.log(`[AI] chat request: model=${model}, messages=${messages.length}`);
-  
-  // 使用管道控制并发
-  const result = await aiPipeline.add(
-    () => getLLMClient().chat({ model, messages }),
-    1 // 普通优先级
-  );
-  
-  console.log(`[AI] chat result: success=${result.success}, model=${result.model}, fallback=${result.usedFallback}`);
-  if (result.success) return { success: true, data: result.data, model: result.model, usedFallback: result.usedFallback };
-  return { success: false, error: getUserFriendlyError(result.error!), errorType: result.error?.type };
-});
-
-// AI 聊天（流式）- 使用 LLM 客户端 + StreamBuffer 优化 + 请求管道
-ipcMain.on('ai-chat-stream', async (event, { model, messages, requestId }) => {
-  console.log(`[AI] stream request: id=${requestId}, model=${model}, mode=chat`);
-  const buffer = new StreamBuffer((text) => event.sender.send('ai-stream-token', { requestId, token: text }), 16);
-  
-  // 使用管道控制并发
-  aiPipeline.add(
-    () => getLLMClient().chatStream({ model, messages }, {
-      onToken: (token) => buffer.push(token),
-      onComplete: (fullText, meta) => { 
-        buffer.destroy(); 
-        console.log(`[AI] stream complete: id=${requestId}, model=${meta.model}`); 
-        event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); 
-      },
-      onError: (error) => { 
-        buffer.destroy(); 
-        console.error(`[AI] stream error: id=${requestId}`, error); 
-        event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); 
-      },
-      onFallback: (from, to) => { 
-        console.log(`[AI] fallback: ${from} -> ${to}`); 
-        event.sender.send('ai-stream-fallback', { requestId, from, to }); 
-      }
-    }),
-    2 // 流式请求高优先级
-  ).catch(e => {
-    buffer.destroy(); 
-    console.error(`[AI] stream exception: id=${requestId}`, e); 
-    event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' });
-  });
-});
-
-// AI 聊天（流式 + 工具调用）- 使用 LLM 客户端 + StreamBuffer 优化
-ipcMain.on('ai-chat-stream-with-tools', async (event, { model, messages, tools, requestId }) => {
-  console.log(`[AI] stream+tools request: id=${requestId}, model=${model}, mode=agent, tools=${tools?.length || 0}`);
-  const buffer = new StreamBuffer((text) => event.sender.send('ai-stream-token', { requestId, token: text }), 16);
-  try {
-    await getLLMClient().chatStream({ model, messages, tools }, {
-      onToken: (token) => buffer.push(token),
-      onToolCall: (calls) => { console.log(`[AI] tool calls: id=${requestId}`, calls.map((c: any) => c.name)); event.sender.send('ai-stream-tool-call', { requestId, toolCalls: calls }); },
-      onComplete: (fullText, meta) => { buffer.destroy(); console.log(`[AI] stream+tools complete: id=${requestId}, model=${meta.model}`); event.sender.send('ai-stream-complete', { requestId, fullText, model: meta.model, usedFallback: meta.usedFallback }); },
-      onError: (error) => { buffer.destroy(); console.error(`[AI] stream+tools error: id=${requestId}`, error); event.sender.send('ai-stream-error', { requestId, error: getUserFriendlyError(error), errorType: error.type }); },
-      onFallback: (from, to) => { console.log(`[AI] fallback: ${from} -> ${to}`); event.sender.send('ai-stream-fallback', { requestId, from, to }); }
-    });
-  } catch (e: any) { buffer.destroy(); console.error(`[AI] stream+tools exception: id=${requestId}`, e); event.sender.send('ai-stream-error', { requestId, error: e?.message || '请求失败', errorType: 'unknown' }); }
-});
-
-// LLM 状态查询
-ipcMain.handle('ai-stats', () => getLLMClient().getStats());
-
-// ==================== 文件系统操作 ====================
-
-// 当前工作区路径（用于路径验证）
-let currentWorkspacePath: string | null = null;
-
-// 验证路径是否在允许的范围内（防止路径遍历攻击）
-function isPathAllowed(targetPath: string, basePath?: string): boolean {
-  try {
-    // 规范化路径
-    const normalizedTarget = path.resolve(targetPath);
-    
-    // 如果提供了基础路径，检查是否在其内
-    if (basePath) {
-      const normalizedBase = path.resolve(basePath);
-      return normalizedTarget.startsWith(normalizedBase + path.sep) || normalizedTarget === normalizedBase;
-    }
-    
-    // 如果有工作区，检查是否在工作区内
-    if (currentWorkspacePath) {
-      const normalizedWorkspace = path.resolve(currentWorkspacePath);
-      return normalizedTarget.startsWith(normalizedWorkspace + path.sep) || normalizedTarget === normalizedWorkspace;
-    }
-    
-    // 检查是否尝试访问系统关键目录
-    const dangerousPaths = process.platform === 'win32'
-      ? ['C:\\Windows', 'C:\\Program Files', 'C:\\Program Files (x86)', 'C:\\ProgramData']
-      : ['/etc', '/usr', '/bin', '/sbin', '/var', '/root', '/boot', '/sys', '/proc'];
-    
-    for (const dangerous of dangerousPaths) {
-      if (normalizedTarget.toLowerCase().startsWith(dangerous.toLowerCase())) {
-        return false;
-      }
-    }
-    
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// 设置工作区路径
-ipcMain.handle('fs:setWorkspace', async (_event, workspacePath: string) => {
-  if (workspacePath && fs.existsSync(workspacePath)) {
-    currentWorkspacePath = path.resolve(workspacePath);
-    return { success: true };
-  }
-  return { success: false, error: '无效的工作区路径' };
-});
-
-// 打开文件夹对话框
-ipcMain.handle('fs:openFolder', async () => {
-  const result = await dialog.showOpenDialog(mainWindow!, {
-    properties: ['openDirectory']
-  });
-  if (result.canceled || result.filePaths.length === 0) {
-    return null;
-  }
-  return result.filePaths[0];
-});
-
-// 读取目录结构
-ipcMain.handle('fs:readDir', async (_event, dirPath: string) => {
-  try {
-    const items = fs.readdirSync(dirPath, { withFileTypes: true });
-    const result = items
-      .filter(item => !item.name.startsWith('.') && item.name !== 'node_modules')
-      .map(item => ({
-        name: item.name,
-        path: path.join(dirPath, item.name),
-        type: item.isDirectory() ? 'folder' : 'file'
-      }))
-      .sort((a, b) => {
-        // 文件夹优先
-        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 读取文件内容（支持多编码）- 带路径验证
-ipcMain.handle('fs:readFile', async (_event, filePath: string, encoding?: EncodingId) => {
-  try {
-    // 路径安全检查
-    if (!isPathAllowed(filePath)) {
-      return { success: false, error: '访问被拒绝：路径不在允许范围内' };
-    }
-    const result = readFileWithEncoding(filePath, encoding);
-    return { success: true, data: result.content, encoding: result.encoding };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 大文件分片读取（支持 10MB+ 文件）
-ipcMain.handle('fs:readFileChunk', async (_event, filePath: string, startLine: number, endLine: number) => {
-  try {
-    const fs = require('fs');
-    const readline = require('readline');
-    const lines: string[] = [];
-    const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    let lineNum = 0;
-    for await (const line of rl) {
-      lineNum++;
-      if (lineNum >= startLine && lineNum <= endLine) lines.push(line);
-      if (lineNum > endLine) break;
-    }
-    stream.destroy();
-    return { success: true, data: { lines, startLine, endLine, totalRead: lines.length } };
-  } catch (error: any) { return { success: false, error: error.message }; }
-});
-
-// 获取文件行数（用于大文件虚拟化）
-ipcMain.handle('fs:getLineCount', async (_event, filePath: string) => {
-  try {
-    const fs = require('fs');
-    const readline = require('readline');
-    const stream = fs.createReadStream(filePath);
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    let count = 0;
-    for await (const _ of rl) count++;
-    stream.destroy();
-    return { success: true, data: count };
-  } catch (error: any) { return { success: false, error: error.message }; }
-});
-
-// 写入文件（支持多编码）- 带路径验证
-ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string, encoding: EncodingId = 'utf8') => {
-  try {
-    // 路径安全检查
-    if (!isPathAllowed(filePath)) {
-      return { success: false, error: '访问被拒绝：路径不在允许范围内' };
-    }
-    writeFileWithEncoding(filePath, content, encoding);
-    // 通知渲染进程文件系统已变更
-    mainWindow?.webContents.send('fs:fileChanged', { filePath, type: 'write' });
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取支持的编码列表
-ipcMain.handle('fs:getEncodings', async () => {
-  return SUPPORTED_ENCODINGS.map(e => ({ id: e.id, label: e.label }));
-});
-
-// 检测文件编码
-ipcMain.handle('fs:detectEncoding', async (_event, filePath: string) => {
-  try {
-    const buffer = fs.readFileSync(filePath);
-    return { success: true, encoding: detectEncoding(buffer) };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取文件信息
-ipcMain.handle('fs:stat', async (_event, filePath: string) => {
-  try {
-    const stat = fs.statSync(filePath);
-    return {
-      success: true,
-      data: {
-        isFile: stat.isFile(),
-        isDirectory: stat.isDirectory(),
-        size: stat.size,
-        mtime: stat.mtime.toISOString()
-      }
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// ==================== 文件搜索（Command Palette） ====================
-
-// 递归获取所有文件
-function getAllFilesRecursive(
-  dirPath: string,
-  baseDir: string,
-  maxDepth: number = 10,
-  currentDepth: number = 0
-): Array<{ name: string; path: string; relativePath: string }> {
-  if (currentDepth >= maxDepth) return [];
-
-  const results: Array<{ name: string; path: string; relativePath: string }> = [];
-
-  try {
-    const items = fs.readdirSync(dirPath, { withFileTypes: true });
-
-    for (const item of items) {
-      // 跳过隐藏文件和常见忽略目录
-      if (item.name.startsWith('.')) continue;
-      if (['node_modules', 'dist', 'build', '.git', '__pycache__', '.vscode'].includes(item.name)) continue;
-
-      const fullPath = path.join(dirPath, item.name);
-      const relativePath = path.relative(baseDir, fullPath);
-
-      if (item.isDirectory()) {
-        results.push(...getAllFilesRecursive(fullPath, baseDir, maxDepth, currentDepth + 1));
-      } else {
-        results.push({
-          name: item.name,
-          path: fullPath,
-          relativePath: relativePath.replace(/\\/g, '/')
-        });
-      }
-    }
-  } catch (error) {
-    // 忽略权限错误等
-  }
-
-  return results;
-}
-
-// 获取工作区所有文件（用于 Command Palette）
-ipcMain.handle('fs:getAllFiles', async (_event, workspacePath: string) => {
-  try {
-    if (!workspacePath || !fs.existsSync(workspacePath)) {
-      return { success: false, error: '工作区路径无效' };
-    }
-
-    const files = getAllFilesRecursive(workspacePath, workspacePath);
-    return { success: true, data: files };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 搜索文件内容（用于全局搜索 Ctrl+Shift+F）
-ipcMain.handle('fs:searchInFiles', async (_event, { workspacePath, query, maxResults = 100 }: {
-  workspacePath: string;
-  query: string;
-  maxResults?: number;
-}) => {
-  try {
-    if (!workspacePath || !query) {
-      return { success: false, error: '参数无效' };
-    }
-
-    const files = getAllFilesRecursive(workspacePath, workspacePath);
-    const results: Array<{
-      file: string;
-      relativePath: string;
-      line: number;
-      column: number;
-      text: string;
-      matchStart: number;
-      matchEnd: number;
-    }> = [];
-
-    const queryLower = query.toLowerCase();
-
-    for (const file of files) {
-      if (results.length >= maxResults) break;
-
-      // 只搜索文本文件
-      const ext = path.extname(file.name).toLowerCase();
-      const textExts = ['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.scss', '.html', '.md', '.txt', '.py', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.vue', '.svelte'];
-      if (!textExts.includes(ext)) continue;
-
-      try {
-        const content = fs.readFileSync(file.path, 'utf-8');
-        const lines = content.split('\n');
-
-        for (let i = 0; i < lines.length && results.length < maxResults; i++) {
-          const line = lines[i];
-          const lineLower = line.toLowerCase();
-          let searchStart = 0;
-
-          while (searchStart < lineLower.length) {
-            const idx = lineLower.indexOf(queryLower, searchStart);
-            if (idx === -1) break;
-
-            results.push({
-              file: file.path,
-              relativePath: file.relativePath,
-              line: i + 1,
-              column: idx + 1,
-              text: line.trim().slice(0, 200),
-              matchStart: idx,
-              matchEnd: idx + query.length
-            });
-
-            searchStart = idx + 1;
-            if (results.length >= maxResults) break;
-          }
-        }
-      } catch {
-        // 忽略读取错误
-      }
-    }
-
-    return { success: true, data: results };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// ==================== 文件管理操作 ====================
-
-// 创建文件夹
-ipcMain.handle('fs:createFolder', async (_event, folderPath: string) => {
-  try {
-    if (fs.existsSync(folderPath)) {
-      return { success: false, error: '文件夹已存在' };
-    }
-    fs.mkdirSync(folderPath, { recursive: true });
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 创建文件
-ipcMain.handle('fs:createFile', async (_event, filePath: string, content: string = '') => {
-  try {
-    if (fs.existsSync(filePath)) {
-      return { success: false, error: '文件已存在' };
-    }
-    // 确保父目录存在
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(filePath, content, 'utf-8');
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 删除文件或文件夹 - 带路径验证
-ipcMain.handle('fs:delete', async (_event, targetPath: string) => {
-  try {
-    // 路径安全检查（删除操作更严格，必须在工作区内）
-    if (!currentWorkspacePath || !isPathAllowed(targetPath, currentWorkspacePath)) {
-      return { success: false, error: '访问被拒绝：只能删除工作区内的文件' };
-    }
-    if (!fs.existsSync(targetPath)) {
-      return { success: false, error: '目标不存在' };
-    }
-    const stat = fs.statSync(targetPath);
-    if (stat.isDirectory()) {
-      fs.rmSync(targetPath, { recursive: true, force: true });
-    } else {
-      fs.unlinkSync(targetPath);
-    }
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 重命名文件或文件夹
-ipcMain.handle('fs:rename', async (_event, oldPath: string, newPath: string) => {
-  try {
-    if (!fs.existsSync(oldPath)) {
-      return { success: false, error: '源文件不存在' };
-    }
-    if (fs.existsSync(newPath)) {
-      return { success: false, error: '目标名称已存在' };
-    }
-    fs.renameSync(oldPath, newPath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 复制文件或文件夹
-ipcMain.handle('fs:copy', async (_event, srcPath: string, destPath: string) => {
-  try {
-    if (!fs.existsSync(srcPath)) {
-      return { success: false, error: '源文件不存在' };
-    }
-    const stat = fs.statSync(srcPath);
-    if (stat.isDirectory()) {
-      fs.cpSync(srcPath, destPath, { recursive: true });
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 检查路径是否存在
-ipcMain.handle('fs:exists', async (_event, targetPath: string) => {
-  try {
-    return { success: true, data: fs.existsSync(targetPath) };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// ==================== 终端操作 ====================
-
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
-
-// 安全的命令白名单 - 允许的命令前缀
-const ALLOWED_COMMAND_PREFIXES = [
-  'npm', 'npx', 'node', 'yarn', 'pnpm',
-  'git', 'python', 'python3', 'pip', 'pip3',
-  'cargo', 'rustc', 'go', 'java', 'javac', 'mvn', 'gradle',
-  'dotnet', 'make', 'cmake',
-  'ls', 'dir', 'cd', 'pwd', 'echo', 'cat', 'type', 'mkdir', 'rmdir', 'cp', 'mv', 'rm',
-  'curl', 'wget', 'tar', 'unzip', 'zip',
-  'tsc', 'eslint', 'prettier', 'jest', 'vitest', 'mocha',
-  'docker', 'docker-compose',
-  'code', 'cursor'
-];
-
-// 危险命令黑名单 - 绝对禁止的命令
-const DANGEROUS_COMMANDS = [
-  'rm -rf /', 'rm -rf /*', 'del /f /s /q c:\\',
-  'format', 'fdisk', 'mkfs',
-  ':(){:|:&};:', // fork bomb
-  'dd if=/dev/zero', 'dd if=/dev/random',
-  '> /dev/sda', '> /dev/hda',
-  'chmod -R 777 /', 'chmod -R 000 /',
-  'shutdown', 'reboot', 'halt', 'poweroff',
-  'wget -O- | sh', 'curl | sh', 'curl | bash'
-];
-
-// 验证命令安全性
-function isCommandSafe(command: string): { safe: boolean; reason?: string } {
-  const trimmedCmd = command.trim().toLowerCase();
-  
-  // 检查危险命令
-  for (const dangerous of DANGEROUS_COMMANDS) {
-    if (trimmedCmd.includes(dangerous.toLowerCase())) {
-      return { safe: false, reason: `危险命令被阻止: ${dangerous}` };
-    }
-  }
-  
-  // 提取命令名（第一个词）
-  const cmdParts = trimmedCmd.split(/\s+/);
-  const cmdName = cmdParts[0].replace(/^\.\//, '').replace(/\.exe$/i, '');
-  
-  // 检查白名单
-  const isAllowed = ALLOWED_COMMAND_PREFIXES.some(prefix => 
-    cmdName === prefix || cmdName.endsWith('/' + prefix) || cmdName.endsWith('\\' + prefix)
-  );
-  
-  if (!isAllowed) {
-    return { safe: false, reason: `命令不在白名单中: ${cmdName}` };
-  }
-  
-  return { safe: true };
-}
-
-// 执行命令（带安全检查）
-ipcMain.handle('terminal:execute', async (_event, command: string, cwd?: string) => {
-  try {
-    // 安全检查
-    const safetyCheck = isCommandSafe(command);
-    if (!safetyCheck.safe) {
-      return {
-        success: false,
-        error: safetyCheck.reason,
-        data: { stdout: '', stderr: safetyCheck.reason || '命令被阻止' }
-      };
-    }
-    
-    // 设置执行选项
-    const options: { cwd?: string; shell?: string; env?: NodeJS.ProcessEnv; timeout?: number } = {
-      timeout: 60000, // 60秒超时
-      env: { ...process.env },
-    };
-
-    if (cwd && fs.existsSync(cwd)) {
-      options.cwd = cwd;
-    }
-
-    // Windows 使用 cmd，其他平台使用 bash
-    if (process.platform === 'win32') {
-      options.shell = 'cmd.exe';
-    } else {
-      options.shell = '/bin/bash';
-    }
-
-    const { stdout, stderr } = await execAsync(command, options);
-    return {
-      success: true,
-      data: { stdout, stderr }
-    };
-  } catch (error: any) {
-    // exec 错误可能包含 stdout 和 stderr
-    return {
-      success: false,
-      error: error.message,
-      data: {
-        stdout: error.stdout || '',
-        stderr: error.stderr || error.message
-      }
-    };
-  }
-});
-
-// 切换目录
-ipcMain.handle('terminal:cd', async (_event, currentDir: string, newDir: string) => {
-  try {
-    let targetPath: string;
-
-    // 处理绝对路径和相对路径
-    if (path.isAbsolute(newDir)) {
-      targetPath = newDir;
-    } else if (newDir === '~' || newDir === '%USERPROFILE%') {
-      targetPath = process.env.HOME || process.env.USERPROFILE || '';
-    } else if (newDir === '-') {
-      // 返回上一个目录（简化处理，直接返回当前目录）
-      targetPath = currentDir;
-    } else {
-      targetPath = path.resolve(currentDir, newDir);
-    }
-
-    // 检查目录是否存在
-    if (!fs.existsSync(targetPath)) {
-      return { success: false, error: `目录不存在: ${newDir}` };
-    }
-
-    const stat = fs.statSync(targetPath);
-    if (!stat.isDirectory()) {
-      return { success: false, error: `不是目录: ${newDir}` };
-    }
-
-    return { success: true, data: targetPath };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取当前工作目录
-ipcMain.handle('terminal:pwd', async () => {
-  return { success: true, data: process.cwd() };
-});
-
-// ==================== Git 操作 ====================
-
-// 执行 Git 命令的辅助函数 - 使用 spawn 避免 shell 注入
-async function execGit(args: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('git', args, {
-      cwd,
-      env: { ...process.env },
-      stdio: ['ignore', 'pipe', 'pipe'],
-      // 不使用 shell，直接执行 git，避免注入
-      shell: false,
-      timeout: 30000
-    });
-    
-    let stdout = '';
-    let stderr = '';
-    
-    proc.stdout.on('data', (data) => { stdout += data.toString(); });
-    proc.stderr.on('data', (data) => { stderr += data.toString(); });
-    
-    proc.on('error', (err) => reject(err));
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
-      } else {
-        const error = new Error(`git exited with code ${code}: ${stderr}`);
-        (error as any).stdout = stdout;
-        (error as any).stderr = stderr;
-        reject(error);
-      }
-    });
-  });
-}
-
-// 检查是否是 Git 仓库
-ipcMain.handle('git:isRepo', async (_event, workspacePath: string) => {
-  try {
-    await execGit(['rev-parse', '--git-dir'], workspacePath);
-    return { success: true, data: true };
-  } catch {
-    return { success: true, data: false };
-  }
-});
-
-// 获取 Git 状态（文件变更列表）
-ipcMain.handle('git:status', async (_event, workspacePath: string) => {
-  try {
-    const { stdout } = await execGit(['status', '--porcelain', '-u'], workspacePath);
-    const files = stdout.trim().split('\n').filter(Boolean).map(line => {
-      const status = line.substring(0, 2);
-      const filePath = line.substring(3);
-      // 解析状态码
-      let state: 'modified' | 'added' | 'deleted' | 'renamed' | 'untracked' | 'conflicted' = 'modified';
-      if (status.includes('?')) state = 'untracked';
-      else if (status.includes('A')) state = 'added';
-      else if (status.includes('D')) state = 'deleted';
-      else if (status.includes('R')) state = 'renamed';
-      else if (status.includes('U')) state = 'conflicted';
-      else if (status.includes('M')) state = 'modified';
-      
-      return { path: filePath, status: state, staged: status[0] !== ' ' && status[0] !== '?' };
-    });
-    return { success: true, data: files };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取当前分支
-ipcMain.handle('git:currentBranch', async (_event, workspacePath: string) => {
-  try {
-    const { stdout } = await execGit(['branch', '--show-current'], workspacePath);
-    return { success: true, data: stdout.trim() };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取所有分支
-ipcMain.handle('git:branches', async (_event, workspacePath: string) => {
-  try {
-    const { stdout } = await execGit(['branch', '-a'], workspacePath);
-    const branches = stdout.trim().split('\n').map(b => {
-      const isCurrent = b.startsWith('*');
-      const name = b.replace(/^\*?\s+/, '').trim();
-      return { name, current: isCurrent };
-    });
-    return { success: true, data: branches };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 暂存文件
-ipcMain.handle('git:stage', async (_event, workspacePath: string, filePaths: string[]) => {
-  try {
-    await execGit(['add', ...filePaths], workspacePath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 取消暂存
-ipcMain.handle('git:unstage', async (_event, workspacePath: string, filePaths: string[]) => {
-  try {
-    await execGit(['reset', 'HEAD', ...filePaths], workspacePath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 提交 - 直接传递消息参数，避免 shell 注入
-ipcMain.handle('git:commit', async (_event, workspacePath: string, message: string) => {
-  try {
-    // 验证消息不为空
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return { success: false, error: '提交消息不能为空' };
-    }
-    // 直接将 message 作为参数传递给 spawn，无需转义
-    await execGit(['commit', '-m', message], workspacePath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取文件 Diff
-ipcMain.handle('git:diff', async (_event, workspacePath: string, filePath: string, staged: boolean) => {
-  try {
-    const args = staged ? ['diff', '--cached', filePath] : ['diff', filePath];
-    const { stdout } = await execGit(args, workspacePath);
-    return { success: true, data: stdout };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 切换分支
-ipcMain.handle('git:checkout', async (_event, workspacePath: string, branchName: string) => {
-  try {
-    await execGit(['checkout', branchName], workspacePath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 创建分支
-ipcMain.handle('git:createBranch', async (_event, workspacePath: string, branchName: string) => {
-  try {
-    await execGit(['checkout', '-b', branchName], workspacePath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 获取提交历史
-ipcMain.handle('git:log', async (_event, workspacePath: string, limit: number = 50) => {
-  try {
-    const { stdout } = await execGit([
-      'log',
-      `--max-count=${limit}`,
-      '--pretty=format:%H|%h|%an|%ae|%at|%s'
-    ], workspacePath);
-    const commits = stdout.trim().split('\n').filter(Boolean).map(line => {
-      const [hash, shortHash, author, email, timestamp, message] = line.split('|');
-      return { hash, shortHash, author, email, date: new Date(parseInt(timestamp) * 1000).toISOString(), message };
-    });
-    return { success: true, data: commits };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 放弃文件修改
-ipcMain.handle('git:discard', async (_event, workspacePath: string, filePath: string) => {
-  try {
-    await execGit(['checkout', '--', filePath], workspacePath);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// ==================== Settings ====================
-const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-
-function loadSettings(): Record<string, any> {
-  try {
-    if (fs.existsSync(settingsPath)) {
-      const data = fs.readFileSync(settingsPath, 'utf-8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('Failed to load settings:', error);
-  }
-  return {};
-}
-
-function saveSettings(settings: Record<string, any>): void {
-  try {
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-  }
-}
-
-let settingsCache = loadSettings();
-
-ipcMain.handle('settings:get', (_event, key: string) => {
-  return settingsCache[key];
-});
-
-ipcMain.handle('settings:set', (_event, key: string, value: any) => {
-  settingsCache[key] = value;
-  saveSettings(settingsCache);
-});
-
-// ==================== Dialog ====================
-ipcMain.handle('dialog:showSaveDialog', async (_event, options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
-  const result = await dialog.showSaveDialog(mainWindow!, {
-    defaultPath: options.defaultPath,
-    filters: options.filters || [{ name: 'All Files', extensions: ['*'] }],
-  });
-  return { canceled: result.canceled, filePath: result.filePath };
-});
-
-ipcMain.handle('dialog:showOpenDialog', async (_event, options: { filters?: { name: string; extensions: string[] }[]; properties?: any[] }) => {
-  const result = await dialog.showOpenDialog(mainWindow!, {
-    filters: options.filters || [{ name: 'All Files', extensions: ['*'] }],
-    properties: options.properties as any || ['openFile'],
-  });
-  return { canceled: result.canceled, filePaths: result.filePaths };
-});
-
-ipcMain.handle('dialog:showMessageBox', async (_event, options: { type?: string; title?: string; message: string; buttons?: string[] }) => {
-  const result = await dialog.showMessageBox(mainWindow!, {
-    type: (options.type as any) || 'info',
-    title: options.title || 'MindCode',
-    message: options.message,
-    buttons: options.buttons || ['OK'],
-  });
-  return { response: result.response };
-});
-
-// ==================== Theme ====================
-ipcMain.on('theme:change', (_event, themeId: string) => {
-  mainWindow?.webContents.send('theme:change', themeId);
-});
-
-// ==================== AI Code Completion ====================
-import {
-  generateCompletionMessages,
-  cleanCompletionOutput,
-  truncateCompletion,
-} from '../core/ai/completion-prompt';
-import {
-  buildCompletionContext,
-  CompletionContext,
-} from '../core/ai/completion-context';
-import {
-  DEFAULT_COMPLETION_REQUEST_CONFIG,
-} from '../core/ai/completion-config';
-
-// 补全请求缓存 - 增强版
-import { completionCache as perfCompletionCache } from '../core/performance';
-
-const COMPLETION_CACHE_TTL = 30000; // 30秒缓存 (增加缓存时间)
-
-// 补全请求处理 - 使用增强缓存
-ipcMain.handle('ai:completion', async (_event, request: {
-  filePath: string;
-  code: string;
-  cursorLine: number;
-  cursorColumn: number;
-  model?: string;
-}) => {
-  const { filePath, code, cursorLine, cursorColumn, model = 'codesuc-sonnet' } = request; // Codesuc Sonnet (特价渠道)
-  const start = Date.now();
-  
-  // 生成缓存 key (包含代码上下文)
-  const prefix = code.split('\n').slice(Math.max(0, cursorLine - 5), cursorLine).join('\n');
-  const cacheKey = `${filePath}:${cursorLine}:${prefix.slice(-200)}`;
-  
-  // 检查缓存
-  const cached = perfCompletionCache.get(cacheKey);
-  if (cached) {
-    console.log(`[AI] completion cache hit: ${Date.now() - start}ms`);
-    return { success: true, data: cached, cached: true };
-  }
-  
-  try {
-    const context = await buildCompletionContext(filePath, code, cursorLine, cursorColumn, {
-      maxPrefixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxPrefixLines,
-      maxSuffixLines: DEFAULT_COMPLETION_REQUEST_CONFIG.maxSuffixLines,
-    });
-    
-    const messages = generateCompletionMessages(context, {
-      useFIM: true, includeSymbols: true, includeDiagnostics: false, includeRelatedSnippets: false, includeStyleHints: true,
-    });
-    
-    const provider = getProviderForModel(model);
-    const response = await provider.setModel(model).chat(messages);
-    const cleaned = cleanCompletionOutput(response);
-    const result = truncateCompletion(cleaned, 20, 2000);
-    
-    // 缓存结果
-    perfCompletionCache.set(cacheKey, result);
-    
-    console.log(`[AI] completion: ${Date.now() - start}ms, ${result.length} chars`);
-    return { success: true, data: result, cached: false };
-  } catch (error: any) {
-    console.error('[AI] completion error:', error);
-    return { success: false, error: error?.message || 'Completion failed' };
-  }
-});
-
-// 获取补全设置
-ipcMain.handle('ai:completion-settings', async () => {
-  const enabled = settingsCache['completion.enabled'] ?? true;
-  const model = settingsCache['completion.model'] ?? 'codesuc-sonnet';
-  const debounceMs = settingsCache['completion.debounceMs'] ?? 150;
-  return { enabled, model, debounceMs };
-});
-
-// 更新补全设置
-ipcMain.handle('ai:completion-settings-set', async (_event, settings: {
-  enabled?: boolean;
-  model?: string;
-  debounceMs?: number;
-}) => {
-  if (settings.enabled !== undefined) {
-    settingsCache['completion.enabled'] = settings.enabled;
-  }
-  if (settings.model !== undefined) {
-    settingsCache['completion.model'] = settings.model;
-  }
-  if (settings.debounceMs !== undefined) {
-    settingsCache['completion.debounceMs'] = settings.debounceMs;
-  }
-  saveSettings(settingsCache);
-  return { success: true };
-});
-
-// ==================== 代码索引服务 ====================
-import { IndexService, createIndexService } from '../core/indexing';
-
-let indexService: IndexService | null = null;
-
-// 初始化索引服务
-async function getOrCreateIndexService(): Promise<IndexService> {
-  if (!indexService) {
-    indexService = createIndexService();
-    await indexService.initialize();
-  }
-  return indexService;
-}
-
-// 索引整个工作区
-ipcMain.handle('index:indexWorkspace', async (_event, workspacePath: string) => {
-  try {
-    const service = await getOrCreateIndexService();
-    
-    // 发送进度更新到渲染进程
-    service.on('onProgress', (progress) => {
-      mainWindow?.webContents.send('index:progress', progress);
-    });
-    
-    service.on('onFileIndexed', (filePath, symbolCount) => {
-      mainWindow?.webContents.send('index:fileIndexed', { filePath, symbolCount });
-    });
-    
-    service.on('onError', (error, filePath) => {
-      console.error('[Index] Error:', filePath, error.message);
-    });
-    
-    service.on('onComplete', (stats) => {
-      mainWindow?.webContents.send('index:complete', stats);
-    });
-    
-    // 开始索引（异步）
-    service.indexDirectory(workspacePath).catch(err => {
-      console.error('[Index] Indexing failed:', err);
-    });
-    
-    return { success: true, message: 'Indexing started' };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取索引进度
-ipcMain.handle('index:getProgress', async () => {
-  if (!indexService) {
-    return { status: 'idle', totalFiles: 0, indexedFiles: 0 };
-  }
-  return indexService.getProgress();
-});
-
-// 获取索引统计
-ipcMain.handle('index:getStats', async () => {
-  if (!indexService) {
-    return { totalFiles: 0, totalSymbols: 0, totalCallRelations: 0, totalDependencies: 0, totalChunks: 0 };
-  }
-  return indexService.getStats();
-});
-
-// 搜索代码
-ipcMain.handle('index:search', async (_event, query: {
-  query: string;
-  type?: 'symbol' | 'semantic' | 'hybrid';
-  limit?: number;
-  fileFilter?: string[];
-  kindFilter?: string[];
-}) => {
-  try {
-    const service = await getOrCreateIndexService();
-    const results = await service.searchCode({
-      query: query.query,
-      type: query.type || 'hybrid',
-      limit: query.limit || 20,
-      fileFilter: query.fileFilter,
-      kindFilter: query.kindFilter as any,
-    });
-    return { success: true, data: results };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 搜索符号
-ipcMain.handle('index:searchSymbols', async (_event, name: string, limit?: number) => {
-  try {
-    const service = await getOrCreateIndexService();
-    const symbols = await service.searchSymbols(name, limit || 20);
-    return { success: true, data: symbols };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取文件符号（文件大纲）
-ipcMain.handle('index:getFileSymbols', async (_event, filePath: string) => {
-  try {
-    const service = await getOrCreateIndexService();
-    const symbols = await service.getFileSymbols(filePath);
-    return { success: true, data: symbols };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 查找定义
-ipcMain.handle('index:findDefinition', async (_event, symbolName: string) => {
-  try {
-    const service = await getOrCreateIndexService();
-    const definition = await service.findDefinition(symbolName);
-    return { success: true, data: definition };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 查找引用
-ipcMain.handle('index:findReferences', async (_event, symbolId: string) => {
-  try {
-    const service = await getOrCreateIndexService();
-    const references = await service.findReferences(symbolId);
-    return { success: true, data: references };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取相关代码（用于 @codebase）
-ipcMain.handle('index:getRelatedCode', async (_event, query: string, limit?: number) => {
-  try {
-    const service = await getOrCreateIndexService();
-    const related = await service.getRelatedCode(query, limit || 10);
-    return { success: true, data: related };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 取消索引
-ipcMain.handle('index:cancel', async () => {
-  if (indexService) {
-    indexService.cancelIndexing();
-    return { success: true };
-  }
-  return { success: false, error: 'No indexing in progress' };
-});
-
-// 清空索引
-ipcMain.handle('index:clear', async () => {
-  if (indexService) {
-    indexService.clearIndex();
-    return { success: true };
-  }
-  return { success: false, error: 'Index service not initialized' };
-});
-
-// ==================== LSP 语言服务器 ====================
-import { getLSPManager } from './lsp-manager';
-
-const lspManager = getLSPManager();
-
-// 启动语言服务器
-ipcMain.handle('lsp:start', async (_event, language: string, options?: { command?: string; args?: string[]; rootPath?: string }) => {
-  return lspManager.start(language, options);
-});
-
-// 停止语言服务器
-ipcMain.handle('lsp:stop', async (_event, language: string) => {
-  await lspManager.stop(language);
-  return { success: true };
-});
-
-// 发送 LSP 请求
-ipcMain.handle('lsp:request', async (_event, language: string, method: string, params: any) => {
-  try {
-    const result = await lspManager.request(language, method, params);
-    return { success: true, data: result };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 发送 LSP 通知
-ipcMain.handle('lsp:notify', async (_event, language: string, method: string, params: any) => {
-  await lspManager.notify(language, method, params);
-  return { success: true };
-});
-
-// 获取语言服务器状态
-ipcMain.handle('lsp:status', async (_event, language: string) => {
-  return lspManager.getStatus(language);
-});
-
-// 监听 LSP 通知并转发到渲染进程
-lspManager.on('notification', (language, method, params) => {
-  mainWindow?.webContents.send('lsp:notification', { language, method, params });
-});
-
-// ============ 调试器操作 ============
-import { debuggerManager } from '../core/debugger';
-
-// 启动调试会话
-ipcMain.handle('debug:start', async (_event, config: any) => {
-  try {
-    const sessionId = await debuggerManager.startSession(config);
-    return { success: true, sessionId };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 停止调试会话
-ipcMain.handle('debug:stop', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.stopSession(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 继续执行
-ipcMain.handle('debug:continue', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.continue(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 单步跳过
-ipcMain.handle('debug:stepOver', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.stepOver(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 单步进入
-ipcMain.handle('debug:stepInto', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.stepInto(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 单步跳出
-ipcMain.handle('debug:stepOut', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.stepOut(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 暂停
-ipcMain.handle('debug:pause', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.pause(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 重启
-ipcMain.handle('debug:restart', async (_event, sessionId?: string) => {
-  try {
-    await debuggerManager.restart(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 添加断点
-ipcMain.handle('debug:addBreakpoint', async (_event, file: string, line: number, options?: any) => {
-  try {
-    const breakpoint = debuggerManager.addBreakpoint(file, line, options);
-    return { success: true, breakpoint };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 移除断点
-ipcMain.handle('debug:removeBreakpoint', async (_event, breakpointId: string) => {
-  try {
-    debuggerManager.removeBreakpoint(breakpointId);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 切换断点
-ipcMain.handle('debug:toggleBreakpoint', async (_event, file: string, line: number) => {
-  try {
-    const breakpoint = debuggerManager.toggleBreakpoint(file, line);
-    return { success: true, breakpoint };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取断点列表
-ipcMain.handle('debug:getBreakpoints', async (_event, file?: string) => {
-  try {
-    const breakpoints = debuggerManager.getBreakpoints(file);
-    return { success: true, breakpoints };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取变量
-ipcMain.handle('debug:getVariables', async (_event, frameId?: number) => {
-  try {
-    const variables = await debuggerManager.getVariables(frameId);
-    return { success: true, variables };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 求值表达式
-ipcMain.handle('debug:evaluate', async (_event, expression: string, frameId?: number) => {
-  try {
-    const result = await debuggerManager.evaluate(expression, frameId);
-    return { success: true, result };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取调试会话
-ipcMain.handle('debug:getSession', async (_event, sessionId?: string) => {
-  try {
-    const session = debuggerManager.getSession(sessionId);
-    return { success: true, session };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-});
-
-// 获取所有会话
-ipcMain.handle('debug:listSessions', async () => {
-  try {
-    const sessions = debuggerManager.listSessions();
-    return { success: true, sessions };
-  } catch (err: any) {
-    return { success: false, error: err.message };
   }
 });

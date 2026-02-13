@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useFileStore, SUPPORTED_LANGUAGES, EditorFile } from '../../stores';
-import { EncodingPicker } from '../EncodingPicker';
-import { LSPStatus } from '../LSP';
-import './StatusBar.css';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import type { EditorFile } from "../../stores";
+import { useFileStore, SUPPORTED_LANGUAGES } from "../../stores";
+import { EncodingPicker } from "../EncodingPicker";
+import { LSPStatus } from "../LSP";
+import { useIndexStore } from "../../services/indexService";
+import "./StatusBar.css";
 
 interface StatusBarProps {
   workspaceRoot: string | null;
@@ -20,9 +22,62 @@ interface GitInfo {
 }
 
 interface IndentSettings {
-  type: 'spaces' | 'tabs';
+  type: "spaces" | "tabs";
   size: number;
 }
+
+// 索引状态指示器
+const IndexStatusIndicator: React.FC = () => {
+  const { status, indexedFiles, totalFiles } = useIndexStore();
+
+  if (status === "idle") return null;
+
+  const statusMap: Record<string, { icon: string; label: string }> = {
+    scanning: { icon: "🔍", label: "扫描文件..." },
+    indexing: { icon: "⚡", label: `索引中 ${indexedFiles}/${totalFiles}` },
+    complete: { icon: "✓", label: `已索引 ${totalFiles} 文件` },
+    error: { icon: "⚠", label: "索引失败" },
+  };
+
+  const info = statusMap[status] || { icon: "", label: "" };
+
+  return (
+    <div className="statusbar-center" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <span
+        className="status-item"
+        title={`代码索引: ${info.label}`}
+        style={{ opacity: status === "complete" ? 0.6 : 1 }}
+      >
+        <span>{info.icon}</span>
+        <span style={{ fontSize: "11px" }}>{info.label}</span>
+        {status === "indexing" && totalFiles > 0 && (
+          <span
+            style={{
+              display: "inline-block",
+              width: 40,
+              height: 3,
+              background: "var(--vscode-progressBar-background, #333)",
+              borderRadius: 2,
+              marginLeft: 4,
+              overflow: "hidden",
+            }}
+          >
+            <span
+              style={{
+                display: "block",
+                width: `${Math.round((indexedFiles / totalFiles) * 100)}%`,
+                height: "100%",
+                background: "var(--vscode-progressBar-foreground, #0078d4)",
+                borderRadius: 2,
+                transition: "width 0.3s ease",
+              }}
+            />
+          </span>
+        )}
+      </span>
+    </div>
+  );
+};
 
 export const StatusBar: React.FC<StatusBarProps> = ({
   workspaceRoot,
@@ -32,33 +87,47 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   onLanguageChange,
 }) => {
   const { setFileEncoding } = useFileStore();
-  const [gitInfo, setGitInfo] = useState<GitInfo>({ branch: '', staged: 0, unstaged: 0, isRepo: false });
+  const [gitInfo, setGitInfo] = useState<GitInfo>({
+    branch: "",
+    staged: 0,
+    unstaged: 0,
+    isRepo: false,
+  });
   const [showIndentPicker, setShowIndentPicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
-  const [indent, setIndent] = useState<IndentSettings>({ type: 'spaces', size: 2 });
-  const [langFilter, setLangFilter] = useState('');
+  const [indent, setIndent] = useState<IndentSettings>({ type: "spaces", size: 2 });
+  const [langFilter, setLangFilter] = useState("");
   const indentRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
 
   // 获取 Git 信息
   const fetchGitInfo = useCallback(async () => {
-    if (!workspaceRoot) { setGitInfo({ branch: '', staged: 0, unstaged: 0, isRepo: false }); return; }
+    if (!workspaceRoot) {
+      setGitInfo({ branch: "", staged: 0, unstaged: 0, isRepo: false });
+      return;
+    }
     try {
       const isRepoRes = await window.mindcode?.git?.isRepo(workspaceRoot);
-      if (!isRepoRes?.data) { setGitInfo({ branch: '', staged: 0, unstaged: 0, isRepo: false }); return; }
-      
+      if (!isRepoRes?.data) {
+        setGitInfo({ branch: "", staged: 0, unstaged: 0, isRepo: false });
+        return;
+      }
+
       const [branchRes, statusRes] = await Promise.all([
         window.mindcode?.git?.currentBranch(workspaceRoot),
         window.mindcode?.git?.status(workspaceRoot),
       ]);
-      
-      const branch = branchRes?.data || 'HEAD';
+
+      const branch = branchRes?.data || "HEAD";
       const files = statusRes?.data || [];
       const staged = files.filter((f: any) => f.staged).length;
       const unstaged = files.filter((f: any) => !f.staged).length;
-      
+
       setGitInfo({ branch, staged, unstaged, isRepo: true });
-    } catch { setGitInfo({ branch: '', staged: 0, unstaged: 0, isRepo: false }); }
+    } catch (err) {
+      console.warn("[StatusBar] Git info fetch failed:", err instanceof Error ? err.message : err);
+      setGitInfo({ branch: "", staged: 0, unstaged: 0, isRepo: false });
+    }
   }, [workspaceRoot]);
 
   // 定时刷新 Git 信息
@@ -71,25 +140,31 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   // 点击外部关闭选择器
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (indentRef.current && !indentRef.current.contains(e.target as Node)) setShowIndentPicker(false);
+      if (indentRef.current && !indentRef.current.contains(e.target as Node))
+        setShowIndentPicker(false);
       if (langRef.current && !langRef.current.contains(e.target as Node)) setShowLangPicker(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // 获取语言显示名称
   const getLanguageDisplayName = (fileName: string): string => {
-    const ext = '.' + fileName.split('.').pop()?.toLowerCase();
-    const lang = SUPPORTED_LANGUAGES.find(l => l.ext === ext);
-    return lang?.name || 'Plain Text';
+    const ext = "." + fileName.split(".").pop()?.toLowerCase();
+    const lang = SUPPORTED_LANGUAGES.find((l) => l.ext === ext);
+    return lang?.name || "Plain Text";
   };
 
-  const currentLang = activeFile ? getLanguageDisplayName(activeFile.name) : 'Plain Text';
-  const currentLangId = activeFile?.language || SUPPORTED_LANGUAGES.find(l => l.ext === '.' + activeFile?.name.split('.').pop())?.id || 'plaintext';
+  const currentLang = activeFile ? getLanguageDisplayName(activeFile.name) : "Plain Text";
+  const currentLangId =
+    activeFile?.language ||
+    SUPPORTED_LANGUAGES.find((l) => l.ext === "." + activeFile?.name.split(".").pop())?.id ||
+    "plaintext";
 
-  const filteredLangs = SUPPORTED_LANGUAGES.filter(l => 
-    l.name.toLowerCase().includes(langFilter.toLowerCase()) || l.id.includes(langFilter.toLowerCase())
+  const filteredLangs = SUPPORTED_LANGUAGES.filter(
+    (l) =>
+      l.name.toLowerCase().includes(langFilter.toLowerCase()) ||
+      l.id.includes(langFilter.toLowerCase()),
   );
 
   return (
@@ -99,9 +174,12 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {gitInfo.isRepo ? (
           <>
             <span className="status-item status-item-git" title={`当前分支: ${gitInfo.branch}`}>
-              <span className="git-icon">⎇</span> {gitInfo.branch || 'HEAD'}
+              <span className="git-icon">⎇</span> {gitInfo.branch || "HEAD"}
             </span>
-            <span className="status-item" title={`未暂存: ${gitInfo.unstaged}, 已暂存: ${gitInfo.staged}`}>
+            <span
+              className="status-item"
+              title={`未暂存: ${gitInfo.unstaged}, 已暂存: ${gitInfo.staged}`}
+            >
               <span className="git-unstaged">○ {gitInfo.unstaged}</span>
               <span className="git-staged">△ {gitInfo.staged}</span>
             </span>
@@ -110,6 +188,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           <span className="status-item status-item-dim">无 Git 仓库</span>
         )}
       </div>
+
+      {/* 中间：索引状态 */}
+      <IndexStatusIndicator />
 
       {/* 右侧：文件信息 */}
       <div className="statusbar-right">
@@ -120,27 +201,43 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
         {/* 缩进设置 */}
         <div ref={indentRef} className="status-item-wrapper">
-          <span 
-            className="status-item status-item-clickable" 
+          <span
+            className="status-item status-item-clickable"
             onClick={() => setShowIndentPicker(!showIndentPicker)}
             title="点击更改缩进设置"
           >
-            {indent.type === 'spaces' ? 'Spaces' : 'Tabs'}: {indent.size}
+            {indent.type === "spaces" ? "Spaces" : "Tabs"}: {indent.size}
           </span>
           {showIndentPicker && (
             <div className="statusbar-picker indent-picker">
               <div className="picker-section">
                 <div className="picker-label">缩进类型</div>
                 <div className="picker-options">
-                  <button className={indent.type === 'spaces' ? 'active' : ''} onClick={() => setIndent({ ...indent, type: 'spaces' })}>Spaces</button>
-                  <button className={indent.type === 'tabs' ? 'active' : ''} onClick={() => setIndent({ ...indent, type: 'tabs' })}>Tabs</button>
+                  <button
+                    className={indent.type === "spaces" ? "active" : ""}
+                    onClick={() => setIndent({ ...indent, type: "spaces" })}
+                  >
+                    Spaces
+                  </button>
+                  <button
+                    className={indent.type === "tabs" ? "active" : ""}
+                    onClick={() => setIndent({ ...indent, type: "tabs" })}
+                  >
+                    Tabs
+                  </button>
                 </div>
               </div>
               <div className="picker-section">
                 <div className="picker-label">缩进大小</div>
                 <div className="picker-options">
-                  {[2, 4, 8].map(size => (
-                    <button key={size} className={indent.size === size ? 'active' : ''} onClick={() => setIndent({ ...indent, size })}>{size}</button>
+                  {[2, 4, 8].map((size) => (
+                    <button
+                      key={size}
+                      className={indent.size === size ? "active" : ""}
+                      onClick={() => setIndent({ ...indent, size })}
+                    >
+                      {size}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -150,15 +247,18 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
         {/* 编码选择器 */}
         <EncodingPicker
-          currentEncoding={activeFile?.encoding || 'utf8'}
+          currentEncoding={activeFile?.encoding || "utf8"}
           onSelect={(enc) => activeFile && setFileEncoding(activeFile.id, enc)}
         />
 
         {/* 语言选择器 */}
         <div ref={langRef} className="status-item-wrapper">
-          <span 
-            className="status-item status-item-clickable" 
-            onClick={() => { setShowLangPicker(!showLangPicker); setLangFilter(''); }}
+          <span
+            className="status-item status-item-clickable"
+            onClick={() => {
+              setShowLangPicker(!showLangPicker);
+              setLangFilter("");
+            }}
             title="点击更改语言模式"
           >
             {currentLang}
@@ -174,10 +274,10 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                 className="picker-search"
               />
               <div className="picker-list">
-                {filteredLangs.map(lang => (
+                {filteredLangs.map((lang) => (
                   <div
                     key={lang.id}
-                    className={`picker-item ${lang.id === currentLangId ? 'active' : ''}`}
+                    className={`picker-item ${lang.id === currentLangId ? "active" : ""}`}
                     onClick={() => {
                       if (activeFile) onLanguageChange(activeFile.id, lang.id);
                       setShowLangPicker(false);

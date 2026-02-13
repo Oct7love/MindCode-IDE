@@ -1,11 +1,33 @@
-/* AssistantMessage.css - AI 消息卡片样式 (VS Code 色系) */
+/* AssistantMessage — IDE row 风格, 无气泡 */
 
 .assistant-message {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  padding: 8px 4px;
+  border-radius: var(--mc-radius-sm, 4px);
   position: relative;
-  padding: 2px 0;
+}
+
+.assistant-message:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* 隐藏旧头像 */
+.assistant-message .message-avatar {
+  display: none;
+}
+
+/* 角色标签 */
+.message-role-label {
+  margin-bottom: 2px;
+}
+
+.message-role-ai {
+  font-size: var(--mc-text-xs, 11px);
+  font-weight: var(--mc-fw-bold, 600);
+  color: var(--mc-accent-ai, #8b5cf6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .assistant-message .message-body {
@@ -13,147 +35,124 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-/* AI 头像 */
-.assistant-message .message-avatar {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.assistant-message .message-avatar-ai {
-  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
-}
-
-.assistant-message .message-avatar-ai .avatar-icon {
-  color: white;
-  font-size: 14px;
-  line-height: 1;
-}
-
-/* 消息卡片 */
+/* 内容区 — 无卡片/边框 */
 .assistant-message .message-card {
   position: relative;
-  background: #252526;
-  border: 1px solid #3c3c3c;
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: border-color 120ms ease;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .assistant-message:hover .message-card {
-  border-color: #4a4a4a;
+  border-color: transparent;
+  box-shadow: none;
 }
 
-/* 状态指示 */
+/* 状态指示 — 左边框 */
 .assistant-message.error .message-card {
-  border-left: 3px solid #f14c4c;
-  background: rgba(241, 76, 76, 0.06);
+  border-left: 2px solid var(--mc-error, #f14c4c);
+  padding-left: 10px;
+  background: var(--mc-error-bg, rgba(241, 76, 76, 0.06));
+  border-radius: 0 var(--mc-radius-sm, 4px) var(--mc-radius-sm, 4px) 0;
 }
 
 .assistant-message.interrupted .message-card {
-  border-left: 3px solid #faad14;
-  background: rgba(250, 173, 20, 0.04);
+  border-left: 2px solid var(--mc-warning, #cca700);
+  padding-left: 10px;
 }
 
 .assistant-message.streaming .message-card {
-  border-left: 3px solid #8b5cf6;
+  border-left: 2px solid var(--mc-accent-ai, #8b5cf6);
+  padding-left: 10px;
 }
 
-/* 消息内容 */
+/* 内容文字 */
 .assistant-message .message-content {
-  font-size: 14px;
-  line-height: 1.65;
-  color: #d4d4d4;
-  word-wrap: break-word;
+  font-size: var(--mc-text-base, 13px);
+  line-height: var(--mc-lh-relaxed, 1.65);
+  color: var(--mc-text-primary, #cccccc);
 }
 
 /* 流式光标 */
 .streaming-cursor {
   display: inline-block;
   width: 2px;
-  height: 1.1em;
-  background: #0078d4;
-  margin-left: 2px;
+  height: 1em;
+  background: var(--mc-accent, #007fd4);
+  margin-left: 1px;
   vertical-align: text-bottom;
-  border-radius: 1px;
-  animation: cursorBlink 1s ease-in-out infinite;
+  animation: cursorBlink 1s step-end infinite;
 }
 
 @keyframes cursorBlink {
-  0%, 45% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
-/* 工具调用区域 */
+/* 工具调用 */
 .message-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Plan 卡片 */
-.message-plan {
-  background: rgba(0, 120, 212, 0.08);
-  border: 1px solid rgba(0, 120, 212, 0.2);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
-.plan-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.plan-icon { font-size: 15px; }
-
-.plan-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e0e0e0;
-}
-
-.plan-tasks {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
+/* Plan 卡片 */
+.message-plan {
+  background: var(--mc-info-bg, rgba(117, 190, 255, 0.08));
+  border: 1px solid rgba(117, 190, 255, 0.15);
+  border-radius: var(--mc-radius-md, 6px);
+  padding: 10px 12px;
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.plan-icon {
+  font-size: 14px;
+}
+.plan-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mc-text-primary, #cccccc);
+}
+.plan-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
 .plan-task {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #a0a0a0;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mc-text-secondary, #969696);
 }
-
 .task-bullet {
-  color: #0078d4;
-  font-size: 10px;
+  color: var(--mc-accent, #007fd4);
+  font-size: 9px;
 }
-
 .task-label {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .plan-more {
   font-size: 11px;
-  color: #6e6e6e;
-  padding-top: 4px;
+  color: var(--mc-text-tertiary, #6e6e6e);
   margin-top: 4px;
-  border-top: 1px solid #3c3c3c;
 }

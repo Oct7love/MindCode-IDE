@@ -1,17 +1,18 @@
 /**
  * Cursor-like Inline Completion 提示词生成器
- * 
+ *
  * 将 CompletionContext 转换为模型可用的提示词
  */
 
+import type { CompletionContext } from "./completion-context";
 import {
-  CompletionContext,
   formatSymbolsForPrompt,
   formatDiagnosticsForPrompt,
   formatStyleHintsForPrompt,
   formatRelatedSnippetsForPrompt,
-} from './completion-context';
-import { getIntentPromptModifier, IntentResult } from './intent-classifier';
+} from "./completion-context";
+import type { IntentResult } from "./intent-classifier";
+import { getIntentPromptModifier } from "./intent-classifier";
 
 // ============================================
 // System Prompts
@@ -42,28 +43,28 @@ export const COMPLETION_SYSTEM_PROMPT_BASE = `你是一个 IDE 的"行内代码�
  */
 export function getCompletionSystemPrompt(intent?: IntentResult): string {
   let prompt = COMPLETION_SYSTEM_PROMPT_BASE;
-  
+
   if (intent && intent.confidence > 0.3) {
     const modifier = getIntentPromptModifier(intent);
     prompt += `\n\n${modifier}`;
-    
+
     // 根据意图调整最大行数
     switch (intent.type) {
-      case 'generate':
-        prompt += '\n- 可以生成较长的完整实现（最多 30 行）。';
+      case "generate":
+        prompt += "\n- 可以生成较长的完整实现（最多 30 行）。";
         break;
-      case 'test':
-        prompt += '\n- 可以生成完整的测试用例（最多 50 行）。';
+      case "test":
+        prompt += "\n- 可以生成完整的测试用例（最多 50 行）。";
         break;
-      case 'fix':
-        prompt += '\n- 保持最小改动，只修复必要的部分。';
+      case "fix":
+        prompt += "\n- 保持最小改动，只修复必要的部分。";
         break;
-      case 'refactor':
-        prompt += '\n- 可以进行较大范围的重构（最多 40 行）。';
+      case "refactor":
+        prompt += "\n- 可以进行较大范围的重构（最多 40 行）。";
         break;
     }
   }
-  
+
   return prompt;
 }
 
@@ -144,68 +145,68 @@ const DEFAULT_OPTIONS: PromptGeneratorOptions = {
  */
 export function generateUserPrompt(
   context: CompletionContext,
-  options: PromptGeneratorOptions = {}
+  options: PromptGeneratorOptions = {},
 ): string {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   const parts: string[] = [];
-  
+
   // 基础信息
   parts.push(`LANGUAGE: ${context.language}`);
   parts.push(`FILE: ${context.filePath}`);
-  parts.push('');
-  
+  parts.push("");
+
   // 风格提示
   if (opts.includeStyleHints) {
-    parts.push('STYLE_HINTS:');
+    parts.push("STYLE_HINTS:");
     parts.push(formatStyleHintsForPrompt(context.styleHints));
-    parts.push('');
+    parts.push("");
   }
-  
+
   // 诊断
   if (opts.includeDiagnostics && context.diagnostics.length > 0) {
-    parts.push('DIAGNOSTICS:');
+    parts.push("DIAGNOSTICS:");
     parts.push(formatDiagnosticsForPrompt(context.diagnostics));
-    parts.push('');
+    parts.push("");
   }
-  
+
   // 符号
   if (opts.includeSymbols && context.symbols.length > 0) {
-    parts.push('AVAILABLE_SYMBOLS:');
+    parts.push("AVAILABLE_SYMBOLS:");
     parts.push(formatSymbolsForPrompt(context.symbols, opts.maxSymbols));
-    parts.push('');
+    parts.push("");
   }
-  
+
   // 相关片段
   if (opts.includeRelatedSnippets && context.relatedSnippets.length > 0) {
-    parts.push('RELATED_SNIPPETS:');
+    parts.push("RELATED_SNIPPETS:");
     parts.push(formatRelatedSnippetsForPrompt(context.relatedSnippets));
-    parts.push('');
+    parts.push("");
   }
-  
+
   // 用户意图
   if (context.userIntent || context.intent) {
-    parts.push('USER_INTENT:');
+    parts.push("USER_INTENT:");
     if (context.userIntent) {
       parts.push(context.userIntent);
     }
     if (context.intent && context.intent.confidence > 0.3) {
-      parts.push(`[${context.intent.description}] ${context.intent.suggestedAction || ''}`);
+      parts.push(`[${context.intent.description}] ${context.intent.suggestedAction || ""}`);
     }
-    parts.push('');
+    parts.push("");
   }
-  
+
   // 代码
-  parts.push('CODE (prefix + cursor + suffix):');
+  parts.push("CODE (prefix + cursor + suffix):");
   parts.push(context.prefix);
-  parts.push('<CURSOR>');
+  parts.push("<CURSOR>");
   parts.push(context.suffix);
-  parts.push('');
-  
+  parts.push("");
+
   // 指令
   parts.push('请生成应插入 <CURSOR> 处的"最优补全"，遵循 system 规则，仅输出补全文本。');
-  
-  return parts.join('\n');
+
+  return parts.join("\n");
 }
 
 /**
@@ -213,75 +214,75 @@ export function generateUserPrompt(
  */
 export function generateFIMPrompt(
   context: CompletionContext,
-  options: PromptGeneratorOptions = {}
+  options: PromptGeneratorOptions = {},
 ): string {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   const parts: string[] = [];
-  
-  parts.push('你是代码补全引擎。请完成 <MIDDLE>，使整体代码最自然可用。');
-  parts.push('');
-  
+
+  parts.push("你是代码补全引擎。请完成 <MIDDLE>，使整体代码最自然可用。");
+  parts.push("");
+
   parts.push(`<FILE_PATH>`);
   parts.push(context.filePath);
-  parts.push('</FILE_PATH>');
-  parts.push('');
-  
+  parts.push("</FILE_PATH>");
+  parts.push("");
+
   parts.push(`<LANGUAGE>`);
   parts.push(context.language);
-  parts.push('</LANGUAGE>');
-  parts.push('');
-  
+  parts.push("</LANGUAGE>");
+  parts.push("");
+
   // 风格提示
   if (opts.includeStyleHints) {
-    parts.push('<STYLE_HINTS>');
+    parts.push("<STYLE_HINTS>");
     parts.push(formatStyleHintsForPrompt(context.styleHints));
-    parts.push('</STYLE_HINTS>');
-    parts.push('');
+    parts.push("</STYLE_HINTS>");
+    parts.push("");
   }
-  
+
   // 诊断
   if (opts.includeDiagnostics && context.diagnostics.length > 0) {
-    parts.push('<DIAGNOSTICS>');
+    parts.push("<DIAGNOSTICS>");
     parts.push(formatDiagnosticsForPrompt(context.diagnostics));
-    parts.push('</DIAGNOSTICS>');
-    parts.push('');
+    parts.push("</DIAGNOSTICS>");
+    parts.push("");
   }
-  
+
   // 符号
   if (opts.includeSymbols && context.symbols.length > 0) {
-    parts.push('<SYMBOLS>');
+    parts.push("<SYMBOLS>");
     parts.push(formatSymbolsForPrompt(context.symbols, opts.maxSymbols));
-    parts.push('</SYMBOLS>');
-    parts.push('');
+    parts.push("</SYMBOLS>");
+    parts.push("");
   }
-  
+
   // 相关片段
   if (opts.includeRelatedSnippets && context.relatedSnippets.length > 0) {
-    parts.push('<RELATED>');
+    parts.push("<RELATED>");
     parts.push(formatRelatedSnippetsForPrompt(context.relatedSnippets));
-    parts.push('</RELATED>');
-    parts.push('');
+    parts.push("</RELATED>");
+    parts.push("");
   }
-  
+
   // 代码结构
-  parts.push('<PREFIX>');
+  parts.push("<PREFIX>");
   parts.push(context.prefix);
-  parts.push('</PREFIX>');
-  parts.push('');
-  
-  parts.push('<MIDDLE>');
-  parts.push('</MIDDLE>');
-  parts.push('');
-  
-  parts.push('<SUFFIX>');
+  parts.push("</PREFIX>");
+  parts.push("");
+
+  parts.push("<MIDDLE>");
+  parts.push("</MIDDLE>");
+  parts.push("");
+
+  parts.push("<SUFFIX>");
   parts.push(context.suffix);
-  parts.push('</SUFFIX>');
-  parts.push('');
-  
-  parts.push('只输出 <MIDDLE> 的内容（纯文本），不要解释，不要 Markdown。');
-  
-  return parts.join('\n');
+  parts.push("</SUFFIX>");
+  parts.push("");
+
+  parts.push("只输出 <MIDDLE> 的内容（纯文本），不要解释，不要 Markdown。");
+
+  return parts.join("\n");
 }
 
 /**
@@ -296,10 +297,10 @@ export function generateMinimalPrompt(context: CompletionContext): string {
  */
 export function generateCompletionMessages(
   context: CompletionContext,
-  options: PromptGeneratorOptions = {}
-): Array<{ role: 'system' | 'user'; content: string }> {
+  options: PromptGeneratorOptions = {},
+): Array<{ role: "system" | "user"; content: string }> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   // 选择 System Prompt（根据意图调整）
   let systemPrompt: string;
   if (opts.multiCandidate) {
@@ -310,15 +311,15 @@ export function generateCompletionMessages(
     // 使用意图增强的 System Prompt
     systemPrompt = getCompletionSystemPrompt(context.intent);
   }
-  
+
   // 选择 User Prompt 格式
   const userPrompt = opts.useFIM
     ? generateFIMPrompt(context, opts)
     : generateUserPrompt(context, opts);
-  
+
   return [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: userPrompt },
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
   ];
 }
 
@@ -331,20 +332,20 @@ export function generateCompletionMessages(
  */
 export function cleanCompletionOutput(output: string): string {
   let cleaned = output;
-  
+
   // 移除可能的 Markdown 代码块
-  cleaned = cleaned.replace(/^```[\w]*\n?/, '');
-  cleaned = cleaned.replace(/\n?```$/, '');
-  
+  cleaned = cleaned.replace(/^```[\w]*\n?/, "");
+  cleaned = cleaned.replace(/\n?```$/, "");
+
   // 移除 <CURSOR> 标记
-  cleaned = cleaned.replace(/<CURSOR>/g, '');
-  
+  cleaned = cleaned.replace(/<CURSOR>/g, "");
+
   // 移除前导空行（但保留缩进）
-  cleaned = cleaned.replace(/^\n+/, '');
-  
+  cleaned = cleaned.replace(/^\n+/, "");
+
   // 移除尾部多余空行
-  cleaned = cleaned.replace(/\n{3,}$/, '\n\n');
-  
+  cleaned = cleaned.replace(/\n{3,}$/, "\n\n");
+
   // 移除解释性文字（如果模型跑偏）
   const explanationPatterns = [
     /^Here's the completion:?\s*\n?/i,
@@ -353,11 +354,11 @@ export function cleanCompletionOutput(output: string): string {
     /^Result:?\s*\n?/i,
     /^I'll complete.*?\n/i,
   ];
-  
+
   for (const pattern of explanationPatterns) {
-    cleaned = cleaned.replace(pattern, '');
+    cleaned = cleaned.replace(pattern, "");
   }
-  
+
   return cleaned;
 }
 
@@ -368,25 +369,25 @@ export function parseMultiCandidateOutput(output: string): Array<{ text: string;
   try {
     // 尝试解析 JSON
     const cleaned = output
-      .replace(/^```json\n?/, '')
-      .replace(/\n?```$/, '')
+      .replace(/^```json\n?/, "")
+      .replace(/\n?```$/, "")
       .trim();
-    
+
     const parsed = JSON.parse(cleaned);
-    
+
     if (parsed.candidates && Array.isArray(parsed.candidates)) {
       return parsed.candidates
-        .filter((c: any) => typeof c.text === 'string')
+        .filter((c: any) => typeof c.text === "string")
         .map((c: any) => ({
           text: cleanCompletionOutput(c.text),
-          score: typeof c.score === 'number' ? c.score : 0.5,
+          score: typeof c.score === "number" ? c.score : 0.5,
         }))
         .sort((a: any, b: any) => b.score - a.score);
     }
   } catch {
     // JSON 解析失败，返回单个候选
   }
-  
+
   return [{ text: cleanCompletionOutput(output), score: 1.0 }];
 }
 
@@ -395,20 +396,20 @@ export function parseMultiCandidateOutput(output: string): Array<{ text: string;
  */
 export function hasOverlapWithSuffix(completion: string, suffix: string): boolean {
   if (!completion || !suffix) return false;
-  
-  const completionLines = completion.trim().split('\n');
-  const suffixLines = suffix.trim().split('\n');
-  
+
+  const completionLines = completion.trim().split("\n");
+  const suffixLines = suffix.trim().split("\n");
+
   // 检查补全的最后几行是否与 suffix 的开头重叠
   for (let i = 1; i <= Math.min(3, completionLines.length); i++) {
-    const completionEnd = completionLines.slice(-i).join('\n').trim();
-    const suffixStart = suffixLines.slice(0, i).join('\n').trim();
-    
+    const completionEnd = completionLines.slice(-i).join("\n").trim();
+    const suffixStart = suffixLines.slice(0, i).join("\n").trim();
+
     if (completionEnd === suffixStart && completionEnd.length > 10) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -418,26 +419,26 @@ export function hasOverlapWithSuffix(completion: string, suffix: string): boolea
 export function truncateCompletion(
   completion: string,
   maxLines: number = 20,
-  maxChars: number = 2000
+  maxChars: number = 2000,
 ): string {
   let result = completion;
-  
+
   // 行数限制
-  const lines = result.split('\n');
+  const lines = result.split("\n");
   if (lines.length > maxLines) {
-    result = lines.slice(0, maxLines).join('\n');
+    result = lines.slice(0, maxLines).join("\n");
   }
-  
+
   // 字符数限制
   if (result.length > maxChars) {
     result = result.substring(0, maxChars);
     // 尝试在最后一个完整行截断
-    const lastNewline = result.lastIndexOf('\n');
+    const lastNewline = result.lastIndexOf("\n");
     if (lastNewline > maxChars * 0.8) {
       result = result.substring(0, lastNewline);
     }
   }
-  
+
   return result;
 }
 

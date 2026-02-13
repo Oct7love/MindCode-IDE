@@ -3,14 +3,14 @@
  * 包含工具栏、变量、调用栈、断点等子面板
  */
 
-import React, { useState, useEffect } from 'react';
-import { DebugToolbar } from './DebugToolbar';
-import { VariablesView } from './VariablesView';
-import { CallStackView } from './CallStackView';
-import { BreakpointsView } from './BreakpointsView';
-import { DebugConsole } from './DebugConsole';
-import type { DebugSession, Breakpoint, Variable, StackFrame } from '../../../core/debugger';
-import './DebugPanel.css';
+import React, { useState, useEffect } from "react";
+import { DebugToolbar } from "./DebugToolbar";
+import { VariablesView } from "./VariablesView";
+import { CallStackView } from "./CallStackView";
+import { BreakpointsView } from "./BreakpointsView";
+import { DebugConsole } from "./DebugConsole";
+import type { DebugSession, Breakpoint, Variable, StackFrame } from "../../../core/debugger";
+import "./DebugPanel.css";
 
 export const DebugPanel: React.FC = () => {
   const [activeSession, setActiveSession] = useState<DebugSession | null>(null);
@@ -18,7 +18,9 @@ export const DebugPanel: React.FC = () => {
   const [variables, setVariables] = useState<Variable[]>([]);
   const [stackFrames, setStackFrames] = useState<StackFrame[]>([]);
   const [breakpoints, setBreakpoints] = useState<Breakpoint[]>([]);
-  const [selectedPanel, setSelectedPanel] = useState<'variables' | 'callstack' | 'breakpoints' | 'console'>('variables');
+  const [selectedPanel, setSelectedPanel] = useState<
+    "variables" | "callstack" | "breakpoints" | "console"
+  >("variables");
 
   // 加载调试会话
   useEffect(() => {
@@ -29,10 +31,11 @@ export const DebugPanel: React.FC = () => {
 
   const loadSessions = async () => {
     const result = await window.mindcode.debug.listSessions();
-    if (result.success) {
-      setSessions(result.sessions);
-      if (result.sessions.length > 0) {
-        const active = result.sessions.find(s => s.state === 'running' || s.state === 'paused');
+    if (result.success && result.data) {
+      const sessionList = result.data as unknown as DebugSession[];
+      setSessions(sessionList);
+      if (sessionList.length > 0) {
+        const active = sessionList.find((s) => s.state === "running" || s.state === "paused");
         if (active) {
           setActiveSession(active);
           setVariables(active.variables || []);
@@ -49,8 +52,8 @@ export const DebugPanel: React.FC = () => {
 
   const loadBreakpoints = async () => {
     const result = await window.mindcode.debug.getBreakpoints();
-    if (result.success) {
-      setBreakpoints(result.breakpoints);
+    if (result.success && result.data) {
+      setBreakpoints(result.data as unknown as Breakpoint[]);
     }
   };
 
@@ -95,13 +98,13 @@ export const DebugPanel: React.FC = () => {
   const handleStart = async () => {
     // TODO: 显示配置选择对话框
     const config = {
-      name: 'Debug Node.js',
-      type: 'node' as const,
-      request: 'launch' as const,
-      program: '${workspaceFolder}/index.js',
-      cwd: '${workspaceFolder}'
+      name: "Debug Node.js",
+      type: "node" as const,
+      request: "launch" as const,
+      program: "${workspaceFolder}/index.js",
+      cwd: "${workspaceFolder}",
     };
-    
+
     const result = await window.mindcode.debug.start(config);
     if (result.success) {
       loadSessions();
@@ -126,16 +129,14 @@ export const DebugPanel: React.FC = () => {
       {/* 会话选择 */}
       {sessions.length > 0 && (
         <div className="debug-sessions">
-          {sessions.map(session => (
+          {sessions.map((session) => (
             <div
               key={session.id}
-              className={`session-item ${session.id === activeSession?.id ? 'active' : ''}`}
+              className={`session-item ${session.id === activeSession?.id ? "active" : ""}`}
               onClick={() => setActiveSession(session)}
             >
               <span className="session-name">{session.name}</span>
-              <span className={`session-state state-${session.state}`}>
-                {session.state}
-              </span>
+              <span className={`session-state state-${session.state}`}>{session.state}</span>
             </div>
           ))}
         </div>
@@ -144,26 +145,26 @@ export const DebugPanel: React.FC = () => {
       {/* 标签页切换 */}
       <div className="debug-tabs">
         <button
-          className={`tab ${selectedPanel === 'variables' ? 'active' : ''}`}
-          onClick={() => setSelectedPanel('variables')}
+          className={`tab ${selectedPanel === "variables" ? "active" : ""}`}
+          onClick={() => setSelectedPanel("variables")}
         >
           Variables
         </button>
         <button
-          className={`tab ${selectedPanel === 'callstack' ? 'active' : ''}`}
-          onClick={() => setSelectedPanel('callstack')}
+          className={`tab ${selectedPanel === "callstack" ? "active" : ""}`}
+          onClick={() => setSelectedPanel("callstack")}
         >
           Call Stack
         </button>
         <button
-          className={`tab ${selectedPanel === 'breakpoints' ? 'active' : ''}`}
-          onClick={() => setSelectedPanel('breakpoints')}
+          className={`tab ${selectedPanel === "breakpoints" ? "active" : ""}`}
+          onClick={() => setSelectedPanel("breakpoints")}
         >
           Breakpoints
         </button>
         <button
-          className={`tab ${selectedPanel === 'console' ? 'active' : ''}`}
-          onClick={() => setSelectedPanel('console')}
+          className={`tab ${selectedPanel === "console" ? "active" : ""}`}
+          onClick={() => setSelectedPanel("console")}
         >
           Debug Console
         </button>
@@ -171,18 +172,21 @@ export const DebugPanel: React.FC = () => {
 
       {/* 内容区域 */}
       <div className="debug-content">
-        {selectedPanel === 'variables' && (
+        {selectedPanel === "variables" && (
           <VariablesView variables={variables} onRefresh={loadSessions} />
         )}
-        {selectedPanel === 'callstack' && (
-          <CallStackView frames={stackFrames} onFrameClick={(frame) => {
-            // TODO: 跳转到对应位置
-            console.log('Navigate to frame:', frame);
-          }} />
+        {selectedPanel === "callstack" && (
+          <CallStackView
+            frames={stackFrames}
+            onFrameClick={(frame) => {
+              // TODO: 跳转到对应位置
+              console.log("Navigate to frame:", frame);
+            }}
+          />
         )}
-        {selectedPanel === 'breakpoints' && (
-          <BreakpointsView 
-            breakpoints={breakpoints} 
+        {selectedPanel === "breakpoints" && (
+          <BreakpointsView
+            breakpoints={breakpoints}
             onRefresh={loadBreakpoints}
             onToggle={async (bp) => {
               await window.mindcode.debug.toggleBreakpoint(bp.file, bp.line);
@@ -194,12 +198,12 @@ export const DebugPanel: React.FC = () => {
             }}
           />
         )}
-        {selectedPanel === 'console' && (
-          <DebugConsole 
+        {selectedPanel === "console" && (
+          <DebugConsole
             session={activeSession}
             onEvaluate={async (expr) => {
               const result = await window.mindcode.debug.evaluate(expr);
-              return result.success ? result.result : 'Error';
+              return result.success && result.data ? result.data.result : "Error";
             }}
           />
         )}
@@ -218,3 +222,5 @@ export const DebugPanel: React.FC = () => {
     </div>
   );
 };
+
+export default DebugPanel;

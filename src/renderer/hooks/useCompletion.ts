@@ -1,10 +1,10 @@
 /**
  * useCompletion - 代码补全 Hook
- * 
+ *
  * 提供 Monaco Editor 的 InlineCompletionProvider
  */
-import { useState, useCallback, useRef, useEffect } from 'react';
-import * as monaco from 'monaco-editor';
+import { useState, useCallback, useRef, useEffect } from "react";
+import type * as monaco from "monaco-editor";
 
 // ============================================
 // 类型定义
@@ -38,10 +38,10 @@ export interface UseCompletionReturn {
 // ============================================
 
 export const COMPLETION_MODELS = [
-  { id: 'deepseek-chat', name: 'DeepSeek V3', description: '快速、高性价比' },
-  { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet', description: '高质量' },
-  { id: 'glm-4.7-flashx', name: 'GLM Flash', description: '国产、快速' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: '平衡' },
+  { id: "deepseek-chat", name: "DeepSeek V3", description: "快速、高性价比" },
+  { id: "claude-sonnet-4-5-20250929", name: "Claude Sonnet", description: "高质量" },
+  { id: "glm-4.7-flashx", name: "GLM Flash", description: "国产、快速" },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", description: "平衡" },
 ];
 
 // ============================================
@@ -50,21 +50,24 @@ export const COMPLETION_MODELS = [
 
 export function useCompletion(): UseCompletionReturn {
   const [enabled, setEnabled] = useState(true);
-  const [model, setModelState] = useState('claude-sonnet-4-5-20250929');
+  const [model, setModelState] = useState("claude-sonnet-4-5-20250929");
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debounceMs, setDebounceMs] = useState(150);
-  
+
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 加载设置
   useEffect(() => {
-    window.mindcode.ai.getCompletionSettings().then(settings => {
-      setEnabled(settings.enabled);
-      setModelState(settings.model);
-      setDebounceMs(settings.debounceMs);
-    }).catch(console.error);
+    window.mindcode.ai
+      .getCompletionSettings()
+      .then((settings) => {
+        setEnabled(settings.enabled);
+        setModelState(settings.model);
+        setDebounceMs(settings.debounceMs);
+      })
+      .catch(console.error);
   }, []);
 
   // 切换启用状态
@@ -81,156 +84,195 @@ export function useCompletion(): UseCompletionReturn {
   }, []);
 
   // 请求补全
-  const requestCompletion = useCallback(async (
-    filePath: string,
-    code: string,
-    cursorLine: number,
-    cursorColumn: number
-  ): Promise<string | null> => {
-    // 取消之前的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
+  const requestCompletion = useCallback(
+    async (
+      filePath: string,
+      code: string,
+      cursorLine: number,
+      cursorColumn: number,
+    ): Promise<string | null> => {
+      // 取消之前的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
 
-    try {
-      setIsCompleting(true);
-      setError(null);
+      try {
+        setIsCompleting(true);
+        setError(null);
 
-      const result = await window.mindcode.ai.completion({
-        filePath,
-        code,
-        cursorLine,
-        cursorColumn,
-        model,
-      });
+        const result = await window.mindcode.ai.completion({
+          filePath,
+          code,
+          cursorLine,
+          cursorColumn,
+          model,
+        });
 
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        if (result.error) {
-          setError(result.error);
+        if (result.success && result.data) {
+          return result.data;
+        } else {
+          if (result.error) {
+            setError(result.error);
+          }
+          return null;
+        }
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          setError(err.message || "Completion failed");
         }
         return null;
+      } finally {
+        setIsCompleting(false);
       }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        setError(err.message || 'Completion failed');
-      }
-      return null;
-    } finally {
-      setIsCompleting(false);
-    }
-  }, [model]);
+    },
+    [model],
+  );
 
   // 注册 Monaco Provider
-  const registerProvider = useCallback((monacoInstance: typeof monaco): monaco.IDisposable => {
-    console.log('[Completion] Registering InlineCompletionProvider...');
-    const disposables: monaco.IDisposable[] = [];
+  const registerProvider = useCallback(
+    (monacoInstance: typeof monaco): monaco.IDisposable => {
+      console.log("[Completion] Registering InlineCompletionProvider...");
+      const disposables: monaco.IDisposable[] = [];
 
-    // 支持的语言
-    const languages = [
-      'typescript', 'javascript', 'python', 'go', 'rust', 
-      'java', 'c', 'cpp', 'csharp', 'php', 'ruby', 'swift',
-      'kotlin', 'scala', 'html', 'css', 'scss', 'json', 'yaml',
-      'markdown', 'sql', 'shell', 'dockerfile', 'plaintext'
-    ];
+      // 支持的语言
+      const languages = [
+        "typescript",
+        "javascript",
+        "python",
+        "go",
+        "rust",
+        "java",
+        "c",
+        "cpp",
+        "csharp",
+        "php",
+        "ruby",
+        "swift",
+        "kotlin",
+        "scala",
+        "html",
+        "css",
+        "scss",
+        "json",
+        "yaml",
+        "markdown",
+        "sql",
+        "shell",
+        "dockerfile",
+        "plaintext",
+      ];
 
-    for (const language of languages) {
-      const provider = monacoInstance.languages.registerInlineCompletionsProvider(language, {
-        provideInlineCompletions: async (
-          editorModel: monaco.editor.ITextModel,
-          position: monaco.Position,
-          context: monaco.languages.InlineCompletionContext,
-          token: monaco.CancellationToken
-        ): Promise<monaco.languages.InlineCompletions | null> => {
-          console.log('[Completion] provideInlineCompletions called', { language, line: position.lineNumber, enabled });
-          
-          // 检查是否取消
-          if (token.isCancellationRequested) {
-            console.log('[Completion] Cancelled');
-            return null;
-          }
-
-          // 防抖
-          try {
-            await new Promise<void>((resolve, reject) => {
-              if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current);
-              }
-              debounceTimerRef.current = setTimeout(() => {
-                if (token.isCancellationRequested) {
-                  reject(new Error('Cancelled'));
-                } else {
-                  resolve();
-                }
-              }, debounceMs);
+      for (const language of languages) {
+        const provider = monacoInstance.languages.registerInlineCompletionsProvider(language, {
+          provideInlineCompletions: async (
+            editorModel: monaco.editor.ITextModel,
+            position: monaco.Position,
+            context: monaco.languages.InlineCompletionContext,
+            token: monaco.CancellationToken,
+          ): Promise<monaco.languages.InlineCompletions | null> => {
+            console.log("[Completion] provideInlineCompletions called", {
+              language,
+              line: position.lineNumber,
+              enabled,
             });
-          } catch {
-            return null;
-          }
 
-          if (token.isCancellationRequested) {
-            return null;
-          }
+            // 检查是否取消
+            if (token.isCancellationRequested) {
+              console.log("[Completion] Cancelled");
+              return null;
+            }
 
-          // 获取文件路径
-          const uri = editorModel.uri;
-          const filePath = uri.path || uri.fsPath || 'untitled.ts';
+            // 防抖
+            try {
+              await new Promise<void>((resolve, reject) => {
+                if (debounceTimerRef.current) {
+                  clearTimeout(debounceTimerRef.current);
+                }
+                debounceTimerRef.current = setTimeout(() => {
+                  if (token.isCancellationRequested) {
+                    reject(new Error("Cancelled"));
+                  } else {
+                    resolve();
+                  }
+                }, debounceMs);
+              });
+            } catch {
+              return null;
+            }
 
-          // 获取代码
-          const code = editorModel.getValue();
-          const cursorLine = position.lineNumber - 1; // 0-based
-          const cursorColumn = position.column;
+            if (token.isCancellationRequested) {
+              return null;
+            }
 
-          console.log('[Completion] Requesting completion...', { filePath, cursorLine, cursorColumn });
+            // 获取文件路径
+            const uri = editorModel.uri;
+            const filePath = uri.path || uri.fsPath || "untitled.ts";
 
-          // 请求补全
-          const completion = await requestCompletion(filePath, code, cursorLine, cursorColumn);
+            // 获取代码
+            const code = editorModel.getValue();
+            const cursorLine = position.lineNumber - 1; // 0-based
+            const cursorColumn = position.column;
 
-          console.log('[Completion] Got result:', completion ? `${completion.length} chars` : 'null');
+            console.log("[Completion] Requesting completion...", {
+              filePath,
+              cursorLine,
+              cursorColumn,
+            });
 
-          if (!completion || token.isCancellationRequested) {
-            return null;
-          }
+            // 请求补全
+            const completion = await requestCompletion(filePath, code, cursorLine, cursorColumn);
 
-          return {
-            items: [{
-              insertText: completion,
-              range: new monacoInstance.Range(
-                position.lineNumber,
-                position.column,
-                position.lineNumber,
-                position.column
-              ),
-            }],
-          };
-        },
+            console.log(
+              "[Completion] Got result:",
+              completion ? `${completion.length} chars` : "null",
+            );
 
-        freeInlineCompletions: () => {
-          // 清理资源
-        },
-      });
+            if (!completion || token.isCancellationRequested) {
+              return null;
+            }
 
-      disposables.push(provider);
-    }
+            return {
+              items: [
+                {
+                  insertText: completion,
+                  range: new monacoInstance.Range(
+                    position.lineNumber,
+                    position.column,
+                    position.lineNumber,
+                    position.column,
+                  ),
+                },
+              ],
+            };
+          },
 
-    console.log('[Completion] Registered for', languages.length, 'languages');
+          freeInlineCompletions: () => {
+            // 清理资源
+          },
+        });
 
-    // 返回组合的 disposable
-    return {
-      dispose: () => {
-        console.log('[Completion] Disposing providers...');
-        disposables.forEach(d => d.dispose());
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-        }
+        disposables.push(provider);
       }
-    };
-  }, [enabled, debounceMs, requestCompletion]);
+
+      console.log("[Completion] Registered for", languages.length, "languages");
+
+      // 返回组合的 disposable
+      return {
+        dispose: () => {
+          console.log("[Completion] Disposing providers...");
+          disposables.forEach((d) => d.dispose());
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+          }
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+        },
+      };
+    },
+    [enabled, debounceMs, requestCompletion],
+  );
 
   return {
     enabled,

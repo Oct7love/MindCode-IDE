@@ -2,10 +2,11 @@
  * EmptyState - 空状态欢迎界面（优化版）
  * 精致的 AI 品牌感 + 快捷操作引导
  */
-import React, { memo } from 'react';
-import { AIMode, useAIStore } from '../../stores';
-import { MODELS } from './ModelPicker';
-import './EmptyState.css';
+import React, { memo } from "react";
+import type { AIMode } from "../../stores";
+import { useAIStore } from "../../stores";
+import { MODELS } from "./ModelPicker";
+import "./EmptyState.css";
 
 interface EmptyStateProps {
   mode: AIMode;
@@ -14,32 +15,36 @@ interface EmptyStateProps {
 }
 
 const QUICK_ACTIONS = [
-  { icon: '💡', text: '代码建议与最佳实践', color: '#f59e0b' },
-  { icon: '🔍', text: '搜索与语义分析', color: '#3b82f6' },
-  { icon: '🔧', text: '调试与问题排查', color: '#ef4444' },
-  { icon: '📝', text: '代码编写与重构', color: '#10b981' },
+  { icon: "💡", text: "代码建议与最佳实践", color: "#f59e0b" },
+  { icon: "🔍", text: "搜索与语义分析", color: "#3b82f6" },
+  { icon: "🔧", text: "调试与问题排查", color: "#ef4444" },
+  { icon: "📝", text: "代码编写与重构", color: "#10b981" },
 ];
 
 export const EmptyState: React.FC<EmptyStateProps> = memo(({ mode }) => {
   const { model } = useAIStore();
-  
+
   const getModelDisplayName = () => {
-    const modelInfo = MODELS.find(m => m.id === model);
-    return modelInfo?.name || 'AI Assistant';
+    const modelInfo = MODELS.find((m) => m.id === model);
+    return modelInfo?.name || "AI Assistant";
   };
-  
+
   const getModelProvider = () => {
-    const modelInfo = MODELS.find(m => m.id === model);
-    return modelInfo?.provider || 'AI';
+    const modelInfo = MODELS.find((m) => m.id === model);
+    return modelInfo?.provider || "AI";
   };
 
   const getGreeting = () => {
     const modelName = getModelDisplayName();
     switch (mode) {
-      case 'agent': return { title: 'Agent Mode', desc: `${modelName} 可以自主执行多步骤开发任务` };
-      case 'plan': return { title: 'Plan Mode', desc: `让 ${modelName} 帮你制定详细的任务计划` };
-      case 'debug': return { title: 'Debug Mode', desc: `${modelName} 专注于代码调试和问题排查` };
-      default: return { title: `Hi, I'm ${modelName}`, desc: '我可以帮你编写、分析和优化代码' };
+      case "agent":
+        return { title: "Agent Mode", desc: `${modelName} 可以自主执行多步骤开发任务` };
+      case "plan":
+        return { title: "Plan Mode", desc: `让 ${modelName} 帮你制定详细的任务计划` };
+      case "debug":
+        return { title: "Debug Mode", desc: `${modelName} 专注于代码调试和问题排查` };
+      default:
+        return { title: `Hi, I'm ${modelName}`, desc: "我可以帮你编写、分析和优化代码" };
     }
   };
 
@@ -59,7 +64,10 @@ export const EmptyState: React.FC<EmptyStateProps> = memo(({ mode }) => {
                   <stop offset="100%" stopColor="#06b6d4" />
                 </linearGradient>
               </defs>
-              <path fill="url(#emptyAiGrad)" d="M16 2L18.6 11.4 28 14 18.6 16.6 16 26 13.4 16.6 4 14l9.4-2.6L16 2z"/>
+              <path
+                fill="url(#emptyAiGrad)"
+                d="M16 2L18.6 11.4 28 14 18.6 16.6 16 26 13.4 16.6 4 14l9.4-2.6L16 2z"
+              />
             </svg>
           </div>
         </div>
@@ -89,4 +97,4 @@ export const EmptyState: React.FC<EmptyStateProps> = memo(({ mode }) => {
   );
 });
 
-EmptyState.displayName = 'EmptyState';
+EmptyState.displayName = "EmptyState";

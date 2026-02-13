@@ -22,28 +22,36 @@
   --premium-bg-elevated: #161619;
   --premium-bg-hover: rgba(255, 255, 255, 0.03);
   --premium-bg-active: rgba(255, 255, 255, 0.05);
-  
+
   /* 边框 - 极细腻 */
   --premium-border: rgba(255, 255, 255, 0.06);
-  --premium-border-hover: rgba(255, 255, 255, 0.10);
+  --premium-border-hover: rgba(255, 255, 255, 0.1);
   --premium-border-focus: #6366f1;
-  
+
   /* 文本 */
   --premium-text-primary: #f5f5f7;
   --premium-text-secondary: #a1a1a6;
   --premium-text-tertiary: #6e6e73;
   --premium-text-muted: #48484a;
-  
+
   /* 强调色 - 紫蓝渐变 */
   --premium-accent: #8b5cf6;
   --premium-accent-secondary: #6366f1;
   --premium-accent-glow: rgba(139, 92, 246, 0.35);
-  
+
   /* 渐变 */
   --premium-gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-  --premium-gradient-subtle: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
-  --premium-gradient-glow: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
-  
+  --premium-gradient-subtle: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    transparent 100%
+  );
+  --premium-gradient-glow: radial-gradient(
+    ellipse at center,
+    rgba(139, 92, 246, 0.15) 0%,
+    transparent 70%
+  );
+
   /* 紧凑字体 - Cursor 风格 */
   --compact-font-ui: 12px;
   --compact-font-code: 12px;
@@ -59,7 +67,8 @@
 
 body {
   background: var(--premium-bg-deepest) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif !important;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif !important;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "ss01", "ss02", "cv01";
 }
@@ -79,7 +88,7 @@ body {
 }
 
 .activity-action::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 8px;
   border-radius: 8px;
@@ -156,7 +165,7 @@ body {
 }
 
 .tree-row.selected::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 4px;
@@ -208,7 +217,7 @@ body {
 }
 
 .tab.active::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -257,10 +266,10 @@ body {
 
 /* 背景网格 */
 .welcome::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 50px 50px;
@@ -270,7 +279,7 @@ body {
 
 /* 背景光晕 */
 .welcome::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 30%;
   left: 50%;
@@ -288,8 +297,15 @@ body {
 }
 
 @keyframes bgPulse {
-  0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-  50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
 }
 
 /* Logo 容器 */
@@ -305,8 +321,13 @@ body {
 }
 
 @keyframes logoFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* 兼容旧的 welcome-logo */
@@ -371,7 +392,7 @@ body {
   background: rgba(255, 255, 255, 0.04) !important;
   border-color: rgba(139, 92, 246, 0.3) !important;
   transform: translateY(-2px) translateX(2px);
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(139, 92, 246, 0.1);
 }
@@ -441,13 +462,17 @@ body {
  * ============================================ */
 
 .ai-panel {
-  background: linear-gradient(180deg, var(--premium-bg-surface) 0%, var(--premium-bg-base) 100%) !important;
+  background: linear-gradient(
+    180deg,
+    var(--premium-bg-surface) 0%,
+    var(--premium-bg-base) 100%
+  ) !important;
   border-left: 1px solid var(--premium-border) !important;
 }
 
 /* 顶部微光线 */
 .ai-panel::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -614,18 +639,23 @@ body {
 /* 输入框渐变边框 */
 .ai-input-box::before,
 .composer-input-wrapper::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   padding: 1px;
   border-radius: 12px;
-  background: linear-gradient(135deg, 
-    rgba(139, 92, 246, 0.2) 0%, 
-    rgba(99, 102, 241, 0.1) 50%, 
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    rgba(99, 102, 241, 0.1) 50%,
     rgba(139, 92, 246, 0.05) 100%
   );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -898,7 +928,9 @@ body {
 }
 
 *:focus-visible {
-  box-shadow: 0 0 0 2px var(--premium-bg-deepest), 0 0 0 4px var(--premium-accent);
+  box-shadow:
+    0 0 0 2px var(--premium-bg-deepest),
+    0 0 0 4px var(--premium-accent);
 }
 
 /* ============================================
@@ -1368,4 +1400,108 @@ body {
 
 .monaco-editor .margin-view-overlays {
   font-size: 11px !important;
+}
+
+/* ============================================
+ * Welcome Page - Recent Projects
+ * ============================================ */
+
+.welcome-recent-section {
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-recent-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground, var(--premium-text-muted, #888));
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.welcome-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.welcome-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  background: transparent;
+}
+
+.welcome-recent-item:hover {
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.04));
+}
+
+.welcome-recent-icon {
+  font-size: 18px;
+  opacity: 0.6;
+}
+
+.welcome-recent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.welcome-recent-name {
+  font-size: 13px;
+  color: var(--vscode-foreground, var(--premium-text-primary, #ccc));
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-recent-path {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, var(--premium-text-muted, #666));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-recent-time {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, var(--premium-text-muted, #555));
+  flex-shrink: 0;
+}
+
+.welcome-open-folder {
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-open-btn {
+  background: var(--vscode-button-background, var(--premium-accent, #0078d4));
+  color: var(--vscode-button-foreground, #fff);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.welcome-open-btn:hover {
+  opacity: 0.85;
+}
+
+/* Extension icon image */
+.ext-icon-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
 }
