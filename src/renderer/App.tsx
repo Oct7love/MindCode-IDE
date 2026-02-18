@@ -40,7 +40,7 @@ import { LanguageSelector } from "./components/LanguageSelector";
 
 // Extracted Components
 import { AppIcons } from "./components/icons";
-import { TreeRow } from "./components/TreeRow";
+import { VirtualFileTree } from "./components/VirtualFileTree";
 import { WelcomePage } from "./components/WelcomePage";
 import { ExtensionsPanel } from "./components/ExtensionsPanel";
 
@@ -514,20 +514,16 @@ const App: React.FC = () => {
                       <AppIcons.Folder16 />
                     </button>
                   </div>
-                  {workspace.fileTree.map((n, i) => (
-                    <TreeRow
-                      key={(n.path || n.name) + i}
-                      node={n}
-                      depth={0}
-                      selected={selected}
-                      contextMenuPath={
-                        fileOps.contextMenu.isOpen ? fileOps.contextMenu.targetPath : null
-                      }
-                      onSelect={editor.openFile}
-                      onContextMenu={fileOps.handleContextMenu}
-                      onLoadChildren={workspace.loadDirectory}
-                    />
-                  ))}
+                  <VirtualFileTree
+                    tree={workspace.fileTree}
+                    selected={selected}
+                    contextMenuPath={
+                      fileOps.contextMenu.isOpen ? fileOps.contextMenu.targetPath : null
+                    }
+                    onSelect={editor.openFile}
+                    onContextMenu={fileOps.handleContextMenu}
+                    onLoadChildren={workspace.loadDirectory}
+                  />
                 </>
               )}
               {tab === "git" && <GitPanel workspacePath={workspace.workspaceRoot} />}

@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { loadConversations, saveConversations } from "@services/conversationPersistence";
+import {
+  loadConversations,
+  loadConversationsAsync,
+  saveConversations,
+} from "@services/conversationPersistence";
 
 export type AIMode = "chat" | "plan" | "agent" | "debug";
 export type ContextType =
@@ -588,3 +592,18 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     setLastRoutingDecision: (lastRoutingDecision) => set({ lastRoutingDecision }),
   };
 });
+
+// 启动后异步从 IndexedDB 升级对话数据（如有更新版本）
+loadConversationsAsync()
+  .then((idbConversations) => {
+    if (!idbConversations?.length) return;
+    const current = useAIStore.getState().conversations;
+    // IndexedDB 数据比 localStorage 更完整时才替换
+    if (idbConversations.length >= current.length) {
+      useAIStore.setState({ conversations: idbConversations });
+      console.log("[AIStore] 对话已从 IndexedDB 升级");
+    }
+  })
+  .catch(() => {
+    /* IndexedDB 不可用，静默降级 */
+  });
