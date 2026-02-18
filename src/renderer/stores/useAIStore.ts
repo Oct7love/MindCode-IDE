@@ -198,7 +198,32 @@ interface AIActions {
   ) => void;
 }
 
-const DEFAULT_MODEL = "claude-opus-4-5-20251101";
+const DEFAULT_MODEL = "claude-opus-4-6";
+
+// 流式文本缓冲区：批量刷入 zustand state（16ms ≈ 60fps），避免逐 token 触发 React 重渲染
+let _streamBuf = "";
+let _thinkBuf = "";
+let _flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleFlush(): void {
+  if (_flushTimer) return;
+  _flushTimer = setTimeout(() => {
+    _flushTimer = null;
+    const state = useAIStore.getState();
+    const updates: Partial<AIState> = {};
+    if (_streamBuf) {
+      updates.streamingText = state.streamingText + _streamBuf;
+      _streamBuf = "";
+    }
+    if (_thinkBuf) {
+      updates.thinkingText = state.thinkingText + _thinkBuf;
+      _thinkBuf = "";
+    }
+    if (Object.keys(updates).length > 0) {
+      useAIStore.setState(updates);
+    }
+  }, 16);
+}
 
 const defaultConversation: Conversation = {
   id: "1",
@@ -253,10 +278,22 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     clearContexts: () => set({ contexts: [] }),
 
     setLoading: (isLoading) => set({ isLoading }),
-    setStreamingText: (streamingText) => set({ streamingText }),
-    appendStreamingText: (text) => set((state) => ({ streamingText: state.streamingText + text })),
-    setThinkingText: (thinkingText) => set({ thinkingText }),
-    appendThinkingText: (text) => set((state) => ({ thinkingText: state.thinkingText + text })),
+    setStreamingText: (streamingText) => {
+      _streamBuf = "";
+      set({ streamingText });
+    },
+    appendStreamingText: (text) => {
+      _streamBuf += text;
+      scheduleFlush();
+    },
+    setThinkingText: (thinkingText) => {
+      _thinkBuf = "";
+      set({ thinkingText });
+    },
+    appendThinkingText: (text) => {
+      _thinkBuf += text;
+      scheduleFlush();
+    },
     setIsThinking: (isThinking) => set({ isThinking }),
     setPinned: (isPinned) => set({ isPinned }),
 

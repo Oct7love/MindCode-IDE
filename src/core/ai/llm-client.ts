@@ -14,7 +14,7 @@ export const LLM_CONFIG = {
   CIRCUIT_BREAKER_RESET_MS: 30000, // 熔断恢复时间 (30秒后重试)
   FALLBACK_MODELS: {
     // 降级链
-    "claude-opus-4-5-thinking": [
+    "claude-opus-4-6-thinking": [
       "claude-sonnet-4-5-thinking",
       "claude-sonnet-4-5",
       "deepseek-chat",
@@ -27,7 +27,7 @@ export const LLM_CONFIG = {
     // 特价渠道降级链（内部降级，不跨渠道）
     "codesuc-opus": ["codesuc-sonnet", "codesuc-haiku"],
     "codesuc-sonnet": ["codesuc-haiku"],
-    "special-claude-opus-4-5": ["codesuc-sonnet", "codesuc-haiku"], // 兼容旧 ID
+    "special-claude-opus-4-6": ["codesuc-sonnet", "codesuc-haiku"], // 兼容旧 ID
     "special-claude-sonnet-4-5": ["codesuc-haiku"],
   } as Record<string, string[]>,
 };
@@ -350,7 +350,7 @@ export class LLMClient extends EventEmitter {
   } {
     const breakers: Record<string, { open: boolean; failCount: number }> = {};
     for (const model of [
-      "claude-opus-4-5-thinking",
+      "claude-opus-4-6-thinking",
       "claude-sonnet-4-5",
       "deepseek-chat",
       "gemini-3-flash",

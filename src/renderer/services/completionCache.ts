@@ -3,7 +3,22 @@
  * 多级缓存：精确缓存 + 模糊缓存 + 前缀缓存
  */
 
-interface CacheEntry { completion: string; timestamp: number; model: string; score: number; }
+/** FNV-1a 哈希：将任意字符串映射为 32 位十六进制摘要 */
+function fnv1aHash(str: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+interface CacheEntry {
+  completion: string;
+  timestamp: number;
+  model: string;
+  score: number;
+}
 
 export class CompletionCache {
   private exact = new Map<string, CacheEntry>(); // 精确缓存 (完整上下文)
@@ -12,16 +27,19 @@ export class CompletionCache {
   private maxSize: number;
   private ttl: number;
 
-  constructor(maxSize = 500, ttl = 60000) { this.maxSize = maxSize; this.ttl = ttl; }
-
-  /** 生成精确 key */
-  exactKey(filePath: string, line: number, col: number, prefix: string): string {
-    return `${filePath}:${line}:${col}:${prefix.slice(-100)}`;
+  constructor(maxSize = 500, ttl = 60000) {
+    this.maxSize = maxSize;
+    this.ttl = ttl;
   }
 
-  /** 生成模糊 key (忽略列位置) */
+  /** 生成精确 key（哈希化，避免明文代码泄露） */
+  exactKey(filePath: string, line: number, col: number, prefix: string): string {
+    return `${filePath}:${line}:${col}:${fnv1aHash(prefix.slice(-100))}`;
+  }
+
+  /** 生成模糊 key（哈希化行内容） */
   fuzzyKey(filePath: string, line: number, lineContent: string): string {
-    return `${filePath}:${line}:${lineContent.trim().slice(0, 50)}`;
+    return `${filePath}:${line}:${fnv1aHash(lineContent.trim().slice(0, 50))}`;
   }
 
   /** 生成前缀 key (基于触发字符) */
@@ -30,24 +48,38 @@ export class CompletionCache {
   }
 
   /** 获取缓存 (按优先级) */
-  get(filePath: string, line: number, col: number, prefix: string, lineContent: string): CacheEntry | null {
+  get(
+    filePath: string,
+    line: number,
+    col: number,
+    prefix: string,
+    lineContent: string,
+  ): CacheEntry | null {
     const now = Date.now();
     // 1. 精确匹配
     const exactK = this.exactKey(filePath, line, col, prefix);
     const exact = this.exact.get(exactK);
-    if (exact && now - exact.timestamp < this.ttl) { this.touch(this.exact, exactK, exact); return { ...exact, score: 1.0 }; }
+    if (exact && now - exact.timestamp < this.ttl) {
+      this.touch(this.exact, exactK, exact);
+      return { ...exact, score: 1.0 };
+    }
     // 2. 模糊匹配 (同一行)
     const fuzzyK = this.fuzzyKey(filePath, line, lineContent);
     const fuzzy = this.fuzzy.get(fuzzyK);
     if (fuzzy && now - fuzzy.timestamp < this.ttl) {
-      if (this.isCompletionApplicable(fuzzy.completion, prefix)) { this.touch(this.fuzzy, fuzzyK, fuzzy); return { ...fuzzy, score: 0.8 }; }
+      if (this.isCompletionApplicable(fuzzy.completion, prefix)) {
+        this.touch(this.fuzzy, fuzzyK, fuzzy);
+        return { ...fuzzy, score: 0.8 };
+      }
     }
     // 3. 前缀匹配 (触发字符)
     const trigger = prefix.slice(-1);
-    if (['.', '(', '[', '{', ':', '/', '<'].includes(trigger)) {
+    if ([".", "(", "[", "{", ":", "/", "<"].includes(trigger)) {
       const prefixK = this.prefixKey(filePath, line, trigger);
       const prefixEntry = this.prefix.get(prefixK);
-      if (prefixEntry && now - prefixEntry.timestamp < this.ttl) { return { ...prefixEntry, score: 0.5 }; }
+      if (prefixEntry && now - prefixEntry.timestamp < this.ttl) {
+        return { ...prefixEntry, score: 0.5 };
+      }
     }
     return null;
   }
@@ -60,19 +92,36 @@ export class CompletionCache {
   }
 
   /** 设置缓存 */
-  set(filePath: string, line: number, col: number, prefix: string, lineContent: string, completion: string, model: string): void {
+  set(
+    filePath: string,
+    line: number,
+    col: number,
+    prefix: string,
+    lineContent: string,
+    completion: string,
+    model: string,
+  ): void {
     const entry: CacheEntry = { completion, timestamp: Date.now(), model, score: 1.0 };
     this.exactPut(this.exactKey(filePath, line, col, prefix), entry);
     this.fuzzyPut(this.fuzzyKey(filePath, line, lineContent), entry);
     const trigger = prefix.slice(-1);
-    if (['.', '(', '[', '{', ':', '/', '<'].includes(trigger)) {
+    if ([".", "(", "[", "{", ":", "/", "<"].includes(trigger)) {
       this.prefixPut(this.prefixKey(filePath, line, trigger), entry);
     }
   }
 
-  private exactPut(key: string, entry: CacheEntry): void { this.evict(this.exact); this.exact.set(key, entry); }
-  private fuzzyPut(key: string, entry: CacheEntry): void { this.evict(this.fuzzy); this.fuzzy.set(key, entry); }
-  private prefixPut(key: string, entry: CacheEntry): void { this.evict(this.prefix); this.prefix.set(key, entry); }
+  private exactPut(key: string, entry: CacheEntry): void {
+    this.evict(this.exact);
+    this.exact.set(key, entry);
+  }
+  private fuzzyPut(key: string, entry: CacheEntry): void {
+    this.evict(this.fuzzy);
+    this.fuzzy.set(key, entry);
+  }
+  private prefixPut(key: string, entry: CacheEntry): void {
+    this.evict(this.prefix);
+    this.prefix.set(key, entry);
+  }
 
   private touch(map: Map<string, CacheEntry>, key: string, entry: CacheEntry): void {
     map.delete(key);
@@ -87,12 +136,27 @@ export class CompletionCache {
   }
 
   /** 预热缓存 (基于最近编辑位置) */
-  warmup(entries: Array<{ filePath: string; line: number; col: number; prefix: string; lineContent: string; completion: string; model: string }>): void {
-    for (const e of entries) this.set(e.filePath, e.line, e.col, e.prefix, e.lineContent, e.completion, e.model);
+  warmup(
+    entries: Array<{
+      filePath: string;
+      line: number;
+      col: number;
+      prefix: string;
+      lineContent: string;
+      completion: string;
+      model: string;
+    }>,
+  ): void {
+    for (const e of entries)
+      this.set(e.filePath, e.line, e.col, e.prefix, e.lineContent, e.completion, e.model);
   }
 
   /** 清空 */
-  clear(): void { this.exact.clear(); this.fuzzy.clear(); this.prefix.clear(); }
+  clear(): void {
+    this.exact.clear();
+    this.fuzzy.clear();
+    this.prefix.clear();
+  }
 
   /** 统计 */
   stats(): { exact: number; fuzzy: number; prefix: number } {

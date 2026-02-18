@@ -32,7 +32,7 @@ const MODE_OPTIONS: { mode: AIMode; icon: string; label: string; shortcut?: stri
 
 // 支持图片的模型列表
 const VISION_CAPABLE_MODELS = [
-  "claude-opus-4-5-20251101",
+  "claude-opus-4-6",
   "claude-sonnet-4-5-20250929",
   "claude-haiku-4-5-20251001",
   "codesuc-opus",

@@ -37,7 +37,7 @@ export abstract class BaseAIProvider implements AIProvider {
   // 前端模型 ID 到 API 模型名的映射
   private static modelMapping: Record<string, string> = {
     // Claude 系列 - Antigravity Anthropic 协议
-    "claude-opus-4-5-thinking": "claude-opus-4-5-thinking",
+    "claude-opus-4-6-thinking": "claude-opus-4-6-thinking",
     "claude-sonnet-4-5-thinking": "claude-sonnet-4-5-thinking",
     "claude-sonnet-4-5": "claude-sonnet-4-5",
     // Gemini 系列 - Antigravity Gemini 协议

@@ -14,8 +14,8 @@ export interface ModelInfo {
 export const MODELS: ModelInfo[] = [
   // Claude 系列 (智能路由：Opus/Sonnet 简单任务自动调用 Haiku)
   {
-    id: "claude-opus-4-5-20251101",
-    name: "Claude Opus 4.5",
+    id: "claude-opus-4-6",
+    name: "Claude Opus 4.6",
     icon: "🧠",
     desc: "最强思维 (含智能路由)",
     provider: "claude",
@@ -123,7 +123,7 @@ export const MODELS: ModelInfo[] = [
   // ===== 特价渠道 (智能路由：Opus/Sonnet 简单任务自动调用 Haiku) =====
   {
     id: "codesuc-opus",
-    name: "Claude Opus 4.5 [特价]",
+    name: "Claude Opus 4.6 [特价]",
     icon: "💎",
     desc: "特价渠道 (含智能路由)",
     provider: "codesuc",

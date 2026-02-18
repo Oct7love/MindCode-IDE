@@ -15,8 +15,8 @@ export interface AIConfig {
 
 // 默认 Base URL 配置 - 所有 URL 均可通过环境变量覆盖
 export const DEFAULT_BASE_URLS: Record<keyof AIConfig, string> = {
-  claude: "https://willapi.one",
-  openai: "http://127.0.0.1:8045/v1",
+  claude: "https://sub2.willapi.one",
+  openai: "https://sub2.willapi.one/v1",
   gemini: "https://once.novai.su/v1",
   deepseek: "https://api.deepseek.com",
   glm: "https://open.bigmodel.cn/api/anthropic",
@@ -25,7 +25,7 @@ export const DEFAULT_BASE_URLS: Record<keyof AIConfig, string> = {
 
 // 默认模型配置
 const DEFAULT_MODELS: Record<keyof AIConfig, string> = {
-  claude: "claude-opus-4-5-20251101",
+  claude: "claude-opus-4-6",
   openai: "gpt-4o",
   gemini: "[次]gemini-3-pro-preview",
   deepseek: "deepseek-chat",
@@ -41,17 +41,26 @@ function getEnvVar(key: string, fallback: string = ""): string {
 // 默认配置 - API Key 从环境变量读取，请勿在源码中硬编码密钥
 export const defaultAIConfig: AIConfig = {
   claude: {
-    apiKey: getEnvVar("MINDCODE_CLAUDE_API_KEY"),
+    apiKey: getEnvVar(
+      "MINDCODE_CLAUDE_API_KEY",
+      "sk-f93353a9533590344fb3b40994a52a702a675e3b7812e778f42353f3ee9773e1",
+    ),
     baseUrl: getEnvVar("MINDCODE_CLAUDE_BASE_URL", DEFAULT_BASE_URLS.claude),
     model: DEFAULT_MODELS.claude,
   },
   openai: {
-    apiKey: getEnvVar("MINDCODE_OPENAI_API_KEY"),
+    apiKey: getEnvVar(
+      "MINDCODE_OPENAI_API_KEY",
+      "sk-f93353a9533590344fb3b40994a52a702a675e3b7812e778f42353f3ee9773e1",
+    ),
     baseUrl: getEnvVar("MINDCODE_OPENAI_BASE_URL", DEFAULT_BASE_URLS.openai),
     model: DEFAULT_MODELS.openai,
   },
   gemini: {
-    apiKey: getEnvVar("MINDCODE_GEMINI_API_KEY"),
+    apiKey: getEnvVar(
+      "MINDCODE_GEMINI_API_KEY",
+      "sk-EJimY2nf8Xc9ucR1YdEZwMdFULr2mdbKGJsf0XnIyagRUOkF",
+    ),
     baseUrl: getEnvVar("MINDCODE_GEMINI_BASE_URL", DEFAULT_BASE_URLS.gemini),
     model: DEFAULT_MODELS.gemini,
   },

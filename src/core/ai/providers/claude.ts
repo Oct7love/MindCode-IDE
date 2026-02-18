@@ -24,8 +24,8 @@ export class ClaudeProvider extends BaseAIProvider {
 
   models: ModelInfo[] = [
     {
-      id: "claude-opus-4-5-20251101",
-      name: "Claude Opus 4.5",
+      id: "claude-opus-4-6",
+      name: "Claude Opus 4.6",
       contextWindow: 200000,
       inputPrice: 15,
       outputPrice: 75,
@@ -77,6 +77,7 @@ export class ClaudeProvider extends BaseAIProvider {
         headers: {
           "Content-Type": "application/json",
           "x-api-key": this.apiKey,
+          Authorization: `Bearer ${this.apiKey}`,
           "anthropic-version": "2023-06-01",
           "Content-Length": Buffer.byteLength(body),
         },

@@ -57,6 +57,7 @@ export function useCompletion(): UseCompletionReturn {
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
 
   // 加载设置
   useEffect(() => {
@@ -96,6 +97,7 @@ export function useCompletion(): UseCompletionReturn {
         abortControllerRef.current.abort();
       }
       abortControllerRef.current = new AbortController();
+      const currentRequestId = ++requestIdRef.current;
 
       try {
         setIsCompleting(true);
@@ -109,6 +111,11 @@ export function useCompletion(): UseCompletionReturn {
           model,
         });
 
+        // 竞态保护：丢弃过期请求的响应
+        if (currentRequestId !== requestIdRef.current) {
+          return null;
+        }
+
         if (result.success && result.data) {
           return result.data;
         } else {
@@ -118,12 +125,15 @@ export function useCompletion(): UseCompletionReturn {
           return null;
         }
       } catch (err: any) {
+        if (currentRequestId !== requestIdRef.current) return null;
         if (err.name !== "AbortError") {
           setError(err.message || "Completion failed");
         }
         return null;
       } finally {
-        setIsCompleting(false);
+        if (currentRequestId === requestIdRef.current) {
+          setIsCompleting(false);
+        }
       }
     },
     [model],

@@ -26,7 +26,7 @@ export class CodesucProvider extends BaseAIProvider {
   models: ModelInfo[] = [
     {
       id: "codesuc-opus",
-      name: "Claude Opus 4.5 [特价]",
+      name: "Claude Opus 4.6 [特价]",
       contextWindow: 200000,
       inputPrice: 10,
       outputPrice: 50,
@@ -50,13 +50,13 @@ export class CodesucProvider extends BaseAIProvider {
   private apiKey: string;
   private baseUrl: string;
   private modelMap: Record<string, string> = {
-    "codesuc-opus": "claude-opus-4-5-20251101",
+    "codesuc-opus": "claude-opus-4-6",
     "codesuc-sonnet": "claude-sonnet-4-5-20250929",
     "codesuc-haiku": "claude-haiku-4-5-20251001",
-    "special-claude-opus-4-5": "claude-opus-4-5-20251101",
+    "special-claude-opus-4-6": "claude-opus-4-6",
     "special-claude-sonnet-4-5": "claude-sonnet-4-5-20250929",
     "special-claude-haiku-4-5": "claude-haiku-4-5-20251001",
-    opus: "claude-opus-4-5-20251101",
+    opus: "claude-opus-4-6",
     sonnet: "claude-sonnet-4-5-20250929",
     haiku: "claude-haiku-4-5-20251001",
   };
@@ -85,7 +85,7 @@ export class CodesucProvider extends BaseAIProvider {
     try {
       // 测试 tools 支持
       const body = {
-        model: "claude-opus-4-5-20251101",
+        model: "claude-opus-4-6",
         max_tokens: 10,
         messages: testMsg,
         tools: testTool,

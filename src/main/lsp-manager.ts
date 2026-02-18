@@ -161,11 +161,14 @@ export class LSPManager extends EventEmitter {
         console.warn(`[LSP:${language}] 进程退出: code=${code}`);
         server.state = "stopped";
         this.servers.delete(language);
-        // 非正常退出时自动重启（最多3次）
+        // 非正常退出时自动重启（最多3次，指数退避：2s→4s→8s）
         if (code !== 0 && (server as any)._restartCount < 3) {
           (server as any)._restartCount = ((server as any)._restartCount || 0) + 1;
-          console.log(`[LSP:${language}] 尝试自动重启 (${(server as any)._restartCount}/3)`);
-          setTimeout(() => this.start(language, { rootPath: server.rootPath }), 2000);
+          const backoff = 2000 * Math.pow(2, (server as any)._restartCount - 1);
+          console.log(
+            `[LSP:${language}] 尝试自动重启 (${(server as any)._restartCount}/3), 延迟 ${backoff}ms`,
+          );
+          setTimeout(() => this.start(language, { rootPath: server.rootPath }), backoff);
         }
       });
       // 发送 initialize 请求

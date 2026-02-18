@@ -175,16 +175,23 @@
 
 /* 角色标签 */
 .unified-msg-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--mc-text-xs, 11px);
   font-weight: var(--mc-fw-bold, 600);
   color: var(--mc-text-tertiary, #6e6e6e);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--mc-bg-tertiary, rgba(255, 255, 255, 0.04));
 }
 
 .unified-msg-user .unified-msg-role {
-  color: var(--mc-text-secondary, #969696);
+  color: var(--mc-accent-user, #58a6ff);
+  background: rgba(88, 166, 255, 0.08);
 }
 
 /* 消息主体 */

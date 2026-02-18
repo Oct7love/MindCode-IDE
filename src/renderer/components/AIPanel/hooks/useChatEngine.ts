@@ -82,7 +82,7 @@ const MODE_TOOLS: Record<AIMode, string[]> = {
 
 // 支持图片/视觉的模型列表（Claude Vision API 格式）
 const VISION_CAPABLE_MODELS = [
-  "claude-opus-4-5-20251101",
+  "claude-opus-4-6",
   "claude-sonnet-4-5-20250929",
   "claude-haiku-4-5-20251001",
   "codesuc-opus",
@@ -127,7 +127,7 @@ const containsModelIdentity = (text: string): boolean => {
 const getModelInfoSuffix = (modelId: string, modelName: string, provider: string): string => {
   // 获取实际调用的底层模型（用于特价渠道等）
   const actualModelMap: Record<string, string> = {
-    "codesuc-opus": "claude-opus-4-5-20251101",
+    "codesuc-opus": "claude-opus-4-6",
     "codesuc-sonnet": "claude-sonnet-4-5-20250929",
     "codesuc-haiku": "claude-haiku-4-5-20251001",
   };
@@ -498,7 +498,7 @@ export function useChatEngine(options: ChatEngineOptions) {
 
     // 获取实际模型名称
     const actualModelMap: Record<string, string> = {
-      "codesuc-opus": "claude-opus-4-5-20251101",
+      "codesuc-opus": "claude-opus-4-6",
       "codesuc-sonnet": "claude-sonnet-4-5-20250929",
       "codesuc-haiku": "claude-haiku-4-5-20251001",
     };

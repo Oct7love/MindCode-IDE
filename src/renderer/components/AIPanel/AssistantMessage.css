@@ -19,15 +19,21 @@
 
 /* 角色标签 */
 .message-role-label {
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .message-role-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--mc-text-xs, 11px);
   font-weight: var(--mc-fw-bold, 600);
   color: var(--mc-accent-ai, #8b5cf6);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.08);
 }
 
 .assistant-message .message-body {
