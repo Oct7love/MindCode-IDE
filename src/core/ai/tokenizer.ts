@@ -42,7 +42,7 @@ function getEncoder(model?: string): Tiktoken {
     // 尝试使用模型名获取编码器
     if (model) {
       try {
-        encoder = encoding_for_model(model as any);
+        encoder = encoding_for_model(model as Parameters<typeof encoding_for_model>[0]);
         encoderCache.set(key, encoder);
         return encoder;
       } catch {

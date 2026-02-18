@@ -7,8 +7,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage, devtools, subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-type Middleware<T> = (config: StateCreator<T>) => StateCreator<T>;
-
 interface StoreOptions<T> {
   name: string;
   persist?: boolean;
@@ -55,9 +53,9 @@ export const loggerMiddleware =
   (set, get, api) =>
     config(
       (args) => {
-        console.log("[Store] prev:", get());
+        if (import.meta.env.DEV) console.log("[Store] prev:", get());
         set(args);
-        console.log("[Store] next:", get());
+        if (import.meta.env.DEV) console.log("[Store] next:", get());
       },
       get,
       api,
@@ -71,7 +69,8 @@ export const perfMiddleware =
       (args) => {
         const start = performance.now();
         set(args);
-        console.log(`[Perf] Update: ${(performance.now() - start).toFixed(2)}ms`);
+        if (import.meta.env.DEV)
+          console.log(`[Perf] Update: ${(performance.now() - start).toFixed(2)}ms`);
       },
       get,
       api,
@@ -124,11 +123,11 @@ export function createUndoStore<T extends object>(
 }
 
 // 选择器缓存
-const selectorCache = new WeakMap<object, Map<string, unknown>>();
+const _selectorCache = new WeakMap<object, Map<string, unknown>>();
 export function createSelector<T, R>(
   store: UseBoundStore<StoreApi<T>>,
   selector: (state: T) => R,
-  equalityFn?: (a: R, b: R) => boolean,
+  _equalityFn?: (a: R, b: R) => boolean,
 ): () => R {
   return () => store(selector as any) as R;
 }

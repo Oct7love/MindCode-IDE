@@ -19,7 +19,7 @@ export { tokenService } from "./tokenService";
 // 服务管理器
 export class ServiceManager {
   private static instance: ServiceManager;
-  private services: Map<string, any> = new Map();
+  private services: Map<string, unknown> = new Map();
 
   private constructor() {}
 
@@ -32,7 +32,7 @@ export class ServiceManager {
     this.services.set(name, service);
   }
   get<T>(name: string): T | undefined {
-    return this.services.get(name) as T;
+    return this.services.get(name) as T | undefined;
   }
   has(name: string): boolean {
     return this.services.has(name);

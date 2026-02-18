@@ -160,9 +160,9 @@ const COMPLEX_TASK_PATTERNS = [
  */
 export function detectTaskType(
   userMessage: string,
-  hasToolCalls: boolean = false,
-  isFirstRound: boolean = true,
-  messageCount: number = 0,
+  _hasToolCalls: boolean = false,
+  _isFirstRound: boolean = true,
+  _messageCount: number = 0,
   useTools: boolean = false,
 ): TaskType {
   const msg = userMessage.toLowerCase().trim();

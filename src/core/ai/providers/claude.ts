@@ -109,7 +109,7 @@ export class ClaudeProvider extends BaseAIProvider {
             } else {
               try {
                 resolve({ data: JSON.parse(data) });
-              } catch (e) {
+              } catch {
                 resolve({ error: `Parse error: ${data}` });
               }
             }
@@ -203,7 +203,7 @@ export class ClaudeProvider extends BaseAIProvider {
                 fullText += token;
                 callbacks.onToken(token);
               }
-            } catch (e) {
+            } catch {
               // 忽略解析错误
             }
           }

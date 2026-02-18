@@ -12,8 +12,15 @@ interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   mode?: AIMode;
-  toolCalls?: any[];
-  plan?: any;
+  toolCalls?: {
+    id: string;
+    name: string;
+    args: Record<string, unknown>;
+    status: string;
+    result?: unknown;
+    error?: string;
+  }[];
+  plan?: { title: string; tasks: { id: string; label: string; status?: string }[] };
   isStreaming?: boolean;
 }
 

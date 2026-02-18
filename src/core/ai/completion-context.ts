@@ -8,9 +8,9 @@
  * - Style Hints (代码风格)
  */
 
-import { detectLanguage, getLanguageConfig } from "./completion-config";
+import { detectLanguage } from "./completion-config";
 import type { IntentResult } from "./intent-classifier";
-import { classifyIntent, extractIntentFromComment, IntentType } from "./intent-classifier";
+import { classifyIntent, extractIntentFromComment } from "./intent-classifier";
 import type { DocumentSymbol, Diagnostic as LSPDiagnostic } from "../../core/lsp/types";
 
 // ============================================
@@ -456,7 +456,7 @@ export function detectStyleHints(code: string): StyleHints {
   const doubleQuotes = (code.match(/"/g) || []).length;
 
   // 尾随逗号检测
-  const trailingCommas = (code.match(/,\s*[\]\}]/g) || []).length;
+  const trailingCommas = (code.match(/,\s*[\]}]/g) || []).length;
 
   // 计算常见缩进大小
   const indentSize = indentSizes.length > 0 ? Math.min(...indentSizes.filter((s) => s > 0)) : 2;

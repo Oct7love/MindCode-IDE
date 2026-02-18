@@ -13,7 +13,7 @@
  * - Thinking UI 支持
  */
 import React, { memo, useState, useCallback, useRef, useEffect } from "react";
-import { MarkdownRenderer, getLanguageFromPath } from "../MarkdownRenderer";
+import { MarkdownRenderer } from "../MarkdownRenderer";
 import type { ToolStatus } from "./ToolBlock";
 import { ToolBlock } from "./ToolBlock";
 import { ThinkingBlock } from "./ThinkingBlock";
@@ -33,8 +33,15 @@ interface Message {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
   mode?: AIMode;
-  toolCalls?: any[];
-  plan?: any;
+  toolCalls?: {
+    id: string;
+    name: string;
+    args: Record<string, unknown>;
+    status: string;
+    result?: unknown;
+    error?: string;
+  }[];
+  plan?: { title: string; tasks: { id: string; label: string; status?: string }[] };
   isStreaming?: boolean;
   thinkingUI?: ThinkingUIData; // Thinking UI 结构化数据
 }
@@ -62,7 +69,7 @@ interface AssistantMessageProps {
 export const AssistantMessage: React.FC<AssistantMessageProps> = memo(
   ({
     message,
-    isLast,
+    isLast: _isLast,
     thinkingText,
     isThinking = false,
     streamingThinkingUI,
@@ -82,7 +89,7 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(
     }>({ isOpen: false, position: { x: 0, y: 0 } });
     const [showFeedback, setShowFeedback] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState("");
-    const [isApplying, setIsApplying] = useState(false);
+    const [_isApplying, setIsApplying] = useState(false);
 
     const messageRef = useRef<HTMLDivElement>(null);
 
@@ -173,9 +180,9 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(
 
           setFeedbackMessage(`已在编辑器中打开`);
           setShowFeedback(true);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("[ApplyCode] Error:", err);
-          setFeedbackMessage("应用失败: " + (err.message || "未知错误"));
+          setFeedbackMessage("应用失败: " + (err instanceof Error ? err.message : "未知错误"));
           setShowFeedback(true);
         } finally {
           setIsApplying(false);
@@ -378,9 +385,15 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(
           ) : (
             <>
               {/* 传统模式：思考过程块 - 流式时用 thinkingText，完成后用 message.thinkingContent */}
-              {(thinkingText || isThinking || (message as any).thinkingContent) && (
+              {(thinkingText ||
+                isThinking ||
+                (message as typeof message & { thinkingContent?: string }).thinkingContent) && (
                 <ThinkingBlock
-                  content={thinkingText || (message as any).thinkingContent || ""}
+                  content={
+                    thinkingText ||
+                    (message as typeof message & { thinkingContent?: string }).thinkingContent ||
+                    ""
+                  }
                   isThinking={isThinking}
                 />
               )}
@@ -439,7 +452,7 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = memo(
                 <span className="plan-title">{message.plan.title}</span>
               </div>
               <div className="plan-tasks">
-                {message.plan.tasks.slice(0, 4).map((t: any) => (
+                {message.plan.tasks.slice(0, 4).map((t: { id: string; label: string }) => (
                   <div key={t.id} className="plan-task">
                     <span className="task-bullet">○</span>
                     <span className="task-label">{t.label}</span>

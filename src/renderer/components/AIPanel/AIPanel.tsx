@@ -31,7 +31,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ onClose, width, isResizing }) 
     const succeeded = results.filter((r) => r.success).length;
     setCheckpointCount(0);
     setRollingBack(false);
-    if (succeeded > 0) {
+    if (succeeded > 0 && import.meta.env.DEV) {
       console.log(`[Agent] 回滚了 ${succeeded} 个文件修改`);
     }
   }, []);

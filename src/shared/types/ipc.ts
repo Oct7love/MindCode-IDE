@@ -4,7 +4,7 @@
  * 所有 IPC channel 的请求参数和返回值类型在此集中定义，
  * 确保 preload.ts 和 handler 两端的类型一致性。
  */
-import type { ChatMessage, ToolCallInfo, ToolSchema } from "./ai";
+import type { ChatMessage, ToolCallInfo } from "./ai";
 
 // ─── 通用类型 ──────────────────────────────────────────
 

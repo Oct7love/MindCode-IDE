@@ -93,6 +93,7 @@ export class DAPClient extends EventEmitter {
   private pendingRequests = new Map<
     number,
     {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       resolve: (value: any) => void;
       reject: (reason: Error) => void;
       timer: ReturnType<typeof setTimeout>;
@@ -308,6 +309,7 @@ export class DAPClient extends EventEmitter {
   }
 
   /** 发送 DAP 请求并等待响应 */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendRequest(command: string, args?: Record<string, unknown>): Promise<any> {
     return new Promise((resolve, reject) => {
       const seq = this.seq++;

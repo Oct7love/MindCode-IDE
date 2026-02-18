@@ -7,7 +7,6 @@ import type { ChildProcess } from "child_process";
 import { spawn, execFile } from "child_process";
 import { EventEmitter } from "events";
 import { promisify } from "util";
-import * as path from "path";
 
 const execFileAsync = promisify(execFile);
 

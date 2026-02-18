@@ -179,8 +179,10 @@ export async function reviewStagedFiles(workspacePath: string): Promise<ReviewRe
     return emptyResult(startTime);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawData = statusResult.data as any;
   const fileList = Array.isArray(rawData) ? rawData : rawData?.files || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stagedFiles = fileList.filter((f: any) => f.staged);
   if (stagedFiles.length === 0) {
     return emptyResult(startTime);
@@ -276,13 +278,14 @@ export async function fixIssue(
       const writeResult = await window.mindcode?.fs?.writeFile?.(fullPath, newContent);
       if (writeResult?.success) {
         // 重新暂存修复后的文件
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (window.mindcode?.git?.stage as any)?.(workspacePath, issue.filePath);
         return { success: true };
       }
     }
     return { success: false, error: "修复应用失败" };
-  } catch (e: any) {
-    return { success: false, error: e.message };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
 

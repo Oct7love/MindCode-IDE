@@ -5,7 +5,7 @@
 
 import * as monaco from "monaco-editor";
 import { LSPClient } from "../../core/lsp/client";
-import type { CompletionItem, Hover, Location, DocumentSymbol } from "../../core/lsp/types";
+import type { CompletionItem, Location, DocumentSymbol } from "../../core/lsp/types";
 
 /** 语言ID到LSP客户端的映射 */
 const lspClients = new Map<string, LSPClient>();

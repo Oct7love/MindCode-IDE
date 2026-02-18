@@ -34,7 +34,7 @@ const AI_MAX_CONCURRENT = 2;
 const STREAM_BUFFER_INTERVAL_MS = 16;
 
 /** 补全缓存 TTL（ms） */
-const COMPLETION_CACHE_TTL_MS = 30000;
+const _COMPLETION_CACHE_TTL_MS = 30000;
 
 /** 补全上下文回溯行数 */
 const COMPLETION_CONTEXT_LINES = 5;
@@ -263,7 +263,7 @@ export function registerAIHandlers(_ctx: IPCContext): void {
       },
     ) => {
       const { filePath, code, cursorLine, cursorColumn, model = "codesuc-sonnet" } = request;
-      const start = Date.now();
+      const _start = Date.now();
 
       // 生成缓存 key
       const prefix = code

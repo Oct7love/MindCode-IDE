@@ -1,10 +1,12 @@
-import React, { useState, useCallback } from 'react';
-import { useAIStore, useFileStore } from '../../stores';
-import { ModelPicker } from './ModelPicker';
-import './DebugView.css';
+import React, { useState, useCallback } from "react";
+import { useAIStore, useFileStore } from "../../stores";
+import { ModelPicker } from "./ModelPicker";
+import "./DebugView.css";
 
 interface DebugIssue {
-  title: string; description: string; empathy: string;
+  title: string;
+  description: string;
+  empathy: string;
   hypotheses: { rank: number; probability: string; cause: string; evidence: string }[];
   evidence: { type: string; description: string; command?: string }[];
   steps: { order: number; action: string; command?: string; expected: string }[];
@@ -13,32 +15,51 @@ interface DebugIssue {
 }
 
 export const DebugView: React.FC = () => {
-  const { debugInfo, setDebugInfo, model, setModel, addContext, setMode } = useAIStore();
+  const {
+    debugInfo: _debugInfo,
+    setDebugInfo,
+    model,
+    setModel,
+    addContext,
+    setMode,
+  } = useAIStore();
   const { workspaceRoot, getActiveFile } = useFileStore();
-  const [errorInput, setErrorInput] = useState('');
+  const [errorInput, setErrorInput] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [issue, setIssue] = useState<DebugIssue | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [collectedLogs, setCollectedLogs] = useState<string>('');
+  const [collectedLogs, setCollectedLogs] = useState<string>("");
 
-  const collectFromTerminal = useCallback(async () => { // 从终端收集错误
-    const res = await window.mindcode?.terminal?.execute?.('echo "[模拟终端输出]"', workspaceRoot || undefined);
-    if (res?.success) { setCollectedLogs(res.data?.stdout || res.data?.stderr || ''); setErrorInput(prev => prev + '\n' + (res.data?.stderr || res.data?.stdout || '')); }
+  const collectFromTerminal = useCallback(async () => {
+    // 从终端收集错误
+    const res = await window.mindcode?.terminal?.execute?.(
+      'echo "[模拟终端输出]"',
+      workspaceRoot || undefined,
+    );
+    if (res?.success) {
+      setCollectedLogs(res.data?.stdout || res.data?.stderr || "");
+      setErrorInput((prev) => prev + "\n" + (res.data?.stderr || res.data?.stdout || ""));
+    }
   }, [workspaceRoot]);
 
-  const collectFromGit = useCallback(async () => { // 从 Git 收集信息
-    const status = await window.mindcode?.git?.status?.(workspaceRoot || '');
-    if (status?.success) { const files = status.data?.map((f: any) => `${f.status}: ${f.path}`).join('\n'); setErrorInput(prev => prev + '\n[Git Status]\n' + files); }
+  const collectFromGit = useCallback(async () => {
+    // 从 Git 收集信息
+    const status = await window.mindcode?.git?.status?.(workspaceRoot || "");
+    if (status?.success) {
+      const files = status.data?.map((f: any) => `${f.status}: ${f.path}`).join("\n");
+      setErrorInput((prev) => prev + "\n[Git Status]\n" + files);
+    }
   }, [workspaceRoot]);
 
-  const analyzeError = useCallback(async () => { // AI 分析错误
+  const analyzeError = useCallback(async () => {
+    // AI 分析错误
     if (!errorInput.trim()) return;
     setIsAnalyzing(true);
     const activeFile = getActiveFile();
     const prompt = `你是一个专业的调试专家。分析以下错误并提供调试方案。
 
-【工作区】${workspaceRoot || '未知'}
-【当前文件】${activeFile?.path || '无'}
+【工作区】${workspaceRoot || "未知"}
+【当前文件】${activeFile?.path || "无"}
 
 【错误信息】
 ${errorInput}
@@ -55,58 +76,112 @@ ${errorInput}
   "fixes": [{"id": "1", "title": "修复方案", "description": "说明", "diff": "代码差异"}]
 }`;
     try {
-      const res = await window.mindcode?.ai?.chat?.(model, [{ role: 'user', content: prompt }]);
+      const res = await window.mindcode?.ai?.chat?.(model, [{ role: "user", content: prompt }]);
       if (res?.success && res.data) {
         const jsonMatch = res.data.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]) as DebugIssue;
           setIssue(parsed);
-          setDebugInfo({ title: parsed.title, description: parsed.description, observations: parsed.hypotheses.map(h => h.cause) });
+          setDebugInfo({
+            title: parsed.title,
+            description: parsed.description,
+            observations: parsed.hypotheses.map((h) => h.cause),
+          });
         }
       }
-    } catch (e) { console.error('Debug analysis error:', e); }
+    } catch (e) {
+      console.error("Debug analysis error:", e);
+    }
     setIsAnalyzing(false);
   }, [errorInput, model, workspaceRoot, getActiveFile, setDebugInfo]);
 
-  const executeStep = useCallback(async (step: DebugIssue['steps'][0]) => { // 执行验证步骤
-    if (step.command) {
-      const res = await window.mindcode?.terminal?.execute?.(step.command, workspaceRoot || undefined);
-      if (res) { setCollectedLogs(prev => prev + `\n[Step ${step.order}] ${step.command}\n${res.data?.stdout || res.data?.stderr || res.error || ''}`); }
-    }
-    setCompletedSteps(s => new Set([...s, step.order]));
-  }, [workspaceRoot]);
+  const executeStep = useCallback(
+    async (step: DebugIssue["steps"][0]) => {
+      // 执行验证步骤
+      if (step.command) {
+        const res = await window.mindcode?.terminal?.execute?.(
+          step.command,
+          workspaceRoot || undefined,
+        );
+        if (res) {
+          setCollectedLogs(
+            (prev) =>
+              prev +
+              `\n[Step ${step.order}] ${step.command}\n${res.data?.stdout || res.data?.stderr || res.error || ""}`,
+          );
+        }
+      }
+      setCompletedSteps((s) => new Set([...s, step.order]));
+    },
+    [workspaceRoot],
+  );
 
-  const applyFix = useCallback(async (fix: DebugIssue['fixes'][0]) => { // 应用修复
-    if (fix.diff) navigator.clipboard.writeText(fix.diff);
-    // 提示用户切换到 Agent 模式应用修复
-    if (confirm(`是否切换到 Agent 模式自动应用修复？\n\n${fix.title}`)) {
-      addContext({ id: `fix-${Date.now()}`, type: 'error', label: '修复方案', data: { content: `应用修复: ${fix.title}\n\n${fix.description}\n\n${fix.diff || ''}` } });
-      setMode('agent');
-    }
-  }, [addContext, setMode]);
+  const applyFix = useCallback(
+    async (fix: DebugIssue["fixes"][0]) => {
+      // 应用修复
+      if (fix.diff) navigator.clipboard.writeText(fix.diff);
+      // 提示用户切换到 Agent 模式应用修复
+      if (confirm(`是否切换到 Agent 模式自动应用修复？\n\n${fix.title}`)) {
+        addContext({
+          id: `fix-${Date.now()}`,
+          type: "error",
+          label: "修复方案",
+          data: { content: `应用修复: ${fix.title}\n\n${fix.description}\n\n${fix.diff || ""}` },
+        });
+        setMode("agent");
+      }
+    },
+    [addContext, setMode],
+  );
 
-  const clearDebug = useCallback(() => { setIssue(null); setDebugInfo(null); setErrorInput(''); setCompletedSteps(new Set()); setCollectedLogs(''); }, [setDebugInfo]);
+  const clearDebug = useCallback(() => {
+    setIssue(null);
+    setDebugInfo(null);
+    setErrorInput("");
+    setCompletedSteps(new Set());
+    setCollectedLogs("");
+  }, [setDebugInfo]);
 
   if (!issue) {
     return (
       <div className="ai-debug-view">
         <div className="ai-debug-input-section">
           <div className="ai-debug-section-title">📋 粘贴或输入错误信息</div>
-          <textarea className="ai-debug-error-input" value={errorInput} onChange={e => setErrorInput(e.target.value)} placeholder="粘贴错误日志、堆栈跟踪或描述遇到的问题..." rows={6} />
+          <textarea
+            className="ai-debug-error-input"
+            value={errorInput}
+            onChange={(e) => setErrorInput(e.target.value)}
+            placeholder="粘贴错误日志、堆栈跟踪或描述遇到的问题..."
+            rows={6}
+          />
           <div className="ai-debug-collect-actions">
-            <button className="ai-debug-btn" onClick={collectFromTerminal}>从终端收集</button>
-            <button className="ai-debug-btn" onClick={collectFromGit}>从 Git 收集</button>
+            <button className="ai-debug-btn" onClick={collectFromTerminal}>
+              从终端收集
+            </button>
+            <button className="ai-debug-btn" onClick={collectFromGit}>
+              从 Git 收集
+            </button>
           </div>
-          <button className="ai-debug-btn primary" onClick={analyzeError} disabled={!errorInput.trim() || isAnalyzing}>{isAnalyzing ? '分析中...' : '开始分析'}</button>
+          <button
+            className="ai-debug-btn primary"
+            onClick={analyzeError}
+            disabled={!errorInput.trim() || isAnalyzing}
+          >
+            {isAnalyzing ? "分析中..." : "开始分析"}
+          </button>
         </div>
         {!errorInput && (
           <div className="ai-empty-state">
             <div className="ai-empty-state-icon">🐛</div>
             <div className="ai-empty-state-text">Debug 模式帮你系统排查问题</div>
-            <div className="ai-empty-state-hint">粘贴错误信息或从终端/Git 收集，AI 会分析原因并给出解决方案</div>
+            <div className="ai-empty-state-hint">
+              粘贴错误信息或从终端/Git 收集，AI 会分析原因并给出解决方案
+            </div>
           </div>
         )}
-        <div className="ai-debug-footer"><ModelPicker model={model} onModelChange={setModel} disabled={isAnalyzing} /></div>
+        <div className="ai-debug-footer">
+          <ModelPicker model={model} onModelChange={setModel} disabled={isAnalyzing} />
+        </div>
       </div>
     );
   }
@@ -122,7 +197,7 @@ ${errorInput}
       <div className="ai-debug-section">
         <div className="ai-debug-section-title">💡 可能原因 (Top {issue.hypotheses.length})</div>
         <div className="ai-debug-hypotheses">
-          {issue.hypotheses.map(h => (
+          {issue.hypotheses.map((h) => (
             <div key={h.rank} className="ai-debug-hypothesis">
               <div className="ai-debug-hypothesis-header">
                 <span className="ai-debug-hypothesis-rank">#{h.rank}</span>
@@ -150,12 +225,29 @@ ${errorInput}
 
       <div className="ai-debug-section">
         <div className="ai-debug-section-title">🔍 验证步骤</div>
-        {issue.steps.map(step => (
-          <div key={step.order} className={`ai-debug-step ${completedSteps.has(step.order) ? 'completed' : ''}`}>
+        {issue.steps.map((step) => (
+          <div
+            key={step.order}
+            className={`ai-debug-step ${completedSteps.has(step.order) ? "completed" : ""}`}
+          >
             <div className="ai-debug-step-header">
-              <input type="checkbox" checked={completedSteps.has(step.order)} onChange={() => setCompletedSteps(s => { const n = new Set(s); n.has(step.order) ? n.delete(step.order) : n.add(step.order); return n; })} />
+              <input
+                type="checkbox"
+                checked={completedSteps.has(step.order)}
+                onChange={() =>
+                  setCompletedSteps((s) => {
+                    const n = new Set(s);
+                    n.has(step.order) ? n.delete(step.order) : n.add(step.order);
+                    return n;
+                  })
+                }
+              />
               <span className="ai-debug-step-order">步骤 {step.order}</span>
-              {step.command && <button className="ai-debug-step-run" onClick={() => executeStep(step)}>执行</button>}
+              {step.command && (
+                <button className="ai-debug-step-run" onClick={() => executeStep(step)}>
+                  执行
+                </button>
+              )}
             </div>
             <div className="ai-debug-step-action">{step.action}</div>
             {step.command && <code className="ai-debug-step-cmd">{step.command}</code>}
@@ -179,14 +271,21 @@ ${errorInput}
       {issue.fixes.length > 0 && (
         <div className="ai-debug-section">
           <div className="ai-debug-section-title">🔧 修复方案</div>
-          {issue.fixes.map(fix => (
+          {issue.fixes.map((fix) => (
             <div key={fix.id} className="ai-debug-fix">
               <div className="ai-debug-fix-title">{fix.title}</div>
               <div className="ai-debug-fix-desc">{fix.description}</div>
               {fix.diff && <pre className="ai-debug-fix-diff">{fix.diff}</pre>}
               <div className="ai-debug-fix-actions">
-                <button className="ai-debug-btn" onClick={() => navigator.clipboard.writeText(fix.diff || fix.description)}>复制</button>
-                <button className="ai-debug-btn primary" onClick={() => applyFix(fix)}>应用修复</button>
+                <button
+                  className="ai-debug-btn"
+                  onClick={() => navigator.clipboard.writeText(fix.diff || fix.description)}
+                >
+                  复制
+                </button>
+                <button className="ai-debug-btn primary" onClick={() => applyFix(fix)}>
+                  应用修复
+                </button>
               </div>
             </div>
           ))}
@@ -201,10 +300,16 @@ ${errorInput}
       )}
 
       <div className="ai-debug-actions">
-        <button className="ai-debug-btn" onClick={clearDebug}>清除</button>
-        <button className="ai-debug-btn" onClick={analyzeError} disabled={isAnalyzing}>重新分析</button>
+        <button className="ai-debug-btn" onClick={clearDebug}>
+          清除
+        </button>
+        <button className="ai-debug-btn" onClick={analyzeError} disabled={isAnalyzing}>
+          重新分析
+        </button>
       </div>
-      <div className="ai-debug-footer"><ModelPicker model={model} onModelChange={setModel} disabled={isAnalyzing} /></div>
+      <div className="ai-debug-footer">
+        <ModelPicker model={model} onModelChange={setModel} disabled={isAnalyzing} />
+      </div>
     </div>
   );
 };

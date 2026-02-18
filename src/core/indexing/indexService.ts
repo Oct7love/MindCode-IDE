@@ -13,7 +13,6 @@ import type {
   CodeSymbol,
   SearchQuery,
   SearchResults,
-  DEFAULT_INDEX_CONFIG,
 } from "./types";
 import type { IndexStore } from "./storage/sqliteStore";
 import { createIndexStore } from "./storage/sqliteStore";
@@ -145,10 +144,9 @@ export class IndexService {
       // 2. 索引文件
       let indexedCount = 0;
       let symbolCount = 0;
-
       for (const filePath of filesToIndex) {
         if (this.abortController.signal.aborted) {
-          console.log("[IndexService] 索引已取消");
+          console.warn("[IndexService] 索引已取消");
           break;
         }
 

@@ -152,7 +152,10 @@ class ConfigManager {
         const parsed = JSON.parse(stored);
         Object.keys(parsed).forEach((key) => {
           if (key in this.config)
-            (this.config as any)[key] = { ...(this.config as any)[key], ...parsed[key] };
+            (this.config as Record<string, unknown>)[key] = {
+              ...((this.config as Record<string, unknown>)[key] as object),
+              ...parsed[key],
+            };
         });
       }
     } catch {}

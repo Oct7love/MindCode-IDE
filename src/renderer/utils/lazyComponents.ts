@@ -54,6 +54,7 @@ function LoadingFallback(): React.ReactElement {
 /**
  * 创建懒加载组件
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createLazyComponent<T extends React.ComponentType<any>>(
   loader: () => Promise<{ default: T }>,
   fallback?: React.ReactNode,
@@ -64,6 +65,7 @@ export function createLazyComponent<T extends React.ComponentType<any>>(
     return createElement(
       Suspense,
       { fallback: fallback || createElement(LoadingFallback) },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       createElement(LazyComponent, props as any),
     );
   };
@@ -108,7 +110,9 @@ export function preloadCriticalComponents() {
   };
 
   if ("requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(preload, { timeout: 2000 });
+    (
+      window as unknown as Record<string, (cb: () => void, opts: { timeout: number }) => void>
+    ).requestIdleCallback(preload, { timeout: 2000 });
   } else {
     setTimeout(preload, 1000);
   }
@@ -126,7 +130,9 @@ export function preloadAIComponents() {
   };
 
   if ("requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(preload, { timeout: 3000 });
+    (
+      window as unknown as Record<string, (cb: () => void, opts: { timeout: number }) => void>
+    ).requestIdleCallback(preload, { timeout: 3000 });
   } else {
     setTimeout(preload, 1500);
   }

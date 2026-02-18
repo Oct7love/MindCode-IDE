@@ -48,7 +48,7 @@ class CompletionService {
     baseUrl = "http://localhost:8765",
     defaultDebounceMs = 20,
     instantDebounceMs = 0,
-    cacheSize = 500,
+    _cacheSize = 500,
   ) {
     // 极速：20ms/0ms
     this.baseUrl = baseUrl;

@@ -3,7 +3,7 @@
  * 职责: 组件编排，UI 渲染
  * 逻辑已提取至 hooks/useChatEngine, useComposerState, useScrollAnchor
  */
-import React, { useState, useCallback, useRef, useEffect, memo, ImgHTMLAttributes } from "react";
+import React, { useState, useCallback, useRef, useEffect, memo } from "react";
 import type { AIMode, ToolCallStatus, ImageAttachment } from "../../stores";
 import { useAIStore } from "../../stores";
 import { useChatEngine, useComposerState, useScrollAnchor } from "./hooks";
@@ -14,11 +14,9 @@ import { ContextPicker } from "./ContextPicker";
 import { ContextChip } from "./ContextChip";
 import { ModelPicker, MODELS, TOOL_CAPABLE_MODELS } from "./ModelPicker";
 import { MarkdownRenderer } from "../MarkdownRenderer";
-import { ToolBlock, ToolStatus } from "./ToolBlock";
 import { TypingIndicator } from "./TypingIndicator";
 import { useCopyFeedback } from "./CopyFeedback";
 import { AssistantMessage } from "./AssistantMessage";
-import { MessageActions } from "./MessageActions";
 import "../../styles/chat-tokens.css";
 import "../../styles/markdown.css";
 import "./UnifiedChatView.css";
@@ -59,7 +57,7 @@ const ImagePreview: React.FC<{
   }, []);
 
   const handleError = useCallback(
-    (e: React.SyntheticEvent<HTMLImageElement>) => {
+    (_e: React.SyntheticEvent<HTMLImageElement>) => {
       // 如果 blob URL 加载失败，且有 data URL 可用，则回退
       if (!useFallback && blobUrl && src && src.startsWith("data:")) {
         // Blob URL failed, falling back to data URL
@@ -130,7 +128,7 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
     getCurrentConversation,
     contexts,
     removeContext,
-    createConversation,
+    createConversation: _createConversation,
   } = useAIStore();
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [pickerPos, setPickerPos] = useState<{ x: number; y: number } | undefined>();
@@ -175,7 +173,7 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
     setShowPicker,
     handleKeyDown: originalKeyDown,
     handleInputChange,
-    handleSend: originalHandleSend,
+    handleSend: _originalHandleSend,
   } = useComposerState({
     onSend: (text) => {
       engineSend(text, images);
@@ -204,7 +202,7 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
   }, [input, images, engineSend, setInput]);
 
   // 检查当前模型是否支持图片
-  const supportsVision = VISION_CAPABLE_MODELS.includes(model);
+  const _supportsVision = VISION_CAPABLE_MODELS.includes(model);
 
   // 处理粘贴图片 - 使用 Blob URL
   const handlePaste = useCallback(

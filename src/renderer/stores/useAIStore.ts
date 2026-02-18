@@ -26,8 +26,10 @@ export interface ContextItem {
 export interface ToolCallStatus {
   id: string;
   name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args: any;
   status: "pending" | "running" | "success" | "failed";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   result?: any;
   error?: string;
 }

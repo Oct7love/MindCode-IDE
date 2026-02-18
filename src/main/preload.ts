@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { IpcRendererEvent } from "electron";
-import type { ChatMessage, ToolCallInfo, ToolSchema } from "../shared/types/ai";
+import type { ChatMessage, ToolSchema } from "../shared/types/ai";
 import type {
   SettingValue,
   CompletionRequest,

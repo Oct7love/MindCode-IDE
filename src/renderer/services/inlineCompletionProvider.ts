@@ -52,6 +52,7 @@ async function getLSPCompletion(
   col: number,
 ): Promise<string | null> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const win = window as any;
     if (!win.mindcode?.lsp?.request) return null;
     const result = await win.mindcode.lsp.request(lang, "textDocument/completion", {
@@ -61,7 +62,7 @@ async function getLSPCompletion(
     if (!result?.success || !result.data) return null;
     const items = Array.isArray(result.data) ? result.data : result.data.items || [];
     if (items.length === 0) return null;
-    const best = items.sort((a: any, b: any) =>
+    const best = items.sort((a: Record<string, string>, b: Record<string, string>) =>
       (b.sortText || b.label) < (a.sortText || a.label) ? 1 : -1,
     )[0]; // 取最佳匹配
     return best?.insertText || best?.label || null;

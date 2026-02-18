@@ -4,7 +4,7 @@
 
 export interface SyncMessage {
   type: string;
-  payload: any;
+  payload: unknown;
   timestamp: number;
   source: string;
 }
@@ -36,7 +36,7 @@ class StateSync {
   }
 
   /** 发送同步消息 */
-  broadcast(type: string, payload: any): void {
+  broadcast(type: string, payload: unknown): void {
     if (!this.enabled || !this.channel) return;
     const message: SyncMessage = { type, payload, timestamp: Date.now(), source: this.instanceId };
     this.channel.postMessage(message);
@@ -69,7 +69,7 @@ class StateSync {
     // 发送当前状态
     this.broadcast(`state:${key}`, getValue());
     // 监听状态变化
-    return this.on(`state:${key}`, (msg) => setValue(msg.payload));
+    return this.on(`state:${key}`, (msg) => setValue(msg.payload as T));
   }
 
   /** 请求其他窗口的状态 */
@@ -116,7 +116,7 @@ export const sync = {
   fileOpened: (path: string) => stateSync.broadcast(SyncTypes.FILE_OPENED, { path }),
   fileClosed: (path: string) => stateSync.broadcast(SyncTypes.FILE_CLOSED, { path }),
   fileSaved: (path: string) => stateSync.broadcast(SyncTypes.FILE_SAVED, { path }),
-  settingsChanged: (key: string, value: any) =>
+  settingsChanged: (key: string, value: unknown) =>
     stateSync.broadcast(SyncTypes.SETTINGS_CHANGED, { key, value }),
   themeChanged: (theme: string) => stateSync.broadcast(SyncTypes.THEME_CHANGED, { theme }),
 };

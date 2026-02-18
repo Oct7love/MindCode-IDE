@@ -9,6 +9,7 @@ export interface FileChangeEvent {
 }
 type FileChangeHandler = (event: FileChangeEvent) => void;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const win = window as any;
 
 class FileWatcher {

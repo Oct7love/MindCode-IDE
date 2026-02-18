@@ -14,7 +14,7 @@ import {
   buildThinkingUserPrompt,
   parseThinkingOutput,
 } from "../../../../core/ai/thinking-prompt";
-import { ModelRouter, detectTaskType, TaskType } from "../../../../core/ai/model-router";
+import { ModelRouter } from "../../../../core/ai/model-router";
 import type { ToolCallInfo } from "@shared/types/ai";
 import { agentToolService } from "../../../services/agentToolService";
 import { collectCodebaseContext, formatCodebaseContext } from "../../../services/indexService";
@@ -395,7 +395,9 @@ export function useChatEngine(options: ChatEngineOptions) {
         }
 
         setThinkingUIData(partialData);
-      } catch {}
+      } catch {
+        /* 忽略解析错误 */
+      }
     },
     [setThinkingUIData],
   );
@@ -427,7 +429,7 @@ export function useChatEngine(options: ChatEngineOptions) {
   }, [setThinkingUIData, setThinkingUIStartTime]);
 
   // 路径解析
-  const resolvePath = useCallback(
+  const _resolvePath = useCallback(
     (p: string) => {
       if (p?.match(/^[a-zA-Z]:[/\\]/) || p?.startsWith("/")) return p;
       return workspaceRoot ? `${workspaceRoot}/${p}`.replace(/\\/g, "/") : p;
@@ -506,7 +508,7 @@ export function useChatEngine(options: ChatEngineOptions) {
       "codesuc-sonnet": "claude-sonnet-4-5-20250929",
       "codesuc-haiku": "claude-haiku-4-5-20251001",
     };
-    const actualModel = actualModelMap[model] || model;
+    const _actualModel = actualModelMap[model] || model;
 
     // 上下文信息
     const context = workspaceRoot

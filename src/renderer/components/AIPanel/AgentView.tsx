@@ -7,9 +7,10 @@ import "./AgentView.css";
 interface ToolCall {
   id: string;
   name: string;
-  args: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args: Record<string, any>;
   status: "pending" | "running" | "success" | "failed";
-  result?: any;
+  result?: unknown;
   error?: string;
 }
 interface AgentMessage {
@@ -56,8 +57,12 @@ export const AgentView: React.FC = memo(() => {
   );
 
   const executeTool = useCallback(
-    async (name: string, args: any): Promise<{ success: boolean; data?: any; error?: string }> => {
-      console.log(`[Agent] executeTool: ${name}`, args); // 调试日志
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (
+      name: string,
+      args: Record<string, any>,
+    ): Promise<{ success: boolean; data?: unknown; error?: string }> => {
+      if (process.env.NODE_ENV === "development") console.log(`[Agent] executeTool: ${name}`, args);
       try {
         switch (name) {
           case "workspace_listDir":
@@ -122,9 +127,9 @@ export const AgentView: React.FC = memo(() => {
           default:
             return { success: false, error: `未知工具: ${name}` };
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(`[Agent] Tool error: ${name}`, e);
-        return { success: false, error: e.message };
+        return { success: false, error: e instanceof Error ? e.message : String(e) };
       }
     },
     [workspaceRoot, getActiveFile, resolvePath],
@@ -237,7 +242,8 @@ export const AgentView: React.FC = memo(() => {
     const chatHistory = messages
       .filter((m) => m.role !== "tool")
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-    const apiMessages: any[] = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const apiMessages: Record<string, any>[] = [
       { role: "system", content: systemPrompt },
       ...chatHistory,
       { role: "user", content: userMsg.content },
@@ -248,33 +254,39 @@ export const AgentView: React.FC = memo(() => {
 
     while (iterations < maxIterations && !abortRef.current) {
       iterations++;
-      let responseText = "",
-        toolCalls: any[] = [];
+      let responseText = "";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let toolCalls: any[] = [];
       try {
         await new Promise<void>((resolve, reject) => {
           if (!window.mindcode?.ai?.chatStreamWithTools) {
             reject(new Error("API 不可用"));
             return;
           }
-          window.mindcode.ai.chatStreamWithTools(model, apiMessages, tools, {
-            onToken: (token) => {
-              responseText += token;
-              setStreamingText((prev) => prev + token);
+          window.mindcode.ai.chatStreamWithTools(
+            model,
+            apiMessages as import("@shared/types/ai").ChatMessage[],
+            tools,
+            {
+              onToken: (token) => {
+                responseText += token;
+                setStreamingText((prev) => prev + token);
+              },
+              onToolCall: (calls) => {
+                toolCalls = calls;
+              },
+              onComplete: () => resolve(),
+              onError: (err) => reject(new Error(err)),
             },
-            onToolCall: (calls) => {
-              toolCalls = calls;
-            },
-            onComplete: () => resolve(),
-            onError: (err) => reject(new Error(err)),
-          });
+          );
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         setMessages((m) => [
           ...m,
           {
             id: `msg-${Date.now()}`,
             role: "assistant",
-            content: `错误: ${e.message}`,
+            content: `错误: ${e instanceof Error ? e.message : String(e)}`,
             timestamp: Date.now(),
           },
         ]);

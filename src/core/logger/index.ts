@@ -9,7 +9,8 @@ export interface LogEntry {
   message: string;
   timestamp: number;
   source?: string;
-  data?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: any; // 日志系统需接受任意类型数据
 }
 
 const LOG_LEVELS: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
@@ -156,8 +157,8 @@ function _onUnhandledRejection(e: PromiseRejectionEvent) {
 }
 
 if (typeof window !== "undefined") {
-  window.removeEventListener("error", _onGlobalError as any);
-  window.removeEventListener("unhandledrejection", _onUnhandledRejection as any);
-  window.addEventListener("error", _onGlobalError as any);
-  window.addEventListener("unhandledrejection", _onUnhandledRejection as any);
+  window.removeEventListener("error", _onGlobalError as EventListener);
+  window.removeEventListener("unhandledrejection", _onUnhandledRejection as EventListener);
+  window.addEventListener("error", _onGlobalError as EventListener);
+  window.addEventListener("unhandledrejection", _onUnhandledRejection as EventListener);
 }

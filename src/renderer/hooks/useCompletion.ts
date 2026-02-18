@@ -124,9 +124,9 @@ export function useCompletion(): UseCompletionReturn {
           }
           return null;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (currentRequestId !== requestIdRef.current) return null;
-        if (err.name !== "AbortError") {
+        if (err instanceof Error && err.name !== "AbortError") {
           setError(err.message || "Completion failed");
         }
         return null;

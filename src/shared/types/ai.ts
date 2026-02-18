@@ -20,13 +20,13 @@ export interface ChatMessage {
 export interface ToolSchema {
   name: string;
   description: string;
-  parameters: { type: "object"; properties: Record<string, any>; required?: string[] };
+  parameters: { type: "object"; properties: Record<string, unknown>; required?: string[] };
 }
 
 export interface ToolCallInfo {
   id: string;
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 export interface ToolCallbacks extends StreamCallbacks {

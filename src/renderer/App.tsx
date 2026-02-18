@@ -67,7 +67,7 @@ const App: React.FC = () => {
   const [tab, setTab] = useState<SidebarTab>("files");
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [commandPaletteMode, setCommandPaletteMode] = useState<"files" | "commands" | "search">(
+  const [_commandPaletteMode, setCommandPaletteMode] = useState<"files" | "commands" | "search">(
     "files",
   );
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);

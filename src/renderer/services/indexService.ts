@@ -42,7 +42,7 @@ interface IndexStore extends IndexState {
 }
 
 /** 索引状态 Store */
-export const useIndexStore = create<IndexStore>((set, get) => ({
+export const useIndexStore = create<IndexStore>((set, _get) => ({
   status: "idle",
   totalFiles: 0,
   indexedFiles: 0,
@@ -69,8 +69,8 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
       if (!result.success) {
         set({ status: "error", error: result.error });
       }
-    } catch (err: any) {
-      set({ status: "error", error: err.message });
+    } catch (err: unknown) {
+      set({ status: "error", error: err instanceof Error ? err.message : String(err) });
     }
   },
 
@@ -80,7 +80,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
     try {
       await window.mindcode.index.cancel();
       set({ status: "idle" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[IndexService] 取消索引失败:", err);
     }
   },
@@ -102,7 +102,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
           totalChunks: 0,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[IndexService] 清空索引失败:", err);
     }
   },
@@ -117,7 +117,7 @@ export const useIndexStore = create<IndexStore>((set, get) => ({
     try {
       const stats = await window.mindcode.index.getStats();
       set({ stats });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[IndexService] 获取统计失败:", err);
     }
   },

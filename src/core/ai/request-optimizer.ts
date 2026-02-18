@@ -19,7 +19,7 @@ export async function warmupConnections(): Promise<void> {
   warmedUp = true;
   const start = Date.now();
   await Promise.allSettled(
-    Object.entries(warmupEndpoints).map(async ([name, url]) => {
+    Object.entries(warmupEndpoints).map(async ([_name, url]) => {
       try {
         await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(2000) });
       } catch {

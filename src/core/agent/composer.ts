@@ -3,7 +3,7 @@
  * 类似 Cursor Composer，支持项目级别的代码修改
  */
 
-import type { TaskPlan, SubTask, Checkpoint, TaskStatus } from "./types";
+import type { Checkpoint, TaskStatus } from "./types";
 import type { TaskPlanner } from "./planner";
 import { createPlanner } from "./planner";
 import type { CheckpointManager } from "./checkpointManager";

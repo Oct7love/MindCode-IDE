@@ -11,7 +11,7 @@
  */
 import React, { memo, useCallback } from "react";
 import type { ImageAttachment } from "../../stores";
-import { useAIStore, AIMode } from "../../stores";
+import { useAIStore } from "../../stores";
 import { ContextChip } from "./ContextChip";
 import { ModelPicker, TOOL_CAPABLE_MODELS } from "./ModelPicker";
 import { ModeSelector } from "./ModeSelector";
@@ -60,7 +60,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = memo(
         const items = e.clipboardData?.items;
         if (!items || !onImagesChange) return;
 
-        const newImages: ImageAttachment[] = [];
+        const _newImages: ImageAttachment[] = [];
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
           if (item.type.startsWith("image/")) {

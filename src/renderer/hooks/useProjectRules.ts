@@ -60,8 +60,8 @@ export function useProjectRules(): UseProjectRulesReturn {
     try {
       const loadedRules = await loadProjectRules(workspaceRoot);
       setRules(loadedRules);
-    } catch (err: any) {
-      setError(err.message || "加载规则失败");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "加载规则失败");
     } finally {
       setIsLoading(false);
     }

@@ -3,7 +3,7 @@
  * 显示LSP诊断信息(错误、警告、提示)
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { lspClients } from "../../services/lspProviders";
 import type { Diagnostic } from "../../../core/lsp/types";
 import "./DiagnosticsPanel.css";
@@ -18,7 +18,7 @@ interface DiagnosticsPanelProps {
 }
 
 export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({ onJumpToLocation }) => {
-  const [diagnostics, setDiagnostics] = useState<DiagnosticsGroup[]>([]);
+  const [diagnostics, _setDiagnostics] = useState<DiagnosticsGroup[]>([]);
   const [filter, setFilter] = useState<"all" | "error" | "warning" | "info">("all");
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
@@ -26,7 +26,7 @@ export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({ onJumpToLoca
     // 监听LSP通知
     const cleanupFuncs: (() => void)[] = [];
 
-    lspClients.forEach((client, language) => {
+    lspClients.forEach((_client, _language) => {
       // TODO: 实现诊断监听
       // 目前需要在LSP Client中添加诊断事件
     });
@@ -66,7 +66,7 @@ export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({ onJumpToLoca
     }
   };
 
-  const getSeverityText = (severity: number) => {
+  const _getSeverityText = (severity: number) => {
     switch (severity) {
       case 1:
         return "Error";

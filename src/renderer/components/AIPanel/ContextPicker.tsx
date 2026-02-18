@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useAIStore, useFileStore, ContextItem } from "../../stores";
+import { useAIStore, useFileStore } from "../../stores";
 import "./ContextPicker.css";
 
 type PickerMode =
@@ -24,7 +24,7 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({
   isOpen,
   onClose,
   position,
-  inputRef,
+  inputRef: _inputRef,
 }) => {
   const { addContext } = useAIStore();
   const { fileTree, workspaceRoot, getActiveFile } = useFileStore();
@@ -244,20 +244,18 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({
               )
             : res.data;
           setResults(
-            filtered
-              .slice(0, 10)
-              .map((c: any) => ({
-                id: c.hash,
-                label: `${c.shortHash} - ${c.message.slice(0, 50)}`,
-                type: "git" as const,
-                data: {
-                  hash: c.hash,
-                  message: c.message,
-                  author: c.author,
-                  date: c.date,
-                  content: `提交: ${c.shortHash}\n作者: ${c.author}\n日期: ${c.date}\n\n${c.message}`,
-                },
-              })),
+            filtered.slice(0, 10).map((c: any) => ({
+              id: c.hash,
+              label: `${c.shortHash} - ${c.message.slice(0, 50)}`,
+              type: "git" as const,
+              data: {
+                hash: c.hash,
+                message: c.message,
+                author: c.author,
+                date: c.date,
+                content: `提交: ${c.shortHash}\n作者: ${c.author}\n日期: ${c.date}\n\n${c.message}`,
+              },
+            })),
           );
         }
       } catch {

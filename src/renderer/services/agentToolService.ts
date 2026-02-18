@@ -9,9 +9,9 @@
  * 5. 智能重试 - 临时失败自动重试
  */
 
-import { isToolCallBlocked, toolPermissions } from "../../core/ai/tools/schemas";
+import { isToolCallBlocked } from "../../core/ai/tools/schemas";
 import { getLSPClient } from "../../core/lsp/client";
-import type { DocumentSymbol, CompletionItem, Hover, Location } from "../../core/lsp/types";
+import type { DocumentSymbol } from "../../core/lsp/types";
 
 // ==================== Types ====================
 

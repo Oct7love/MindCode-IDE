@@ -148,15 +148,21 @@ export const persistentCache = new CacheManager(1000, 86400000); // 24小时TTL
 
 // 装饰器：缓存方法结果
 export function cached(ttl?: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function <T extends (...args: any[]) => any>(
-    _target: any,
+    _target: unknown,
     propertyKey: string,
     descriptor: TypedPropertyDescriptor<T>,
   ) {
     const original = descriptor.value!;
-    descriptor.value = function (this: any, ...args: Parameters<T>): ReturnType<T> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    descriptor.value = function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
       const key = `${propertyKey}:${JSON.stringify(args)}`;
-      return globalCache.getOrSet(key, () => original.apply(this, args), ttl) as ReturnType<T>;
+      return globalCache.getOrSet(
+        key,
+        () => original.apply(this as unknown, args),
+        ttl,
+      ) as ReturnType<T>;
     } as T;
     return descriptor;
   };

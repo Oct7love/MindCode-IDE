@@ -154,7 +154,7 @@ class MessageCompressor {
   extractKeyInfo(messages: Message[]): string[] {
     const keywords: string[] = [];
     const codeBlockRegex = /```[\s\S]*?```/g;
-    const filePathRegex = /[\/\\][\w\-\.\/\\]+\.\w+/g;
+    const filePathRegex = /[/\\][\w\-./\\]+\.\w+/g;
 
     messages.forEach((m) => {
       const codeBlocks = m.content.match(codeBlockRegex) || [];

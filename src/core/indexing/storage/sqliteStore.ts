@@ -3,16 +3,7 @@
  * 使用 sql.js（纯 JS 实现的 SQLite）
  */
 
-import type {
-  CodeSymbol,
-  FileIndex,
-  CallRelation,
-  FileDependency,
-  CodeChunk,
-  SearchResults,
-  SearchQuery,
-  SearchResult,
-} from "../types";
+import type { CodeSymbol, FileIndex, CallRelation, FileDependency, CodeChunk } from "../types";
 
 // sql.js 类型（运行时动态加载）
 interface SqlJsDatabase {

@@ -35,7 +35,7 @@ const POLL_INTERVAL_MS = 30;
 // 注释模式检测
 const COMMENT_PATTERNS = ["//", "/*", "#", '"""', "'''", "<!--"];
 
-function shouldUseBlockMode(content: string, lineNumber: number): boolean {
+function _shouldUseBlockMode(content: string, lineNumber: number): boolean {
   const lines = content.split("\n");
   if (lineNumber < 1 || lineNumber > lines.length) return false;
   const currentLine = lines[lineNumber - 1] || "";

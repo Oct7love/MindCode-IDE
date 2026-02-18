@@ -27,6 +27,7 @@ export interface ReplaceResult {
   replacements: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const win = window as any;
 
 class SearchEngine {

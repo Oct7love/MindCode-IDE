@@ -13,15 +13,9 @@ import {
   CompletionRequestConfig,
   DEFAULT_COMPLETION_REQUEST_CONFIG,
   getModelConfig,
-  detectLanguage,
 } from "./completion-config";
 
-import {
-  CompletionContext,
-  DiagnosticInfo,
-  buildCompletionContext,
-  extractDiagnosticsFromMonaco,
-} from "./completion-context";
+import { CompletionContext, DiagnosticInfo, buildCompletionContext } from "./completion-context";
 
 import type { PromptGeneratorOptions } from "./completion-prompt";
 import {

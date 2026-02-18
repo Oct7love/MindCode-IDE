@@ -6,7 +6,9 @@ type EventCallback<T = unknown> = (data: T) => void;
 type EventMap = Record<string, unknown>;
 
 class EventBus<E extends EventMap = EventMap> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private listeners = new Map<keyof E, Set<EventCallback<any>>>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onceListeners = new Map<keyof E, Set<EventCallback<any>>>();
   private history = new Map<keyof E, unknown>();
 

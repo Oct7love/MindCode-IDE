@@ -3,6 +3,7 @@
  */
 
 // 防抖
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => any>(
   fn: T,
   ms: number,
@@ -19,6 +20,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // 节流
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function throttle<T extends (...args: any[]) => any>(fn: T, ms: number): T {
   let last = 0;
   return ((...args: Parameters<T>) => {
@@ -36,7 +38,8 @@ export function deepClone<T>(obj: T): T {
   if (Array.isArray(obj)) return obj.map(deepClone) as T;
   const clone = {} as T;
   for (const key in obj)
-    if (Object.prototype.hasOwnProperty.call(obj, key)) (clone as any)[key] = deepClone(obj[key]);
+    if (Object.prototype.hasOwnProperty.call(obj, key))
+      (clone as Record<string, unknown>)[key] = deepClone((obj as Record<string, unknown>)[key]);
   return clone;
 }
 
@@ -45,12 +48,15 @@ export function deepMerge<T extends object>(target: T, ...sources: Partial<T>[])
   for (const source of sources) {
     for (const key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
-        const targetVal = (target as any)[key],
-          sourceVal = (source as any)[key];
+        const targetVal = (target as Record<string, unknown>)[key],
+          sourceVal = (source as Record<string, unknown>)[key];
         if (sourceVal && typeof sourceVal === "object" && !Array.isArray(sourceVal)) {
-          (target as any)[key] = deepMerge(targetVal || {}, sourceVal);
+          (target as Record<string, unknown>)[key] = deepMerge(
+            (targetVal || {}) as Record<string, unknown>,
+            sourceVal as Record<string, unknown>,
+          );
         } else {
-          (target as any)[key] = sourceVal;
+          (target as Record<string, unknown>)[key] = sourceVal;
         }
       }
     }
@@ -218,7 +224,8 @@ export class LRUCache<K, V> {
 }
 
 // 事件总线
-export class EventBus<T extends Record<string, any>> {
+export class EventBus<T extends Record<string, unknown>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private listeners = new Map<keyof T, Set<(data: any) => void>>();
   on<K extends keyof T>(event: K, handler: (data: T[K]) => void): () => void {
     if (!this.listeners.has(event)) this.listeners.set(event, new Set());

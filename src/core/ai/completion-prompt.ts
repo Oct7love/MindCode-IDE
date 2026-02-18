@@ -376,13 +376,18 @@ export function parseMultiCandidateOutput(output: string): Array<{ text: string;
     const parsed = JSON.parse(cleaned);
 
     if (parsed.candidates && Array.isArray(parsed.candidates)) {
-      return parsed.candidates
-        .filter((c: any) => typeof c.text === "string")
-        .map((c: any) => ({
+      return (parsed.candidates as unknown[])
+        .filter(
+          (c): c is { text: string; score?: number } =>
+            typeof c === "object" &&
+            c !== null &&
+            typeof (c as Record<string, unknown>).text === "string",
+        )
+        .map((c) => ({
           text: cleanCompletionOutput(c.text),
           score: typeof c.score === "number" ? c.score : 0.5,
         }))
-        .sort((a: any, b: any) => b.score - a.score);
+        .sort((a, b) => b.score - a.score);
     }
   } catch {
     // JSON 解析失败，返回单个候选

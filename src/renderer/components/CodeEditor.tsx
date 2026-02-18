@@ -253,7 +253,7 @@ const shouldUseBlockMode = (content: string, lineNumber: number): boolean => {
  * - 智能 block/inline 模式切换
  * - 多行补全支持
  */
-const createLocalCompletionProvider = (): monaco.languages.InlineCompletionsProvider => ({
+const _createLocalCompletionProvider = (): monaco.languages.InlineCompletionsProvider => ({
   provideInlineCompletions: async (monacoModel, position, _context, token) => {
     const fullContent = monacoModel.getValue();
 
@@ -316,7 +316,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   wordWrap = "off",
   fontSize = 12, // 紧凑模式
   enableGhostText = true,
-  completionModel = "gemini-2.5-flash-lite", // 使用 Gemini 2.5 Flash Lite 做代码补全
+  completionModel: _completionModel = "gemini-2.5-flash-lite", // 使用 Gemini 2.5 Flash Lite 做代码补全
   workspacePath,
   onLSPStatusChange,
   onAIEdit,

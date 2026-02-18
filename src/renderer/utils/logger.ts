@@ -12,8 +12,6 @@
 
 const isDev = typeof process !== "undefined" ? process.env.NODE_ENV === "development" : false;
 
-type LogLevel = "debug" | "info" | "warn" | "error";
-
 interface Logger {
   debug: (...args: unknown[]) => void;
   info: (...args: unknown[]) => void;

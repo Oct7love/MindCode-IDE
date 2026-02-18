@@ -3,10 +3,10 @@
  * 优化并发请求,避免同时发送过多请求
  */
 
-interface PendingRequest<T = any> {
+interface PendingRequest<T = unknown> {
   request: () => Promise<T>;
   resolve: (value: T) => void;
-  reject: (error: any) => void;
+  reject: (error: unknown) => void;
   priority: number;
   timestamp: number;
 }
@@ -29,7 +29,7 @@ export class RequestPipeline {
     completedRequests: 0,
     failedRequests: 0,
     avgLatency: 0,
-    queueLength: 0
+    queueLength: 0,
   };
   private latencies: number[] = [];
 
@@ -49,15 +49,15 @@ export class RequestPipeline {
     return new Promise<T>((resolve, reject) => {
       this.queue.push({
         request,
-        resolve: resolve as any,
+        resolve: resolve as (value: unknown) => void,
         reject,
         priority,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       // 按优先级排序
       this.queue.sort((a, b) => b.priority - a.priority);
-      
+
       this.process();
     });
   }
@@ -85,7 +85,7 @@ export class RequestPipeline {
     try {
       const result = await pending.request();
       const latency = Date.now() - startTime;
-      
+
       // 更新统计
       this.latencies.push(latency);
       if (this.latencies.length > 100) {
@@ -100,10 +100,10 @@ export class RequestPipeline {
       pending.reject(error);
     } finally {
       this.activeRequests--;
-      
+
       // 继续处理下一个
       this.process();
-      
+
       // 如果还有更多请求,启动额外的处理器
       if (this.queue.length > 0 && this.activeRequests < this.maxConcurrent) {
         this.process();
@@ -122,8 +122,8 @@ export class RequestPipeline {
    * 清空队列
    */
   clear() {
-    this.queue.forEach(pending => {
-      pending.reject(new Error('Pipeline cleared'));
+    this.queue.forEach((pending) => {
+      pending.reject(new Error("Pipeline cleared"));
     });
     this.queue = [];
     this.stats.queueLength = 0;
@@ -152,22 +152,22 @@ export function getRequestPipeline(): RequestPipeline {
  * 在应用启动时建立连接,减少首次请求延迟
  */
 export async function warmupAIConnections() {
-  console.log('[Pipeline] 预热AI连接...');
-  
+  console.log("[Pipeline] 预热AI连接...");
+
   // 使用管道发送预热请求
   const pipeline = getRequestPipeline();
-  
+
   // 低优先级预热请求
-  const warmupRequest = () => 
+  const warmupRequest = () =>
     Promise.race([
-      fetch('https://api.anthropic.com/v1/messages', {
-        method: 'HEAD'
+      fetch("https://api.anthropic.com/v1/messages", {
+        method: "HEAD",
       }).catch(() => {}),
-      new Promise(resolve => setTimeout(resolve, 1000))
+      new Promise((resolve) => setTimeout(resolve, 1000)),
     ]);
 
   // 添加到管道,低优先级
   pipeline.add(warmupRequest, -1).catch(() => {});
-  
-  console.log('[Pipeline] AI连接预热完成');
+
+  console.log("[Pipeline] AI连接预热完成");
 }
