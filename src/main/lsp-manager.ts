@@ -4,12 +4,12 @@
  */
 
 import type { ChildProcess } from "child_process";
-import { spawn, exec } from "child_process";
+import { spawn, execFile } from "child_process";
 import { EventEmitter } from "events";
 import { promisify } from "util";
 import * as path from "path";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // 语言服务器配置
 export interface LSPServerConfig {
@@ -92,17 +92,16 @@ export class LSPManager extends EventEmitter {
     if (!config) return { available: false, command: "", installHint: `不支持的语言: ${language}` };
 
     try {
-      await execAsync(config.detectCommand, { timeout: 5000 });
+      // 使用 execFile 避免 shell 注入（将 detectCommand 拆分为命令+参数）
+      const detectCmd = process.platform === "win32" ? "where" : "which";
+      await execFileAsync(detectCmd, [config.command], { timeout: 5000 });
       return { available: true, command: config.command };
     } catch {
       // 尝试备选命令
       if (config.alternativeCommand) {
         try {
-          const altDetect =
-            process.platform === "win32"
-              ? `where ${config.alternativeCommand}`
-              : `which ${config.alternativeCommand}`;
-          await execAsync(altDetect, { timeout: 5000 });
+          const detectCmd = process.platform === "win32" ? "where" : "which";
+          await execFileAsync(detectCmd, [config.alternativeCommand], { timeout: 5000 });
           return { available: true, command: config.alternativeCommand };
         } catch {}
       }
@@ -134,18 +133,20 @@ export class LSPManager extends EventEmitter {
     };
     this.servers.set(language, server);
     try {
-      // Windows 下不启用 shell 选项，改为显式通过 ComSpec 调用命令解释器以避免注入风险
-      let spawnCmd = cmd;
-      let spawnArgs = args;
-      if (process.platform === "win32") {
-        const comSpec = process.env.ComSpec || "cmd.exe";
-        spawnArgs = ["/c", cmd, ...args];
-        spawnCmd = comSpec;
+      // 校验命令名安全性（禁止 Shell 元字符）
+      if (/[;&|`$()<>!{}\\"'\n\r]/.test(cmd)) {
+        throw new Error(`不安全的 LSP 命令: ${cmd}`);
       }
-      const proc = spawn(spawnCmd, spawnArgs, {
+      // Windows 上对 npm 系工具使用 .cmd 后缀直接调用，避免 cmd.exe /c 注入
+      const resolvedCmd =
+        process.platform === "win32" && ["npx", "npm", "yarn", "pnpm"].includes(cmd)
+          ? `${cmd}.cmd`
+          : cmd;
+      const proc = spawn(resolvedCmd, args, {
         stdio: ["pipe", "pipe", "pipe"],
         shell: false,
         cwd: options?.rootPath,
+        windowsHide: true,
       });
       server.process = proc;
       proc.stdout?.on("data", (data) => this.handleData(language, data.toString()));

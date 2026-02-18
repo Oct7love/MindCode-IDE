@@ -111,6 +111,49 @@ export class DAPClient extends EventEmitter {
     return this.capabilities;
   }
 
+  /** 环境变量黑名单（阻止注入攻击） */
+  private static readonly DANGEROUS_ENV_KEYS = new Set([
+    "LD_PRELOAD",
+    "LD_LIBRARY_PATH",
+    "DYLD_INSERT_LIBRARIES",
+    "DYLD_LIBRARY_PATH",
+    "DYLD_FRAMEWORK_PATH",
+    "NODE_OPTIONS",
+    "ELECTRON_RUN_AS_NODE",
+    "ELECTRON_NO_ASAR",
+  ]);
+
+  /** 过滤危险环境变量 */
+  private static filterEnv(env?: Record<string, string>): Record<string, string> {
+    const base: Record<string, string> = {};
+    // 仅继承安全的基础环境变量
+    const safeBaseKeys = [
+      "PATH",
+      "HOME",
+      "USERPROFILE",
+      "LANG",
+      "TERM",
+      "SystemRoot",
+      "COMSPEC",
+      "TMPDIR",
+      "TEMP",
+      "TMP",
+    ];
+    for (const key of safeBaseKeys) {
+      if (process.env[key]) base[key] = process.env[key]!;
+    }
+    if (!env) return base;
+    // 合并用户 env，但过滤危险项
+    for (const [key, val] of Object.entries(env)) {
+      if (!DAPClient.DANGEROUS_ENV_KEYS.has(key.toUpperCase())) {
+        base[key] = val;
+      } else {
+        console.warn(`[DAP] 已过滤危险环境变量: ${key}`);
+      }
+    }
+    return base;
+  }
+
   /** 启动调试适配器进程（仅允许已注册的适配器命令） */
   async spawn(command: string, args: string[] = [], env?: Record<string, string>): Promise<void> {
     // 验证命令是否来自已注册的适配器
@@ -123,11 +166,20 @@ export class DAPClient extends EventEmitter {
       throw new Error(`不允许的调试适配器命令: ${command}，仅支持已注册的适配器`);
     }
 
+    // 校验 args 不含 Shell 元字符
+    for (const arg of args) {
+      if (/[;&|`$()<>!{}\n\r]/.test(arg)) {
+        throw new Error(`不安全的调试参数: ${arg}`);
+      }
+    }
+
     if (this.process) await this.disconnect();
 
     this.process = cpSpawn(command, args, {
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, ...env },
+      env: DAPClient.filterEnv(env),
+      shell: false,
+      windowsHide: true,
     });
 
     this.process.stdout!.on("data", (chunk: Buffer) => this.onData(chunk));

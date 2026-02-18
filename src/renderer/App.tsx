@@ -73,13 +73,22 @@ const App: React.FC = () => {
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [languageSelectorTarget, setLanguageSelectorTarget] = useState<string | null>(null);
 
-  // --- Stable refs for IPC callbacks ---
+  // --- Stable refs for IPC/keyboard callbacks (避免闭包过期) ---
   const openFileRef = useRef(editor.openFile);
   const saveFileRef = useRef(editor.saveFile);
   const closeFileRef = useRef(editor.closeFile);
   const activeFileRef = useRef(editor.activeFile);
   const activeFileIdRef = useRef(editor.activeFileId);
   const editorRefCurrent = useRef(editor.editorRef);
+  const layoutRef = useRef(layout);
+  const setTabRef = useRef(setTab);
+  const editorRef = useRef(editor);
+  const workspaceRef = useRef(workspace);
+  const showCommandPaletteRef = useRef(showCommandPalette);
+  const setShowCommandPaletteRef = useRef(setShowCommandPalette);
+  const setCommandPaletteModeRef = useRef(setCommandPaletteMode);
+  const setShowLanguageSelectorRef = useRef(setShowLanguageSelector);
+  const setLanguageSelectorTargetRef = useRef(setLanguageSelectorTarget);
 
   useEffect(() => {
     openFileRef.current = editor.openFile;
@@ -88,6 +97,15 @@ const App: React.FC = () => {
     activeFileRef.current = editor.activeFile;
     activeFileIdRef.current = editor.activeFileId;
     editorRefCurrent.current = editor.editorRef;
+    layoutRef.current = layout;
+    setTabRef.current = setTab;
+    editorRef.current = editor;
+    workspaceRef.current = workspace;
+    showCommandPaletteRef.current = showCommandPalette;
+    setShowCommandPaletteRef.current = setShowCommandPalette;
+    setCommandPaletteModeRef.current = setCommandPaletteMode;
+    setShowLanguageSelectorRef.current = setShowLanguageSelector;
+    setLanguageSelectorTargetRef.current = setLanguageSelectorTarget;
   });
 
   // --- Menu event listener ---
@@ -163,59 +181,60 @@ const App: React.FC = () => {
     return cleanup;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- Keyboard shortcuts ---
+  // --- Keyboard shortcuts (所有外部引用通过 ref 访问，依赖数组安全为空) ---
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
+      const ly = layoutRef.current;
 
       if (ctrl && e.key === "p" && !e.shiftKey) {
         e.preventDefault();
-        setCommandPaletteMode("files");
-        setShowCommandPalette(true);
+        setCommandPaletteModeRef.current("files");
+        setShowCommandPaletteRef.current(true);
         return;
       }
       if (ctrl && e.shiftKey && e.key === "P") {
         e.preventDefault();
-        setCommandPaletteMode("commands");
-        setShowCommandPalette(true);
+        setCommandPaletteModeRef.current("commands");
+        setShowCommandPaletteRef.current(true);
         return;
       }
       if (ctrl && e.shiftKey && e.key === "F") {
         e.preventDefault();
-        setTab("search");
-        layout.setSidebarCollapsed(false);
+        setTabRef.current("search");
+        ly.setSidebarCollapsed(false);
         return;
       }
       if (ctrl && e.key === ",") {
         e.preventDefault();
-        setTab("settings");
-        layout.setSidebarCollapsed(false);
+        setTabRef.current("settings");
+        ly.setSidebarCollapsed(false);
         return;
       }
       if (ctrl && e.shiftKey && e.key === "I") {
         e.preventDefault();
-        layout.setShowComposer(true);
+        ly.setShowComposer(true);
         return;
       }
       if (ctrl && e.key === "l") {
         e.preventDefault();
-        layout.setShowAI((prev) => !prev);
+        ly.setShowAI((prev: boolean) => !prev);
         return;
       }
       if (ctrl && e.key === "b") {
         e.preventDefault();
-        layout.setSidebarCollapsed((prev) => !prev);
+        ly.setSidebarCollapsed((prev: boolean) => !prev);
         return;
       }
       if (ctrl && (e.key === "`" || e.key === "j")) {
         e.preventDefault();
-        layout.setShowBottomPanel((prev) => !prev);
-        layout.setBottomPanelTab("terminal");
+        ly.setShowBottomPanel((prev: boolean) => !prev);
+        ly.setBottomPanelTab("terminal");
         return;
       }
       if (e.key === "F5" && !ctrl && !e.shiftKey) {
         e.preventDefault();
-        setTab("debug");
+        setTabRef.current("debug");
         return;
       }
       if (ctrl && e.key === "w") {
@@ -229,7 +248,11 @@ const App: React.FC = () => {
         if (!currentFile) return;
         const content = editorRefCurrent.current?.current?.getValue() || currentFile.content;
         if (currentFile.isUntitled) {
-          await editor.saveUntitledFile(currentFile, content, workspace.refreshFileTree);
+          await editorRef.current.saveUntitledFile(
+            currentFile,
+            content,
+            workspaceRef.current.refreshFileTree,
+          );
         } else {
           saveFileRef.current(content);
         }
@@ -237,25 +260,25 @@ const App: React.FC = () => {
       }
       if (ctrl && e.key === "n") {
         e.preventDefault();
-        const newId = editor.createNewFile();
-        setLanguageSelectorTarget(newId);
-        setShowLanguageSelector(true);
+        const newId = editorRef.current.createNewFile();
+        setLanguageSelectorTargetRef.current(newId);
+        setShowLanguageSelectorRef.current(true);
         return;
       }
       if (ctrl && e.shiftKey && e.key === "D") {
         e.preventDefault();
-        layout.setShowDiffPanel((prev) => !prev);
+        ly.setShowDiffPanel((prev: boolean) => !prev);
         return;
       }
       if (e.key === "Escape") {
-        if (layout.showDiffPanel) {
+        if (ly.showDiffPanel) {
           e.preventDefault();
-          layout.closeDiffPanel();
+          ly.closeDiffPanel();
           return;
         }
-        if (showCommandPalette) {
+        if (showCommandPaletteRef.current) {
           e.preventDefault();
-          setShowCommandPalette(false);
+          setShowCommandPaletteRef.current(false);
         }
         return;
       }
@@ -263,7 +286,7 @@ const App: React.FC = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [layout.showDiffPanel, showCommandPalette]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // 所有引用通过 ref 访问，无需额外依赖
 
   // --- Command list ---
   const commands = useMemo(

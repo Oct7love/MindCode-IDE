@@ -1,9 +1,16 @@
 /**
  * 插件管理器
  * 整合加载器、命令注册表、API 注入
+ * 基于 manifest.permissions 的沙盒权限模型
  */
 
-import type { PluginAPI, PluginInstance, Disposable } from "./types";
+import type {
+  PluginAPI,
+  PluginInstance,
+  PluginManifest,
+  PluginPermission,
+  Disposable,
+} from "./types";
 import { PluginLoader } from "./loader";
 import type { CommandRegistry } from "./commands";
 import { getCommandRegistry } from "./commands";
@@ -56,6 +63,37 @@ interface MindCodeWindow {
 const win: MindCodeWindow | null =
   typeof window !== "undefined" ? (window as unknown as MindCodeWindow) : null;
 
+/** 权限不足时抛出的错误 */
+function permissionDenied(pluginId: string, permission: PluginPermission): never {
+  throw new Error(`[Plugin:${pluginId}] Permission denied: requires "${permission}"`);
+}
+
+/** 校验路径是否在允许范围内（工作区 + 插件存储目录） */
+function isPluginPathAllowed(
+  targetPath: string,
+  workspacePath: string | null,
+  pluginPath: string,
+): boolean {
+  const normalized = targetPath.replace(/\\/g, "/");
+  const normalizedWorkspace = workspacePath?.replace(/\\/g, "/");
+  const normalizedPlugin = pluginPath.replace(/\\/g, "/");
+
+  // 禁止路径穿越
+  if (normalized.includes("..")) return false;
+
+  // 允许访问插件自身目录
+  if (normalized.startsWith(normalizedPlugin + "/") || normalized === normalizedPlugin) return true;
+
+  // 允许访问工作区目录
+  if (
+    normalizedWorkspace &&
+    (normalized.startsWith(normalizedWorkspace + "/") || normalized === normalizedWorkspace)
+  )
+    return true;
+
+  return false;
+}
+
 export class PluginManager {
   private loader: PluginLoader;
   private commandRegistry: CommandRegistry;
@@ -64,7 +102,7 @@ export class PluginManager {
   constructor(pluginsDir: string = "./plugins") {
     this.pluginsDir = pluginsDir;
     this.commandRegistry = getCommandRegistry();
-    this.loader = new PluginLoader(this.createAPI());
+    this.loader = new PluginLoader(this.createSandboxedAPI.bind(this));
   }
 
   /** 初始化 - 扫描并加载所有插件 */
@@ -137,22 +175,45 @@ export class PluginManager {
     return this.commandRegistry.executeCommand(command, ...args);
   }
 
-  // ============ 创建插件 API ============
+  // ============ 创建沙盒化插件 API ============
 
-  private createAPI(): PluginAPI {
+  /** 根据 manifest.permissions 创建权限受限的 API */
+  private createSandboxedAPI(manifest: PluginManifest): PluginAPI {
     const registry = this.commandRegistry;
+    const perms = new Set(manifest.permissions || []);
+    const pluginId = manifest.id;
     const decorationTypes = new Map<string, Record<string, unknown>>();
     let decorationId = 0;
+
+    // 获取插件路径（用于 fs 路径校验）
+    const pluginPath = `${this.pluginsDir}/${manifest.id.split(".").pop() || manifest.id}`;
+
+    /** 校验 fs 路径合法性 */
+    const validatePath = (fsPath: string): void => {
+      const workspacePath = win?.mindcode?.workspace?.getPath?.() || null;
+      if (!isPluginPathAllowed(fsPath, workspacePath, pluginPath)) {
+        throw new Error(`[Plugin:${pluginId}] Path access denied: ${fsPath}`);
+      }
+    };
+
     return {
       editor: {
-        getActiveEditor: () => win?.mindcode?.editor?.getActive?.(),
-        openFile: async (path) => win?.mindcode?.fs?.openFile?.(path),
+        getActiveEditor: () => {
+          if (!perms.has("editor")) permissionDenied(pluginId, "editor");
+          return win?.mindcode?.editor?.getActive?.();
+        },
+        openFile: async (path) => {
+          if (!perms.has("editor")) permissionDenied(pluginId, "editor");
+          return win?.mindcode?.fs?.openFile?.(path);
+        },
         showMessage: (message, type = "info") => {
-          if (type === "error") console.error(message);
-          else if (type === "warning") console.warn(message);
-          else console.log(message);
+          // showMessage 不需要特殊权限
+          if (type === "error") console.error(`[Plugin:${pluginId}]`, message);
+          else if (type === "warning") console.warn(`[Plugin:${pluginId}]`, message);
+          else console.log(`[Plugin:${pluginId}]`, message);
         },
         setDecorations: (decorationType, ranges) => {
+          if (!perms.has("editor")) permissionDenied(pluginId, "editor");
           const editor = win?.mindcode?.editor?.getActive?.();
           if (editor?.deltaDecorations)
             editor.deltaDecorations(
@@ -164,11 +225,13 @@ export class PluginManager {
             );
         },
         createDecorationType: (options) => {
+          if (!perms.has("editor")) permissionDenied(pluginId, "editor");
           const id = `decoration-${++decorationId}`;
           decorationTypes.set(id, options);
           return id;
         },
         getSelection: () => {
+          if (!perms.has("editor")) permissionDenied(pluginId, "editor");
           const editor = win?.mindcode?.editor?.getActive?.();
           if (!editor) return null;
           const sel = editor.getSelection?.();
@@ -181,6 +244,7 @@ export class PluginManager {
             : null;
         },
         insertText: (text) => {
+          if (!perms.has("editor")) permissionDenied(pluginId, "editor");
           const editor = win?.mindcode?.editor?.getActive?.();
           editor?.trigger?.("plugin", "type", { text });
         },
@@ -192,14 +256,24 @@ export class PluginManager {
       },
       fs: {
         readFile: async (path) => {
+          if (!perms.has("fs.read")) permissionDenied(pluginId, "fs.read");
+          validatePath(path);
           const r = await win?.mindcode?.fs?.readFile?.(path);
           return r?.data || "";
         },
         writeFile: async (path, content) => {
+          if (!perms.has("fs.write")) permissionDenied(pluginId, "fs.write");
+          validatePath(path);
           await win?.mindcode?.fs?.writeFile?.(path, content);
         },
-        exists: async (path) => win?.mindcode?.fs?.exists?.(path) || false,
+        exists: async (path) => {
+          if (!perms.has("fs.read")) permissionDenied(pluginId, "fs.read");
+          validatePath(path);
+          return win?.mindcode?.fs?.exists?.(path) || false;
+        },
         listDir: async (path) => {
+          if (!perms.has("fs.read")) permissionDenied(pluginId, "fs.read");
+          validatePath(path);
           const r = await win?.mindcode?.fs?.listDir?.(path);
           return (r?.data || []).map((f: { name: string; isDirectory: boolean }) => ({
             name: f.name,
@@ -224,10 +298,10 @@ export class PluginManager {
         },
         showNotification: (message, options) => {
           const type = options?.type || "info";
-          console.log(`[${type.toUpperCase()}] ${message}`);
+          console.log(`[Plugin:${pluginId}] [${type.toUpperCase()}] ${message}`);
         },
         showProgress: async (title, task) => {
-          console.log(`[Progress] ${title}`);
+          console.log(`[Plugin:${pluginId}] [Progress] ${title}`);
           await task({
             report: (v) => console.log(`[Progress] ${v.message || ""} ${v.increment || ""}%`),
           });
@@ -235,19 +309,24 @@ export class PluginManager {
         createStatusBarItem: (options) => ({
           text: options.text,
           tooltip: options.tooltip,
-          show: () => console.log(`[StatusBar] ${options.text}`),
+          show: () => console.log(`[Plugin:${pluginId}] [StatusBar] ${options.text}`),
           hide: () => {},
           dispose: () => {},
         }),
       },
       workspace: {
-        getWorkspacePath: () => win?.mindcode?.workspace?.getPath?.() || null,
+        getWorkspacePath: () => {
+          if (!perms.has("workspace")) permissionDenied(pluginId, "workspace");
+          return win?.mindcode?.workspace?.getPath?.() || null;
+        },
         onDidSaveFile: (handler) => {
+          if (!perms.has("workspace")) permissionDenied(pluginId, "workspace");
           const h = (_: unknown, path: string) => handler(path);
           win?.mindcode?.workspace?.onSave?.(h);
           return { dispose: () => win?.mindcode?.workspace?.offSave?.(h) };
         },
         onDidOpenFile: (handler) => {
+          if (!perms.has("workspace")) permissionDenied(pluginId, "workspace");
           const h = (_: unknown, path: string) => handler(path);
           win?.mindcode?.workspace?.onOpen?.(h);
           return { dispose: () => win?.mindcode?.workspace?.offOpen?.(h) };
@@ -260,10 +339,12 @@ export class PluginManager {
       },
       ai: {
         chat: async (prompt, options) => {
+          if (!perms.has("ai")) permissionDenied(pluginId, "ai");
           const r = await win?.mindcode?.ai?.chat?.(prompt, options);
           return r?.content || "";
         },
         complete: async (prefix, suffix) => {
+          if (!perms.has("ai")) permissionDenied(pluginId, "ai");
           const r = await win?.mindcode?.ai?.complete?.({ prefix, suffix });
           return r?.completion || "";
         },

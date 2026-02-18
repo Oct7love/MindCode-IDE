@@ -32,6 +32,13 @@ export interface IndexServiceEvents {
   onFileChanged: (filePath: string, changeType: "add" | "change" | "unlink") => void; // 增量索引事件
 }
 
+/** OOM 防护配置 */
+const INDEX_LIMITS = {
+  MAX_FILES: 10000, // 最大索引文件数
+  MAX_SYMBOLS: 200000, // 最大符号数
+  MAX_MEMORY_MB: 512, // 内存使用上限 (MB)
+};
+
 /** 索引服务 */
 export class IndexService {
   private store: IndexStore;
@@ -45,6 +52,7 @@ export class IndexService {
   private watcher: FSWatcher | null = null; // chokidar 文件监听器
   private watchRoot: string | null = null; // 监听的根目录
   private pendingUpdates = new Map<string, NodeJS.Timeout>(); // 防抖更新队列
+  private totalSymbolCount = 0; // 运行时符号计数
 
   constructor(config: Partial<IndexConfig> = {}) {
     this.config = {
@@ -123,21 +131,48 @@ export class IndexService {
         status: "indexing",
       });
 
-      console.log(`[IndexService] 扫描到 ${files.length} 个文件`);
+      // OOM 防护：文件数量上限
+      const filesToIndex =
+        files.length > INDEX_LIMITS.MAX_FILES
+          ? (console.warn(
+              `[IndexService] 文件数 ${files.length} 超过上限 ${INDEX_LIMITS.MAX_FILES}，仅索引前 ${INDEX_LIMITS.MAX_FILES} 个`,
+            ),
+            files.slice(0, INDEX_LIMITS.MAX_FILES))
+          : files;
+
+      console.log(`[IndexService] 扫描到 ${files.length} 个文件，将索引 ${filesToIndex.length} 个`);
 
       // 2. 索引文件
       let indexedCount = 0;
       let symbolCount = 0;
 
-      for (const filePath of files) {
+      for (const filePath of filesToIndex) {
         if (this.abortController.signal.aborted) {
           console.log("[IndexService] 索引已取消");
           break;
         }
 
+        // OOM 防护：符号数量上限
+        if (this.totalSymbolCount > INDEX_LIMITS.MAX_SYMBOLS) {
+          console.warn(`[IndexService] 符号数超过上限 ${INDEX_LIMITS.MAX_SYMBOLS}，停止索引`);
+          break;
+        }
+
+        // OOM 防护：内存使用检查（每 100 个文件检查一次）
+        if (indexedCount % 100 === 0 && indexedCount > 0) {
+          const memMB = process.memoryUsage().heapUsed / 1024 / 1024;
+          if (memMB > INDEX_LIMITS.MAX_MEMORY_MB) {
+            console.warn(
+              `[IndexService] 内存使用 ${memMB.toFixed(0)}MB 超过上限 ${INDEX_LIMITS.MAX_MEMORY_MB}MB，停止索引`,
+            );
+            break;
+          }
+        }
+
         try {
           const count = await this.indexFile(filePath);
           symbolCount += count;
+          this.totalSymbolCount += count;
           indexedCount++;
 
           this.updateProgress({

@@ -8,7 +8,7 @@
  * - 启动性能追踪
  */
 import type { MenuItemConstructorOptions } from "electron";
-import { app, BrowserWindow, ipcMain, dialog, Menu } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, Menu, session } from "electron";
 import * as path from "path";
 import { markStartup } from "../core/performance";
 import {
@@ -57,6 +57,7 @@ function createWindow(): void {
     minHeight: MIN_WINDOW_HEIGHT,
     title: "MindCode",
     webPreferences: {
+      sandbox: true,
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
@@ -451,6 +452,21 @@ function createMenu(): void {
 // ==================== App Lifecycle ====================
 app.whenReady().then(() => {
   markStartup("app_ready");
+
+  // CSP 安全策略
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [
+          isDev
+            ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*; font-src 'self' data:; img-src 'self' data: blob:;"
+            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:;",
+        ],
+      },
+    });
+  });
+
   createMenu();
   createWindow();
 

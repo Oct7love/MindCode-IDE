@@ -59,14 +59,32 @@ const SKIP_DIRECTORIES = new Set([
 ]);
 
 /**
- * 验证路径是否在允许的范围内（防止路径遍历攻击）
+ * 解析路径的真实位置（跟随符号链接）
+ * 如果路径不存在则回退到 path.resolve
+ */
+function resolveRealPath(targetPath: string): string {
+  try {
+    return fs.realpathSync(targetPath);
+  } catch {
+    // 路径不存在时回退（新建文件场景），校验父目录
+    const parent = path.dirname(targetPath);
+    try {
+      return path.join(fs.realpathSync(parent), path.basename(targetPath));
+    } catch {
+      return path.resolve(targetPath);
+    }
+  }
+}
+
+/**
+ * 验证路径是否在允许的范围内（防止路径遍历 + 符号链接穿越）
  */
 function isPathAllowed(targetPath: string, basePath?: string): boolean {
   try {
-    const normalizedTarget = path.resolve(targetPath);
+    const normalizedTarget = resolveRealPath(targetPath);
 
     if (basePath) {
-      const normalizedBase = path.resolve(basePath);
+      const normalizedBase = resolveRealPath(basePath);
       return (
         normalizedTarget.startsWith(normalizedBase + path.sep) ||
         normalizedTarget === normalizedBase
@@ -74,7 +92,7 @@ function isPathAllowed(targetPath: string, basePath?: string): boolean {
     }
 
     if (currentWorkspacePath) {
-      const normalizedWorkspace = path.resolve(currentWorkspacePath);
+      const normalizedWorkspace = resolveRealPath(currentWorkspacePath);
       return (
         normalizedTarget.startsWith(normalizedWorkspace + path.sep) ||
         normalizedTarget === normalizedWorkspace

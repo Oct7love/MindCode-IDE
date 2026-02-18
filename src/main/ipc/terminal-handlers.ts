@@ -2,16 +2,13 @@
  * Terminal IPC Handlers
  *
  * 基于 node-pty 的真实 PTY 会话管理器
- * 包含命令安全验证（白名单 + 黑名单）用于回退模式
+ * 包含命令安全验证（白名单 + 黑名单 + Shell 元字符过滤）用于回退模式
  */
 import { ipcMain } from "electron";
 import * as path from "path";
 import * as fs from "fs";
-import { promisify } from "util";
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import type { IPCContext } from "./types";
-
-const execAsync = promisify(exec);
 
 // node-pty 动态导入（原生模块可能不可用）
 let pty: typeof import("node-pty") | null = null;
@@ -35,7 +32,81 @@ const sessions = new Map<string, PtySession>();
 /** 命令执行超时（ms） */
 const COMMAND_TIMEOUT_MS = 60000;
 
-/** 安全的命令白名单（仅用于 exec 回退模式） */
+/** PTY 环境变量白名单（仅传递安全变量，阻止 API Key 泄露） */
+const SAFE_ENV_KEYS = new Set([
+  "PATH",
+  "HOME",
+  "USERPROFILE",
+  "USER",
+  "USERNAME",
+  "SHELL",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TERM",
+  "TERM_PROGRAM",
+  "COLORTERM",
+  "EDITOR",
+  "VISUAL",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "SystemRoot",
+  "SYSTEMROOT",
+  "ComSpec",
+  "COMSPEC",
+  "windir",
+  "WINDIR",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "ProgramFiles",
+  "ProgramFiles(x86)",
+  "CommonProgramFiles",
+  "NUMBER_OF_PROCESSORS",
+  "PROCESSOR_ARCHITECTURE",
+  "OS",
+  "PWD",
+  "OLDPWD",
+  "SHLVL",
+  "LOGNAME",
+  "XDG_RUNTIME_DIR",
+  "XDG_DATA_HOME",
+  "XDG_CONFIG_HOME",
+  "XDG_CACHE_HOME",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "SSH_AUTH_SOCK",
+  "GPG_AGENT_INFO",
+  "GOPATH",
+  "GOROOT",
+  "CARGO_HOME",
+  "RUSTUP_HOME",
+  "NVM_DIR",
+  "JAVA_HOME",
+  "DOTNET_ROOT",
+  "VIRTUAL_ENV",
+  "CONDA_PREFIX",
+  "PYENV_ROOT",
+]);
+
+/** 过滤环境变量，仅保留白名单中的安全变量 */
+function getSafeEnv(): Record<string, string> {
+  const safeEnv: Record<string, string> = {};
+  for (const key of Object.keys(process.env)) {
+    if (SAFE_ENV_KEYS.has(key)) {
+      const val = process.env[key];
+      if (val !== undefined) safeEnv[key] = val;
+    }
+  }
+  return safeEnv;
+}
+
+/** Shell 元字符黑名单（防止命令注入） */
+const SHELL_METACHAR_PATTERN = /[;&|`$()<>!{}\\"\n\r]/;
+
+/** 安全的命令白名单（仅用于 spawn 回退模式） */
 const ALLOWED_COMMAND_PREFIXES = [
   "npm",
   "npx",
@@ -65,15 +136,6 @@ const ALLOWED_COMMAND_PREFIXES = [
   "cat",
   "type",
   "mkdir",
-  "rmdir",
-  "cp",
-  "mv",
-  "rm",
-  "curl",
-  "wget",
-  "tar",
-  "unzip",
-  "zip",
   "tsc",
   "eslint",
   "prettier",
@@ -111,19 +173,36 @@ const DANGEROUS_COMMANDS = [
 ];
 
 /**
- * 验证命令安全性（仅用于 exec 回退模式）
+ * 验证命令安全性（仅用于 spawn 回退模式）
+ *
+ * 三层防护：
+ * 1. Shell 元字符检测（阻止注入）
+ * 2. 危险命令黑名单
+ * 3. 命令前缀白名单
  */
 function isCommandSafe(command: string): { safe: boolean; reason?: string } {
-  const trimmedCmd = command.trim().toLowerCase();
+  const trimmedCmd = command.trim();
 
+  // 第一层：Shell 元字符检测
+  if (SHELL_METACHAR_PATTERN.test(trimmedCmd)) {
+    return { safe: false, reason: "Shell metacharacters are not allowed in commands" };
+  }
+
+  const lowerCmd = trimmedCmd.toLowerCase();
+
+  // 第二层：危险命令黑名单
   for (const dangerous of DANGEROUS_COMMANDS) {
-    if (trimmedCmd.includes(dangerous.toLowerCase())) {
+    if (lowerCmd.includes(dangerous.toLowerCase())) {
       return { safe: false, reason: `Dangerous command blocked: ${dangerous}` };
     }
   }
 
+  // 第三层：命令前缀白名单
   const cmdParts = trimmedCmd.split(/\s+/);
-  const cmdName = cmdParts[0].replace(/^\.\//, "").replace(/\.exe$/i, "");
+  const cmdName = cmdParts[0]
+    .replace(/^\.\//, "")
+    .replace(/\.exe$/i, "")
+    .toLowerCase();
 
   const isAllowed = ALLOWED_COMMAND_PREFIXES.some(
     (prefix) =>
@@ -135,6 +214,14 @@ function isCommandSafe(command: string): { safe: boolean; reason?: string } {
   }
 
   return { safe: true };
+}
+
+/**
+ * 将命令字符串解析为可执行文件和参数数组（用于 spawn）
+ */
+function parseCommand(command: string): { cmd: string; args: string[] } {
+  const parts = command.trim().split(/\s+/);
+  return { cmd: parts[0], args: parts.slice(1) };
 }
 
 /**
@@ -164,13 +251,13 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
         return { success: false, error: `工作目录不存在: ${cwd}` };
       }
 
-      // 创建 PTY 实例
+      // 创建 PTY 实例（仅传递安全环境变量）
       const ptyProcess = pty.spawn(shell, [], {
         name: "xterm-256color",
         cols: 80,
         rows: 30,
         cwd,
-        env: process.env as { [key: string]: string },
+        env: getSafeEnv(),
       });
 
       // 存储会话
@@ -248,7 +335,7 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
 
   // ========== 以下是原有的回退模式（node-pty 不可用时使用） ==========
 
-  // 执行命令（带安全检查）
+  // 执行命令（带安全检查，使用 spawn + shell:false 防注入）
   ipcMain.handle("terminal:execute", async (_event, command: string, cwd?: string) => {
     try {
       const safetyCheck = isCommandSafe(command);
@@ -260,19 +347,48 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
         };
       }
 
-      const options: { cwd?: string; shell?: string; env?: NodeJS.ProcessEnv; timeout?: number } = {
-        timeout: COMMAND_TIMEOUT_MS,
-        env: { ...process.env },
-      };
+      const { cmd, args } = parseCommand(command);
+      const spawnCwd = cwd && fs.existsSync(cwd) ? cwd : undefined;
 
-      if (cwd && fs.existsSync(cwd)) {
-        options.cwd = cwd;
-      }
+      const result = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        const child = spawn(cmd, args, {
+          cwd: spawnCwd,
+          env: getSafeEnv(),
+          shell: false,
+          timeout: COMMAND_TIMEOUT_MS,
+          windowsHide: true,
+        });
 
-      options.shell = process.platform === "win32" ? "cmd.exe" : "/bin/bash";
+        let stdout = "";
+        let stderr = "";
 
-      const { stdout, stderr } = await execAsync(command, options);
-      return { success: true, data: { stdout, stderr } };
+        child.stdout?.on("data", (chunk: Buffer) => {
+          stdout += chunk.toString();
+          if (stdout.length > 10 * 1024 * 1024) {
+            child.kill();
+            reject(new Error("Output exceeded 10MB limit"));
+          }
+        });
+
+        child.stderr?.on("data", (chunk: Buffer) => {
+          stderr += chunk.toString();
+          if (stderr.length > 10 * 1024 * 1024) {
+            child.kill();
+            reject(new Error("Stderr exceeded 10MB limit"));
+          }
+        });
+
+        child.on("error", (err) => reject(err));
+        child.on("close", (code) => {
+          if (code === 0) resolve({ stdout, stderr });
+          else
+            reject(
+              Object.assign(new Error(`Process exited with code ${code}`), { stdout, stderr }),
+            );
+        });
+      });
+
+      return { success: true, data: result };
     } catch (error: unknown) {
       const err = error as Error & { stdout?: string; stderr?: string };
       return {

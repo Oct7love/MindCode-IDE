@@ -9,7 +9,6 @@ import type {
   PluginContext,
   PluginAPI,
   PluginState,
-  Disposable,
   ActivateFunction,
   DeactivateFunction,
 } from "./types";
@@ -24,27 +23,63 @@ interface PluginLoaderWindow {
 }
 const win = (typeof window !== "undefined" ? window : null) as (Window & PluginLoaderWindow) | null;
 
+/** API 工厂函数类型：根据 manifest 权限创建沙盒化 API */
+type APIFactory = (manifest: PluginManifest) => PluginAPI;
+
 export class PluginLoader {
   private plugins = new Map<string, PluginInstance>();
-  private api: PluginAPI;
+  private apiFactory: APIFactory;
 
-  constructor(api: PluginAPI) {
-    this.api = api;
+  constructor(apiFactory: APIFactory) {
+    this.apiFactory = apiFactory;
   }
 
-  /** 加载插件 */
+  /** 校验 manifest 基本合法性 */
+  private validateManifest(manifest: PluginManifest): string | null {
+    if (!manifest.id || typeof manifest.id !== "string") return "Missing or invalid 'id'";
+    if (!manifest.main || typeof manifest.main !== "string") return "Missing or invalid 'main'";
+    if (!manifest.name || typeof manifest.name !== "string") return "Missing or invalid 'name'";
+    if (!manifest.version || typeof manifest.version !== "string")
+      return "Missing or invalid 'version'";
+    if (!Array.isArray(manifest.permissions)) return "Missing 'permissions' array";
+    // id 格式校验：仅允许字母、数字、点、连字符
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.\-]*$/.test(manifest.id))
+      return `Invalid plugin id format: ${manifest.id}`;
+    // main 路径不能包含路径穿越
+    if (manifest.main.includes("..")) return "Plugin 'main' path traversal detected";
+    return null;
+  }
+
+  /** 加载插件（含 manifest 校验） */
   async loadPlugin(manifestPath: string): Promise<PluginInstance | null> {
     try {
+      // 创建临时无权限 API 用于读取 manifest
+      const tempApi = this.apiFactory({
+        id: "__loader__",
+        name: "Loader",
+        version: "0",
+        main: "",
+        permissions: ["fs.read"],
+      } as PluginManifest);
+
       // 读取 manifest
-      const manifestContent = await this.api.fs.readFile(manifestPath);
+      const manifestContent = await tempApi.fs.readFile(manifestPath);
       const manifest: PluginManifest = JSON.parse(manifestContent);
-      if (!manifest.id || !manifest.main) throw new Error("Invalid manifest");
+
+      // 严格校验 manifest
+      const validationError = this.validateManifest(manifest);
+      if (validationError) throw new Error(`Invalid manifest: ${validationError}`);
 
       // 检查是否已加载
       if (this.plugins.has(manifest.id)) {
         console.warn(`[PluginLoader] 插件已加载: ${manifest.id}`);
         return this.plugins.get(manifest.id)!;
       }
+
+      // 记录所请求的权限
+      console.log(
+        `[PluginLoader] 插件 ${manifest.id} 请求权限: [${manifest.permissions.join(", ")}]`,
+      );
 
       // 创建上下文
       const pluginPath = manifestPath.replace(/[/\\]manifest\.json$/, "");
@@ -67,7 +102,7 @@ export class PluginLoader {
     }
   }
 
-  /** 激活插件 */
+  /** 激活插件（使用基于权限的沙盒化 API） */
   async activatePlugin(pluginId: string): Promise<boolean> {
     const instance = this.plugins.get(pluginId);
     if (!instance) {
@@ -78,16 +113,21 @@ export class PluginLoader {
 
     instance.state = "activating";
     try {
+      // 为每个插件创建独立的权限受限 API
+      const sandboxedApi = this.apiFactory(instance.manifest);
+
       // 动态加载入口模块
       const mainPath = `${instance.context.pluginPath}/${instance.manifest.main}`;
       const module = await this.loadModule(mainPath);
       if (module?.activate) {
         const activate = module.activate as ActivateFunction;
-        await activate(instance.context, this.api);
+        await activate(instance.context, sandboxedApi);
       }
       instance.exports = module;
       instance.state = "active";
-      console.log(`[PluginLoader] 插件已激活: ${pluginId}`);
+      console.log(
+        `[PluginLoader] 插件已激活: ${pluginId} (权限: [${instance.manifest.permissions.join(", ")}])`,
+      );
       return true;
     } catch (err) {
       console.error(`[PluginLoader] 激活失败: ${pluginId}`, err);

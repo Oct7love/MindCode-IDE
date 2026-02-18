@@ -12,6 +12,12 @@ import { DEFAULT_BASE_URLS } from "../config";
 import * as http from "http";
 import * as https from "https";
 
+/** 响应体最大字节数 (10MB) */
+const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
+
+/** 流式无数据超时 (30s) */
+const STREAM_IDLE_TIMEOUT_MS = 30000;
+
 export class ClaudeProvider extends BaseAIProvider {
   name = "claude" as const;
   displayName = "Claude (Anthropic)";
@@ -87,7 +93,15 @@ export class ClaudeProvider extends BaseAIProvider {
           }
         } else {
           let data = "";
-          res.on("data", (chunk) => (data += chunk));
+          let totalBytes = 0;
+          res.on("data", (chunk) => {
+            totalBytes += chunk.length;
+            if (totalBytes > MAX_RESPONSE_BYTES) {
+              res.destroy(new Error("Response exceeded 10MB limit"));
+              return;
+            }
+            data += chunk;
+          });
           res.on("end", () => {
             if (res.statusCode !== 200) {
               resolve({ error: `API Error ${res.statusCode}: ${data}` });
@@ -149,8 +163,27 @@ export class ClaudeProvider extends BaseAIProvider {
 
       const res = result.stream!;
       let buffer = "";
+      let totalBytes = 0;
+
+      // 流式空闲超时检测
+      let idleTimer = setTimeout(() => {
+        res.destroy(new Error("Stream idle timeout (30s no data)"));
+      }, STREAM_IDLE_TIMEOUT_MS);
 
       res.on("data", (chunk: Buffer) => {
+        // 重置空闲超时
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          res.destroy(new Error("Stream idle timeout (30s no data)"));
+        }, STREAM_IDLE_TIMEOUT_MS);
+
+        // 响应大小限制
+        totalBytes += chunk.length;
+        if (totalBytes > MAX_RESPONSE_BYTES) {
+          res.destroy(new Error("Stream response exceeded 10MB limit"));
+          return;
+        }
+
         buffer += chunk.toString();
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
@@ -177,10 +210,12 @@ export class ClaudeProvider extends BaseAIProvider {
       });
 
       res.on("end", () => {
+        clearTimeout(idleTimer);
         callbacks.onComplete(fullText);
       });
 
       res.on("error", (e: Error) => {
+        clearTimeout(idleTimer);
         callbacks.onError(e);
       });
     } catch (error) {
@@ -251,7 +286,23 @@ export class ClaudeProvider extends BaseAIProvider {
       }
       const res = result.stream!;
       let buffer = "";
+      let totalBytes = 0;
+      let idleTimer = setTimeout(() => {
+        res.destroy(new Error("Stream idle timeout (30s no data)"));
+      }, STREAM_IDLE_TIMEOUT_MS);
+
       res.on("data", (chunk: Buffer) => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          res.destroy(new Error("Stream idle timeout (30s no data)"));
+        }, STREAM_IDLE_TIMEOUT_MS);
+
+        totalBytes += chunk.length;
+        if (totalBytes > MAX_RESPONSE_BYTES) {
+          res.destroy(new Error("Stream response exceeded 10MB limit"));
+          return;
+        }
+
         buffer += chunk.toString();
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
@@ -295,10 +346,14 @@ export class ClaudeProvider extends BaseAIProvider {
         }
       });
       res.on("end", () => {
+        clearTimeout(idleTimer);
         if (toolCalls.length > 0 && callbacks.onToolCall) callbacks.onToolCall(toolCalls);
         callbacks.onComplete(fullText);
       });
-      res.on("error", (e: Error) => callbacks.onError(e));
+      res.on("error", (e: Error) => {
+        clearTimeout(idleTimer);
+        callbacks.onError(e);
+      });
     } catch (error) {
       callbacks.onError(error as Error);
     }
