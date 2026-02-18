@@ -2,46 +2,103 @@
  * Message Compressor - 消息历史压缩
  */
 
-export interface Message { role: 'user' | 'assistant' | 'system'; content: string; timestamp?: number; tokens?: number; }
-export interface CompressedHistory { messages: Message[]; summary?: string; originalCount: number; compressedCount: number; tokensSaved: number; }
+export interface Message {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp?: number;
+  tokens?: number;
+}
+export interface CompressedHistory {
+  messages: Message[];
+  summary?: string;
+  originalCount: number;
+  compressedCount: number;
+  tokensSaved: number;
+}
+
+/** 智能 token 估算：区分中文/CJK 字符（≈1.5 token/字）和 ASCII（≈0.25 token/字） */
+function estimateTokensDefault(text: string): number {
+  let cjk = 0;
+  let ascii = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    // CJK Unified Ideographs + CJK 扩展 + 日文假名 + 韩文音节
+    if (
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0x3400 && code <= 0x4dbf) ||
+      (code >= 0x3040 && code <= 0x30ff) ||
+      (code >= 0xac00 && code <= 0xd7af)
+    ) {
+      cjk++;
+    } else {
+      ascii++;
+    }
+  }
+  return Math.ceil(cjk * 1.5 + ascii / 4);
+}
 
 class MessageCompressor {
-  private tokenEstimator: (text: string) => number = text => Math.ceil(text.length / 4);
+  private tokenEstimator: (text: string) => number = estimateTokensDefault;
   private maxTokens = 50000;
   private summarizer?: (messages: Message[]) => Promise<string>;
 
-  setTokenEstimator(fn: (text: string) => number): void { this.tokenEstimator = fn; }
-  setMaxTokens(max: number): void { this.maxTokens = max; }
-  setSummarizer(fn: (messages: Message[]) => Promise<string>): void { this.summarizer = fn; }
+  setTokenEstimator(fn: (text: string) => number): void {
+    this.tokenEstimator = fn;
+  }
+  setMaxTokens(max: number): void {
+    this.maxTokens = max;
+  }
+  setSummarizer(fn: (messages: Message[]) => Promise<string>): void {
+    this.summarizer = fn;
+  }
 
-  estimateTokens(messages: Message[]): number { return messages.reduce((sum, m) => sum + (m.tokens || this.tokenEstimator(m.content)), 0); }
+  estimateTokens(messages: Message[]): number {
+    return messages.reduce((sum, m) => sum + (m.tokens || this.tokenEstimator(m.content)), 0);
+  }
 
   compress(messages: Message[], targetTokens?: number): CompressedHistory {
     const target = targetTokens || this.maxTokens;
     const originalTokens = this.estimateTokens(messages);
-    if (originalTokens <= target) return { messages, originalCount: messages.length, compressedCount: messages.length, tokensSaved: 0 };
+    if (originalTokens <= target)
+      return {
+        messages,
+        originalCount: messages.length,
+        compressedCount: messages.length,
+        tokensSaved: 0,
+      };
 
     // 策略1: 保留最近消息，截断早期消息
     const result: Message[] = [];
     let currentTokens = 0;
 
     // 始终保留系统消息
-    const systemMsgs = messages.filter(m => m.role === 'system');
-    systemMsgs.forEach(m => { result.push(m); currentTokens += m.tokens || this.tokenEstimator(m.content); });
+    const systemMsgs = messages.filter((m) => m.role === "system");
+    systemMsgs.forEach((m) => {
+      result.push(m);
+      currentTokens += m.tokens || this.tokenEstimator(m.content);
+    });
 
     // 从最近的消息开始添加
-    const nonSystemMsgs = messages.filter(m => m.role !== 'system').reverse();
+    const nonSystemMsgs = messages.filter((m) => m.role !== "system").reverse();
     for (const msg of nonSystemMsgs) {
       const tokens = msg.tokens || this.tokenEstimator(msg.content);
-      if (currentTokens + tokens <= target * 0.9) { result.unshift(msg); currentTokens += tokens; } // 留10%余量
+      if (currentTokens + tokens <= target * 0.9) {
+        result.unshift(msg);
+        currentTokens += tokens;
+      } // 留10%余量
       else break;
     }
 
-    // 策略2: 截断长消息
-    const compressedMessages = result.map(m => {
+    // 策略2: 截断长消息（基于 token 估算动态截断）
+    const compressedMessages = result.map((m) => {
       const tokens = m.tokens || this.tokenEstimator(m.content);
-      if (tokens > 2000 && m.role === 'assistant') { // 截断长回复
-        const truncated = m.content.slice(0, 4000) + '\n\n[... 内容已截断 ...]';
+      if (tokens > 2000 && m.role === "assistant") {
+        // 按 token 估算反推截断位置，而非固定字符数
+        const targetChars = Math.min(
+          m.content.length,
+          Math.floor((2000 / this.tokenEstimator(m.content)) * m.content.length),
+        );
+        const truncated = m.content.slice(0, targetChars) + "\n\n[... 内容已截断 ...]";
         return { ...m, content: truncated, tokens: this.tokenEstimator(truncated) };
       }
       return m;
@@ -55,12 +112,21 @@ class MessageCompressor {
     };
   }
 
-  async compressWithSummary(messages: Message[], targetTokens?: number): Promise<CompressedHistory> {
+  async compressWithSummary(
+    messages: Message[],
+    targetTokens?: number,
+  ): Promise<CompressedHistory> {
     if (!this.summarizer) return this.compress(messages, targetTokens);
 
     const target = targetTokens || this.maxTokens;
     const originalTokens = this.estimateTokens(messages);
-    if (originalTokens <= target) return { messages, originalCount: messages.length, compressedCount: messages.length, tokensSaved: 0 };
+    if (originalTokens <= target)
+      return {
+        messages,
+        originalCount: messages.length,
+        compressedCount: messages.length,
+        tokensSaved: 0,
+      };
 
     // 将早期消息总结成摘要
     const midpoint = Math.floor(messages.length / 2);
@@ -68,7 +134,11 @@ class MessageCompressor {
     const recentMessages = messages.slice(midpoint);
 
     const summary = await this.summarizer(earlyMessages);
-    const summaryMessage: Message = { role: 'system', content: `[对话历史摘要]\n${summary}`, tokens: this.tokenEstimator(summary) };
+    const summaryMessage: Message = {
+      role: "system",
+      content: `[对话历史摘要]\n${summary}`,
+      tokens: this.tokenEstimator(summary),
+    };
 
     const result = [summaryMessage, ...recentMessages];
     return {
@@ -86,9 +156,11 @@ class MessageCompressor {
     const codeBlockRegex = /```[\s\S]*?```/g;
     const filePathRegex = /[\/\\][\w\-\.\/\\]+\.\w+/g;
 
-    messages.forEach(m => {
+    messages.forEach((m) => {
       const codeBlocks = m.content.match(codeBlockRegex) || [];
-      codeBlocks.forEach(block => { if (block.length < 500) keywords.push(block); });
+      codeBlocks.forEach((block) => {
+        if (block.length < 500) keywords.push(block);
+      });
       const filePaths = m.content.match(filePathRegex) || [];
       keywords.push(...filePaths);
     });

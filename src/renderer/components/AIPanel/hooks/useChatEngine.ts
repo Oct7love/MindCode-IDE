@@ -15,6 +15,7 @@ import {
   parseThinkingOutput,
 } from "../../../../core/ai/thinking-prompt";
 import { ModelRouter, detectTaskType, TaskType } from "../../../../core/ai/model-router";
+import type { ToolCallInfo } from "@shared/types/ai";
 import { agentToolService } from "../../../services/agentToolService";
 import { collectCodebaseContext, formatCodebaseContext } from "../../../services/indexService";
 import { messageCompressor } from "../../../../core/ai/messageCompressor";
@@ -353,7 +354,7 @@ export function useChatEngine(options: ChatEngineOptions) {
         // 检测 ui.mode
         const modeMatch = buffer.match(/"mode"\s*:\s*"(\w+)"/);
         if (modeMatch && partialData.ui) {
-          partialData.ui.mode = modeMatch[1] as any;
+          partialData.ui.mode = modeMatch[1] as ThinkingUIData["ui"]["mode"];
           if (modeMatch[1] === "done") {
             partialData.ui.title = "Done";
           } else if (modeMatch[1] === "answering") {
@@ -445,9 +446,12 @@ export function useChatEngine(options: ChatEngineOptions) {
     });
   }, [workspaceRoot, getActiveFile]);
 
-  const executeTool = useCallback(async (name: string, args: any): Promise<ToolResult> => {
-    return await agentToolService.execute(name, args);
-  }, []);
+  const executeTool = useCallback(
+    async (name: string, args: Record<string, unknown>): Promise<ToolResult> => {
+      return await agentToolService.execute(name, args);
+    },
+    [],
+  );
 
   // 工具确认 Promise
   const confirmTool = useCallback(
@@ -474,15 +478,15 @@ export function useChatEngine(options: ChatEngineOptions) {
         version: 1,
         assumptions: parsed.assumptions || [],
         risks: parsed.risks || [],
-        milestones: (parsed.milestones || []).map((m: any, i: number) => ({
+        milestones: (parsed.milestones || []).map((m: Record<string, string>, i: number) => ({
           id: m.id || `m${i}`,
-          label: m.label || m,
+          label: m.label || String(m),
           estimated: m.estimated || "",
           completed: false,
         })),
-        tasks: (parsed.tasks || []).map((t: any, i: number) => ({
+        tasks: (parsed.tasks || []).map((t: Record<string, string>, i: number) => ({
           id: t.id || `t${i}`,
-          label: t.label || t,
+          label: t.label || String(t),
           completed: false,
         })),
       };
@@ -886,7 +890,10 @@ ${thinkingProtocol}`;
       }
 
       // 构建 API 消息，支持图片（Claude Vision API 格式）
-      let userMessageContent: any = finalContent;
+      type VisionBlock =
+        | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+        | { type: "text"; content: string };
+      let userMessageContent: string | VisionBlock[] = finalContent;
       const supportsVision = VISION_CAPABLE_MODELS.includes(effectiveModel);
 
       if (images && images.length > 0) {
@@ -909,10 +916,17 @@ ${thinkingProtocol}`;
           ];
         }
       }
-      const apiMessages: any[] = [
+      // Vision API 的 content 可以是 string | VisionBlock[]，但 IPC 层统一序列化，安全断言
+      type APIMessage = {
+        role: "system" | "user" | "assistant" | "tool";
+        content: string;
+        toolCalls?: ToolCallInfo[];
+        toolCallId?: string;
+      };
+      const apiMessages: APIMessage[] = [
         { role: "system", content: systemPrompt },
         ...chatHistory,
-        { role: "user", content: userMessageContent },
+        { role: "user", content: userMessageContent as string },
       ];
 
       // 所有模式都可以使用工具（工具已按 MODE_TOOLS 过滤），只要模型支持
@@ -967,7 +981,7 @@ ${thinkingProtocol}`;
                   .map((c) => `[${c.type}: ${c.label}]\n${c.data.content || c.data.path}`)
                   .join("\n\n") + `\n\n用户: ${nextMsg.content}`;
             }
-            const queueApiMessages: any[] = [
+            const queueApiMessages: APIMessage[] = [
               { role: "system", content: newSystemPrompt },
               ...newChatHistory,
               { role: "user", content: queueFinalContent },
@@ -1019,7 +1033,7 @@ ${thinkingProtocol}`;
             `[ChatEngine] 工具循环 #${iterations}/${maxIterations}, 消息数: ${apiMessages.length}`,
           );
           let responseText = "";
-          let toolCalls: any[] = [];
+          let toolCalls: ToolCallInfo[] = [];
           try {
             await new Promise<void>((resolve, reject) => {
               if (!window.mindcode?.ai?.chatStreamWithTools) {
@@ -1059,9 +1073,9 @@ ${thinkingProtocol}`;
                 },
               });
             });
-          } catch (e: any) {
+          } catch (e: unknown) {
             console.error("[ChatEngine] 工具调用错误:", e);
-            updateLastMessage(`错误: ${e.message || "请求失败"}`);
+            updateLastMessage(`错误: ${e instanceof Error ? e.message : "请求失败"}`);
             break;
           }
 

@@ -9,7 +9,6 @@ class EventBus<E extends EventMap = EventMap> {
   private listeners = new Map<keyof E, Set<EventCallback<any>>>();
   private onceListeners = new Map<keyof E, Set<EventCallback<any>>>();
   private history = new Map<keyof E, unknown>();
-  private maxHistorySize = 10;
 
   on<K extends keyof E>(event: K, callback: EventCallback<E[K]>): () => void {
     // 订阅

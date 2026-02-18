@@ -205,6 +205,13 @@ let _streamBuf = "";
 let _thinkBuf = "";
 let _flushTimer: ReturnType<typeof setTimeout> | null = null;
 
+function cancelFlush(): void {
+  if (_flushTimer) {
+    clearTimeout(_flushTimer);
+    _flushTimer = null;
+  }
+}
+
 function scheduleFlush(): void {
   if (_flushTimer) return;
   _flushTimer = setTimeout(() => {
@@ -280,6 +287,7 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     setLoading: (isLoading) => set({ isLoading }),
     setStreamingText: (streamingText) => {
       _streamBuf = "";
+      cancelFlush();
       set({ streamingText });
     },
     appendStreamingText: (text) => {
@@ -288,6 +296,7 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     },
     setThinkingText: (thinkingText) => {
       _thinkBuf = "";
+      cancelFlush();
       set({ thinkingText });
     },
     appendThinkingText: (text) => {

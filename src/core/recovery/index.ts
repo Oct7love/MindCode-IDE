@@ -4,27 +4,44 @@
  */
 
 export interface RecoveryState {
-  openFiles: Array<{ path: string; content: string; isDirty: boolean; cursorPosition?: { line: number; column: number } }>;
+  openFiles: Array<{
+    path: string;
+    content: string;
+    isDirty: boolean;
+    cursorPosition?: { line: number; column: number };
+  }>;
   activeFileId?: string;
   workspacePath?: string;
   aiConversations?: any[];
   timestamp: number;
 }
 
-const STORAGE_KEY = 'mindcode_recovery_state';
+const STORAGE_KEY = "mindcode_recovery_state";
 const AUTO_SAVE_INTERVAL = 30000; // 30 秒
 
 class RecoveryManager {
   private state: RecoveryState | null = null;
   private saveTimer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<(state: RecoveryState) => void>();
+  private initialized = false;
+  private _onBeforeUnload = () => this.saveState();
 
-  /** 初始化 */
+  /** 初始化（防重复调用） */
   init(): void {
+    if (this.initialized) return;
+    this.initialized = true;
     this.loadState();
     this.startAutoSave();
-    window.addEventListener('beforeunload', () => this.saveState());
-    console.log('[Recovery] 初始化完成');
+    window.addEventListener("beforeunload", this._onBeforeUnload);
+    console.log("[Recovery] 初始化完成");
+  }
+
+  /** 销毁，释放监听器和定时器 */
+  destroy(): void {
+    window.removeEventListener("beforeunload", this._onBeforeUnload);
+    this.stopAutoSave();
+    this.listeners.clear();
+    this.initialized = false;
   }
 
   /** 开始自动保存 */
@@ -35,7 +52,10 @@ class RecoveryManager {
 
   /** 停止自动保存 */
   stopAutoSave(): void {
-    if (this.saveTimer) { clearInterval(this.saveTimer); this.saveTimer = null; }
+    if (this.saveTimer) {
+      clearInterval(this.saveTimer);
+      this.saveTimer = null;
+    }
   }
 
   /** 更新状态 */
@@ -48,8 +68,10 @@ class RecoveryManager {
     if (!this.state) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-      console.log('[Recovery] 状态已保存');
-    } catch (e) { console.error('[Recovery] 保存失败:', e); }
+      console.log("[Recovery] 状态已保存");
+    } catch (e) {
+      console.error("[Recovery] 保存失败:", e);
+    }
   }
 
   /** 加载状态 */
@@ -58,15 +80,19 @@ class RecoveryManager {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         this.state = JSON.parse(stored);
-        console.log('[Recovery] 状态已加载');
+        console.log("[Recovery] 状态已加载");
         return this.state;
       }
-    } catch (e) { console.error('[Recovery] 加载失败:', e); }
+    } catch (e) {
+      console.error("[Recovery] 加载失败:", e);
+    }
     return null;
   }
 
   /** 获取当前状态 */
-  getState(): RecoveryState | null { return this.state; }
+  getState(): RecoveryState | null {
+    return this.state;
+  }
 
   /** 检查是否有可恢复的状态 */
   hasRecoverableState(): boolean {
@@ -80,7 +106,7 @@ class RecoveryManager {
   clearState(): void {
     this.state = null;
     localStorage.removeItem(STORAGE_KEY);
-    console.log('[Recovery] 状态已清除');
+    console.log("[Recovery] 状态已清除");
   }
 
   /** 监听状态变化 */

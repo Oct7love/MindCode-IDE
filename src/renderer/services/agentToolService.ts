@@ -38,6 +38,12 @@ export interface CheckpointEntry {
   timestamp: number;
 }
 
+/** 从 unknown error 中安全提取 message */
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return String(e);
+}
+
 // ==================== Constants ====================
 
 const MAX_RESULT_SIZE = 15000; // 工具结果最大字符数
@@ -89,15 +95,18 @@ export class AgentToolService {
       try {
         result = await this.executeHandler(name, args);
         break;
-      } catch (e: any) {
+      } catch (e: unknown) {
         attempts++;
         if (attempts > MAX_RETRY_COUNT) {
-          result = { success: false, error: `执行失败 (${attempts} 次尝试): ${e.message}` };
+          result = {
+            success: false,
+            error: `执行失败 (${attempts} 次尝试): ${getErrorMessage(e)}`,
+          };
           break;
         }
         // 只对临时错误重试
         if (!this.isRetryable(e)) {
-          result = { success: false, error: e.message };
+          result = { success: false, error: getErrorMessage(e) };
           break;
         }
         await this.delay(500 * attempts); // 指数退避
@@ -128,8 +137,8 @@ export class AgentToolService {
         return { success: true, data: { rolledBack: checkpoint.filePath } };
       }
       return { success: false, error: "回滚写入失败" };
-    } catch (e: any) {
-      return { success: false, error: `回滚失败: ${e.message}` };
+    } catch (e: unknown) {
+      return { success: false, error: `回滚失败: ${getErrorMessage(e)}` };
     }
   }
 
@@ -175,6 +184,11 @@ export class AgentToolService {
       const fullPath = this.resolvePath(path);
       const existing = await window.mindcode?.fs?.readFile?.(fullPath);
       if (existing?.success && existing.data !== undefined) {
+        // 上限保护：超过 50 个检查点时淘汰最旧的
+        if (this.checkpoints.size >= 50) {
+          const oldest = this.checkpoints.keys().next().value;
+          if (oldest) this.checkpoints.delete(oldest);
+        }
         const id = `cp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         this.checkpoints.set(id, {
           id,
@@ -317,7 +331,12 @@ export class AgentToolService {
 
   /** 搜索 - 限制结果数量 */
   private async handleSearch(args: Record<string, any>): Promise<ToolResult> {
-    const searchParams: any = {
+    const searchParams: {
+      workspacePath: string;
+      query: string;
+      maxResults: number;
+      glob?: string;
+    } = {
       workspacePath: this.workspaceRoot || "",
       query: args.query,
       maxResults: Math.min(args.maxResults || MAX_SEARCH_RESULTS, MAX_SEARCH_RESULTS),
@@ -380,8 +399,8 @@ export class AgentToolService {
       if (!hover) return { success: true, data: null };
       const contents = typeof hover.contents === "string" ? hover.contents : hover.contents.value;
       return { success: true, data: { contents, range: hover.range } };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: getErrorMessage(e) };
     }
   }
 
@@ -407,8 +426,8 @@ export class AgentToolService {
           column: l.range.start.character + 1,
         })),
       };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: getErrorMessage(e) };
     }
   }
 
@@ -432,8 +451,8 @@ export class AgentToolService {
           column: r.range.start.character + 1,
         })),
       };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: getErrorMessage(e) };
     }
   }
 
@@ -446,14 +465,20 @@ export class AgentToolService {
       return { success: false, error: `LSP 未运行: ${info.language}` };
     try {
       const symbols = await client.getDocumentSymbols(info.uri);
-      const flatten = (syms: DocumentSymbol[], depth = 0): any[] =>
+      interface FlatSymbol {
+        name: string;
+        kind: number;
+        line: number;
+        depth: number;
+      }
+      const flatten = (syms: DocumentSymbol[], depth = 0): FlatSymbol[] =>
         syms.flatMap((s) => [
           { name: s.name, kind: s.kind, line: s.range.start.line + 1, depth },
           ...(s.children ? flatten(s.children, depth + 1) : []),
         ]);
       return { success: true, data: flatten(symbols) };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: getErrorMessage(e) };
     }
   }
 
@@ -483,8 +508,8 @@ export class AgentToolService {
           source: d.source,
         })),
       };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: getErrorMessage(e) };
     }
   }
 
@@ -509,8 +534,8 @@ export class AgentToolService {
           insertText: i.insertText,
         })),
       };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: getErrorMessage(e) };
     }
   }
 
@@ -569,8 +594,8 @@ export class AgentToolService {
   }
 
   /** 判断错误是否可重试 */
-  private isRetryable(error: any): boolean {
-    const msg = error?.message?.toLowerCase() || "";
+  private isRetryable(error: unknown): boolean {
+    const msg = getErrorMessage(error).toLowerCase();
     return msg.includes("timeout") || msg.includes("network") || msg.includes("econnreset");
   }
 

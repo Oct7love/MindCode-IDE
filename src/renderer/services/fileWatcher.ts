@@ -2,7 +2,11 @@
  * FileWatcher - 文件监控服务
  */
 
-export interface FileChangeEvent { type: 'create' | 'change' | 'delete' | 'rename'; path: string; oldPath?: string; }
+export interface FileChangeEvent {
+  type: "create" | "change" | "delete" | "rename";
+  path: string;
+  oldPath?: string;
+}
 type FileChangeHandler = (event: FileChangeEvent) => void;
 
 const win = window as any;
@@ -27,8 +31,10 @@ class FileWatcher {
   unwatch(path: string, handler?: FileChangeHandler): void {
     const watcher = this.watchers.get(path);
     if (!watcher) return;
-    if (handler) { watcher.handlers.delete(handler); if (watcher.handlers.size === 0) this.stopWatching(path); }
-    else this.stopWatching(path);
+    if (handler) {
+      watcher.handlers.delete(handler);
+      if (watcher.handlers.size === 0) this.stopWatching(path);
+    } else this.stopWatching(path);
   }
 
   /** 全局监控 */
@@ -43,7 +49,9 @@ class FileWatcher {
       try {
         await win.mindcode.fs.watch(path, (event: FileChangeEvent) => this.emit(event));
         return;
-      } catch (e) { console.warn('[FileWatcher] IPC watch failed, using polling:', e); }
+      } catch (e) {
+        console.warn("[FileWatcher] IPC watch failed, using polling:", e);
+      }
     }
 
     // 回退到轮询模式
@@ -52,7 +60,7 @@ class FileWatcher {
       const currentMtime = await this.getFileMtime(path);
       if (currentMtime !== lastMtime) {
         lastMtime = currentMtime;
-        this.emit({ type: currentMtime ? 'change' : 'delete', path });
+        this.emit({ type: currentMtime ? "change" : "delete", path });
       }
     }, this.pollInterval);
     this.pollTimers.set(path, timer);
@@ -61,21 +69,46 @@ class FileWatcher {
   private stopWatching(path: string): void {
     this.watchers.delete(path);
     const timer = this.pollTimers.get(path);
-    if (timer) { clearInterval(timer); this.pollTimers.delete(path); }
-    if (win.mindcode?.fs?.unwatch) win.mindcode.fs.unwatch(path).catch(() => {});
+    if (timer) {
+      clearInterval(timer);
+      this.pollTimers.delete(path);
+    }
+    if (win.mindcode?.fs?.unwatch) {
+      win.mindcode.fs.unwatch(path).catch((e: unknown) => {
+        console.warn("[FileWatcher] unwatch 失败，回调可能残留:", path, e);
+      });
+    }
   }
 
   private async getFileMtime(path: string): Promise<number | null> {
     try {
-      if (win.mindcode?.fs?.stat) { const stat = await win.mindcode.fs.stat(path); return stat?.mtime || null; }
-    } catch { return null; }
+      if (win.mindcode?.fs?.stat) {
+        const stat = await win.mindcode.fs.stat(path);
+        return stat?.mtime || null;
+      }
+    } catch {
+      return null;
+    }
     return null;
   }
 
   private emit(event: FileChangeEvent): void {
     const watcher = this.watchers.get(event.path);
-    if (watcher) watcher.handlers.forEach(h => h(event));
-    this.globalHandlers.forEach(h => h(event));
+    if (!watcher) return; // 已 unwatch，忽略残留回调
+    watcher.handlers.forEach((h) => {
+      try {
+        h(event);
+      } catch (e) {
+        console.error("[FileWatcher] handler error:", e);
+      }
+    });
+    this.globalHandlers.forEach((h) => {
+      try {
+        h(event);
+      } catch (e) {
+        console.error("[FileWatcher] global handler error:", e);
+      }
+    });
   }
 
   /** 检查文件是否被外部修改 */
@@ -85,7 +118,7 @@ class FileWatcher {
   }
 
   destroy(): void {
-    this.pollTimers.forEach(timer => clearInterval(timer));
+    this.pollTimers.forEach((timer) => clearInterval(timer));
     this.pollTimers.clear();
     this.watchers.clear();
     this.globalHandlers.clear();

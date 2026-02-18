@@ -1,5 +1,6 @@
 // LLM 客户端中间件 - 限流/重试/熔断/降级
 import { EventEmitter } from "events";
+import type { ChatMessage, ToolSchema, ToolCallInfo, AIProvider } from "@shared/types/ai";
 
 // === 配置 ===
 export const LLM_CONFIG = {
@@ -42,9 +43,10 @@ export interface LLMError {
   suggestFallback?: boolean;
 }
 
-export function classifyError(error: any): LLMError {
-  const msg = String(error?.message || error || "").toLowerCase();
-  const code = error?.status || error?.statusCode || (msg.match(/(\d{3})/) || [])[1];
+export function classifyError(error: unknown): LLMError {
+  const err = error as Record<string, unknown> | undefined;
+  const msg = String(err?.message || error || "").toLowerCase();
+  const code = err?.status || err?.statusCode || (msg.match(/(\d{3})/) || [])[1];
   if (code === 429 || msg.includes("rate") || msg.includes("limit") || msg.includes("too many"))
     return {
       type: "rate_limit",
@@ -71,7 +73,7 @@ export function classifyError(error: any): LLMError {
     return { type: "network", message: "网络连接失败", retryable: true };
   if (code === 401 || code === 403 || msg.includes("auth") || msg.includes("key"))
     return { type: "auth", message: "API 密钥无效", retryable: false };
-  return { type: "unknown", message: error?.message || "未知错误", retryable: false };
+  return { type: "unknown", message: (err?.message as string) || "未知错误", retryable: false };
 }
 
 // === 熔断器 ===
@@ -106,10 +108,11 @@ class CircuitBreaker {
 interface QueuedRequest<T> {
   execute: () => Promise<T>;
   resolve: (v: T) => void;
-  reject: (e: any) => void;
+  reject: (e: unknown) => void;
   model: string;
 }
 class RequestQueue {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 异构队列需要类型擦除
   private queues = new Map<string, QueuedRequest<any>[]>();
   private running = new Map<string, number>();
   async enqueue<T>(model: string, execute: () => Promise<T>): Promise<T> {
@@ -153,7 +156,7 @@ async function withRetry<T>(
   model: string,
   breaker: CircuitBreaker,
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   for (let attempt = 0; attempt <= LLM_CONFIG.RETRY_MAX; attempt++) {
     try {
       const result = await fn();
@@ -186,9 +189,9 @@ export function getFallbackModel(model: string, triedModels: Set<string>): strin
 // === LLM 客户端 ===
 export interface LLMRequest {
   model: string;
-  messages: any[];
+  messages: ChatMessage[];
   stream?: boolean;
-  tools?: any[];
+  tools?: ToolSchema[];
   userId?: string;
   requestId?: string;
 }
@@ -202,7 +205,7 @@ export interface LLMResponse {
 }
 export interface LLMStreamCallbacks {
   onToken: (token: string) => void;
-  onToolCall?: (calls: any[]) => void;
+  onToolCall?: (calls: ToolCallInfo[]) => void;
   onComplete: (text: string, meta: { model: string; usedFallback: boolean }) => void;
   onError: (error: LLMError) => void;
   onFallback?: (from: string, to: string) => void;
@@ -211,13 +214,13 @@ export interface LLMStreamCallbacks {
 export class LLMClient extends EventEmitter {
   private breaker = new CircuitBreaker();
   private queue = new RequestQueue();
-  private providers: Map<string, any>;
-  constructor(providers: Map<string, any>) {
+  private providers: Map<string, AIProvider>;
+  constructor(providers: Map<string, AIProvider>) {
     super();
     this.providers = providers;
   }
 
-  private getProviderForModel(model: string): any {
+  private getProviderForModel(model: string): AIProvider | undefined {
     let providerName = "claude"; // 默认
     if (model.startsWith("codesuc-") || model.startsWith("special-claude-"))
       providerName = "codesuc"; // 特价渠道（兼容旧 ID）
@@ -252,6 +255,7 @@ export class LLMClient extends EventEmitter {
       }
       try {
         const provider = this.getProviderForModel(currentModel);
+        if (!provider) throw new Error(`未找到模型 ${currentModel} 对应的 Provider`);
         const data = await this.queue.enqueue<string>(currentModel, () =>
           withRetry(
             () => provider.setModel(currentModel).chat(request.messages),
@@ -300,18 +304,21 @@ export class LLMClient extends EventEmitter {
         return;
       }
       const provider = this.getProviderForModel(currentModel);
+      if (!provider) {
+        callbacks.onError({
+          type: "unknown",
+          message: `未找到模型 ${currentModel} 对应的 Provider`,
+          retryable: false,
+        });
+        return;
+      }
       return this.queue.enqueue(
         currentModel,
         () =>
           new Promise<void>((resolve, reject) => {
-            const streamFn =
-              request.tools && provider.chatWithTools
-                ? provider.chatWithTools.bind(provider)
-                : provider.chatStream.bind(provider);
-            const args = request.tools ? [request.messages, request.tools] : [request.messages];
             const wrappedCallbacks = {
               onToken: callbacks.onToken,
-              onToolCall: callbacks.onToolCall,
+              onToolCall: callbacks.onToolCall || (() => {}),
               onComplete: (text: string) => {
                 this.breaker.recordSuccess(currentModel);
                 callbacks.onComplete(text, {
@@ -337,7 +344,11 @@ export class LLMClient extends EventEmitter {
               },
             };
             provider.setModel(currentModel);
-            streamFn(...args, wrappedCallbacks).catch((e: Error) => wrappedCallbacks.onError(e));
+            const p =
+              request.tools && provider.chatWithTools
+                ? provider.chatWithTools(request.messages, request.tools, wrappedCallbacks)
+                : provider.chatStream(request.messages, wrappedCallbacks);
+            p.catch((e: Error) => wrappedCallbacks.onError(e));
           }),
       );
     };

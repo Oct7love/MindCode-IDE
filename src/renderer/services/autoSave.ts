@@ -2,18 +2,38 @@
  * AutoSave - 自动保存服务
  */
 
-export interface AutoSaveConfig { enabled: boolean; delay: number; onFocusLoss: boolean; onWindowClose: boolean; }
+export interface AutoSaveConfig {
+  enabled: boolean;
+  delay: number;
+  onFocusLoss: boolean;
+  onWindowClose: boolean;
+}
 type SaveHandler = (path: string, content: string) => Promise<void>;
 
-const STORAGE_KEY = 'mindcode-autosave-config';
-const DRAFT_PREFIX = 'mindcode-draft-';
+const STORAGE_KEY = "mindcode-autosave-config";
+const DRAFT_PREFIX = "mindcode-draft-";
 
 class AutoSaveService {
-  private config: AutoSaveConfig = { enabled: true, delay: 1000, onFocusLoss: true, onWindowClose: true };
+  private config: AutoSaveConfig = {
+    enabled: true,
+    delay: 1000,
+    onFocusLoss: true,
+    onWindowClose: true,
+  };
   private timers = new Map<string, NodeJS.Timeout>();
   private dirtyFiles = new Map<string, { content: string; lastModified: number }>();
   private saveHandler: SaveHandler | null = null;
   private initialized = false;
+  // 保存 bound 引用，以便 destroy 时移除
+  private _onBlur = () => {
+    if (this.config.onFocusLoss) this.saveAll();
+  };
+  private _onBeforeUnload = () => {
+    if (this.config.onWindowClose) this.saveAllSync();
+  };
+  private _onVisibilityChange = () => {
+    if (document.hidden && this.config.onFocusLoss) this.saveAll();
+  };
 
   init(saveHandler: SaveHandler): void {
     if (this.initialized) return;
@@ -24,9 +44,9 @@ class AutoSaveService {
   }
 
   private setupListeners(): void {
-    window.addEventListener('blur', () => { if (this.config.onFocusLoss) this.saveAll(); });
-    window.addEventListener('beforeunload', () => { if (this.config.onWindowClose) this.saveAllSync(); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && this.config.onFocusLoss) this.saveAll(); });
+    window.addEventListener("blur", this._onBlur);
+    window.addEventListener("beforeunload", this._onBeforeUnload);
+    document.addEventListener("visibilitychange", this._onVisibilityChange);
   }
 
   /** 标记文件为脏 */
@@ -49,7 +69,10 @@ class AutoSaveService {
   markClean(path: string): void {
     this.dirtyFiles.delete(path);
     const timer = this.timers.get(path);
-    if (timer) { clearTimeout(timer); this.timers.delete(path); }
+    if (timer) {
+      clearTimeout(timer);
+      this.timers.delete(path);
+    }
     this.clearDraft(path);
   }
 
@@ -61,15 +84,18 @@ class AutoSaveService {
     try {
       await this.saveHandler(path, dirty.content);
       this.markClean(path);
-      console.log('[AutoSave] Saved:', path);
+      console.log("[AutoSave] Saved:", path);
       return true;
-    } catch (e) { console.error('[AutoSave] Save failed:', path, e); return false; }
+    } catch (e) {
+      console.error("[AutoSave] Save failed:", path, e);
+      return false;
+    }
   }
 
   /** 保存所有脏文件 */
   async saveAll(): Promise<void> {
     const paths = Array.from(this.dirtyFiles.keys());
-    await Promise.all(paths.map(p => this.save(p)));
+    await Promise.all(paths.map((p) => this.save(p)));
   }
 
   /** 同步保存所有（用于 beforeunload） */
@@ -80,15 +106,27 @@ class AutoSaveService {
   }
 
   /** 检查是否有未保存的更改 */
-  hasDirtyFiles(): boolean { return this.dirtyFiles.size > 0; }
-  getDirtyFiles(): string[] { return Array.from(this.dirtyFiles.keys()); }
-  isDirty(path: string): boolean { return this.dirtyFiles.has(path); }
+  hasDirtyFiles(): boolean {
+    return this.dirtyFiles.size > 0;
+  }
+  getDirtyFiles(): string[] {
+    return Array.from(this.dirtyFiles.keys());
+  }
+  isDirty(path: string): boolean {
+    return this.dirtyFiles.has(path);
+  }
 
   // ============ 草稿管理 ============
 
   private saveDraft(path: string, content: string): void {
-    try { localStorage.setItem(DRAFT_PREFIX + this.hashPath(path), JSON.stringify({ path, content, timestamp: Date.now() })); }
-    catch { /* quota exceeded */ }
+    try {
+      localStorage.setItem(
+        DRAFT_PREFIX + this.hashPath(path),
+        JSON.stringify({ path, content, timestamp: Date.now() }),
+      );
+    } catch {
+      /* quota exceeded */
+    }
   }
 
   private clearDraft(path: string): void {
@@ -98,7 +136,10 @@ class AutoSaveService {
   getDraft(path: string): { content: string; timestamp: number } | null {
     try {
       const stored = localStorage.getItem(DRAFT_PREFIX + this.hashPath(path));
-      if (stored) { const data = JSON.parse(stored); return { content: data.content, timestamp: data.timestamp }; }
+      if (stored) {
+        const data = JSON.parse(stored);
+        return { content: data.content, timestamp: data.timestamp };
+      }
     } catch {}
     return null;
   }
@@ -108,8 +149,10 @@ class AutoSaveService {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith(DRAFT_PREFIX)) {
-        try { const data = JSON.parse(localStorage.getItem(key)!); drafts.push({ path: data.path, timestamp: data.timestamp }); }
-        catch {}
+        try {
+          const data = JSON.parse(localStorage.getItem(key)!);
+          drafts.push({ path: data.path, timestamp: data.timestamp });
+        } catch {}
       }
     }
     return drafts.sort((a, b) => b.timestamp - a.timestamp);
@@ -121,18 +164,23 @@ class AutoSaveService {
       const key = localStorage.key(i);
       if (key?.startsWith(DRAFT_PREFIX)) keys.push(key);
     }
-    keys.forEach(k => localStorage.removeItem(k));
+    keys.forEach((k) => localStorage.removeItem(k));
   }
 
   private hashPath(path: string): string {
     let hash = 0;
-    for (let i = 0; i < path.length; i++) { hash = ((hash << 5) - hash) + path.charCodeAt(i); hash |= 0; }
+    for (let i = 0; i < path.length; i++) {
+      hash = (hash << 5) - hash + path.charCodeAt(i);
+      hash |= 0;
+    }
     return hash.toString(36);
   }
 
   // ============ 配置 ============
 
-  getConfig(): AutoSaveConfig { return { ...this.config }; }
+  getConfig(): AutoSaveConfig {
+    return { ...this.config };
+  }
 
   setConfig(updates: Partial<AutoSaveConfig>): void {
     this.config = { ...this.config, ...updates };
@@ -147,14 +195,19 @@ class AutoSaveService {
   }
 
   private saveConfig(): void {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.config)); }
-    catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.config));
+    } catch {}
   }
 
   destroy(): void {
-    this.timers.forEach(timer => clearTimeout(timer));
+    window.removeEventListener("blur", this._onBlur);
+    window.removeEventListener("beforeunload", this._onBeforeUnload);
+    document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    this.timers.forEach((timer) => clearTimeout(timer));
     this.timers.clear();
     this.dirtyFiles.clear();
+    this.initialized = false;
   }
 }
 

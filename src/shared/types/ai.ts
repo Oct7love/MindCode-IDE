@@ -1,6 +1,6 @@
 // AI 服务相关类型定义
 
-export type AIProviderType = 'claude' | 'openai' | 'gemini' | 'deepseek' | 'glm' | 'codesuc';
+export type AIProviderType = "claude" | "openai" | "gemini" | "deepseek" | "glm" | "codesuc";
 
 export interface AIProviderConfig {
   apiKey: string;
@@ -11,7 +11,7 @@ export interface AIProviderConfig {
 }
 
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
   toolCalls?: ToolCallInfo[];
   toolCallId?: string;
@@ -20,10 +20,14 @@ export interface ChatMessage {
 export interface ToolSchema {
   name: string;
   description: string;
-  parameters: { type: 'object'; properties: Record<string, any>; required?: string[] };
+  parameters: { type: "object"; properties: Record<string, any>; required?: string[] };
 }
 
-export interface ToolCallInfo { id: string; name: string; arguments: Record<string, any>; }
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  arguments: Record<string, any>;
+}
 
 export interface ToolCallbacks extends StreamCallbacks {
   onToolCall: (calls: ToolCallInfo[]) => void;
@@ -31,8 +35,8 @@ export interface ToolCallbacks extends StreamCallbacks {
 
 export interface StreamCallbacks {
   onToken: (token: string) => void;
-  onThinking?: (token: string) => void;  // 思考过程回调
-  onThinkingComplete?: () => void;       // 思考完成回调
+  onThinking?: (token: string) => void; // 思考过程回调
+  onThinkingComplete?: () => void; // 思考完成回调
   onComplete: (fullText: string) => void;
   onError: (error: Error) => void;
 }
@@ -44,6 +48,11 @@ export interface AIProvider {
   supportsTools?: boolean; // 是否支持 Anthropic/OpenAI tools API
   chat(messages: ChatMessage[]): Promise<string>;
   chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void>;
+  chatWithTools?(
+    messages: ChatMessage[],
+    tools: ToolSchema[],
+    callbacks: ToolCallbacks,
+  ): Promise<void>;
   countTokens(text: string): number;
   setModel(model: string): AIProvider; // 运行时设置模型
 }
@@ -52,7 +61,7 @@ export interface ModelInfo {
   id: string;
   name: string;
   contextWindow: number;
-  inputPrice: number;  // 每百万 token 价格（美元）
+  inputPrice: number; // 每百万 token 价格（美元）
   outputPrice: number;
 }
 

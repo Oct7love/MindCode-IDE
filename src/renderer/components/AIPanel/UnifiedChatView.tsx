@@ -179,8 +179,12 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
   } = useComposerState({
     onSend: (text) => {
       engineSend(text, images);
-      setImages([]); // 发送后清空图片
-      setImageHistory([]); // 清空历史
+      // 释放 Blob URL 防止内存泄漏
+      images.forEach((img) => {
+        if (img.blobUrl) URL.revokeObjectURL(img.blobUrl);
+      });
+      setImages([]);
+      setImageHistory([]);
     },
     onStop: handleStop,
     onPickerOpen: setPickerPos,
@@ -192,6 +196,9 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
     if (input.trim() || images.length > 0) {
       engineSend(input, images);
       setInput("");
+      images.forEach((img) => {
+        if (img.blobUrl) URL.revokeObjectURL(img.blobUrl);
+      });
       setImages([]);
     }
   }, [input, images, engineSend, setInput]);
@@ -255,9 +262,11 @@ export const UnifiedChatView: React.FC<UnifiedChatViewProps> = memo(({ isResizin
     [images, model],
   );
 
-  // 移除图片（保存历史用于撤销，限制深度）
+  // 移除图片（保存历史用于撤销，限制深度，释放 Blob URL）
   const removeImage = useCallback(
     (id: string) => {
+      const target = images.find((img) => img.id === id);
+      if (target?.blobUrl) URL.revokeObjectURL(target.blobUrl);
       setImageHistory((prev) => [...prev.slice(-MAX_IMAGE_HISTORY + 1), images]);
       setImages((prev) => prev.filter((img) => img.id !== id));
     },

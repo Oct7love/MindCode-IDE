@@ -21,6 +21,7 @@ interface StreamState {
   finalText: string | null;
   cancel: (() => void) | null;
   resolve: ((value: string | null) => void) | null;
+  pollTimer: ReturnType<typeof setInterval> | null;
 }
 
 // 配置
@@ -68,6 +69,10 @@ export function createStreamingCompletionProvider(
       currentStream.cancel?.();
       currentStream.isStreaming = false;
       currentStream.resolve?.(null);
+      if (currentStream.pollTimer) {
+        clearInterval(currentStream.pollTimer);
+        currentStream.pollTimer = null;
+      }
       currentStream = null;
     }
     if (refreshTimer) {
@@ -95,6 +100,7 @@ export function createStreamingCompletionProvider(
       finalText: null,
       cancel: null,
       resolve: null,
+      pollTimer: null,
     };
 
     const cleanup = window.mindcode.ai.completionStream(
@@ -169,21 +175,30 @@ export function createStreamingCompletionProvider(
 
         stream.resolve = resolve;
 
-        const checkInterval = setInterval(() => {
+        stream.pollTimer = setInterval(() => {
           if (token.isCancellationRequested || !stream.isStreaming) {
-            clearInterval(checkInterval);
+            if (stream.pollTimer) {
+              clearInterval(stream.pollTimer);
+              stream.pollTimer = null;
+            }
             if (!stream.isDone) resolve(null);
             return;
           }
           if (stream.accumulated.length >= FIRST_TOKEN_THRESHOLD) {
-            clearInterval(checkInterval);
+            if (stream.pollTimer) {
+              clearInterval(stream.pollTimer);
+              stream.pollTimer = null;
+            }
             stream.resolve = null;
             resolve(stream.accumulated);
           }
         }, POLL_INTERVAL_MS);
 
         setTimeout(() => {
-          clearInterval(checkInterval);
+          if (stream.pollTimer) {
+            clearInterval(stream.pollTimer);
+            stream.pollTimer = null;
+          }
           if (stream.resolve === resolve) {
             stream.resolve = null;
             resolve(stream.accumulated.length > 0 ? stream.accumulated : null);

@@ -3,7 +3,7 @@
  * 集中处理已知bug的修复
  */
 
-import * as monaco from 'monaco-editor';
+import * as monaco from "monaco-editor";
 
 /**
  * 修复Tab切换焦点问题
@@ -11,13 +11,13 @@ import * as monaco from 'monaco-editor';
  */
 export function fixTabSwitchFocus(editor: monaco.editor.IStandaloneCodeEditor | null) {
   if (!editor) return;
-  
+
   // 延迟聚焦,确保DOM更新完成
   requestAnimationFrame(() => {
     try {
       editor.focus();
     } catch (error) {
-      console.warn('[BugFix] 编辑器聚焦失败:', error);
+      console.warn("[BugFix] 编辑器聚焦失败:", error);
     }
   });
 }
@@ -34,7 +34,7 @@ export class AgentLoopDetector {
   recordAction(action: string) {
     this.actionHistory.push({
       action,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // 保持历史记录在限制内
@@ -51,19 +51,19 @@ export class AgentLoopDetector {
     // 检查最近N次操作是否相同
     const recent = this.actionHistory.slice(-this.loopThreshold);
     const firstAction = recent[0].action;
-    const allSame = recent.every(item => item.action === firstAction);
+    const allSame = recent.every((item) => item.action === firstAction);
 
     if (allSame) {
-      console.warn('[BugFix] 检测到Agent死循环:', firstAction);
+      console.warn("[BugFix] 检测到Agent死循环:", firstAction);
       return true;
     }
 
     // 检查是否在两个操作之间来回切换
-    const pattern = recent.map(item => item.action).join(',');
+    const pattern = recent.map((item) => item.action).join(",");
     const repeatingPattern = /^(.+?),\1,\1/.test(pattern);
 
     if (repeatingPattern) {
-      console.warn('[BugFix] 检测到Agent重复模式:', pattern);
+      console.warn("[BugFix] 检测到Agent重复模式:", pattern);
       return true;
     }
 
@@ -86,7 +86,7 @@ export class AgentLoopDetector {
 export async function callToolWithTimeout<T>(
   toolFn: () => Promise<T>,
   timeoutMs = 30000,
-  toolName = 'unknown'
+  toolName = "unknown",
 ): Promise<{ success: boolean; data?: T; error?: string; timedOut?: boolean }> {
   let timeoutId: NodeJS.Timeout;
 
@@ -97,23 +97,20 @@ export async function callToolWithTimeout<T>(
   });
 
   try {
-    const result = await Promise.race([
-      toolFn(),
-      timeoutPromise
-    ]);
-    
+    const result = await Promise.race([toolFn(), timeoutPromise]);
+
     clearTimeout(timeoutId!);
     return { success: true, data: result };
   } catch (error: any) {
     clearTimeout(timeoutId!);
-    
-    const isTimeout = error.message?.includes('超时');
+
+    const isTimeout = error.message?.includes("超时");
     console.error(`[BugFix] 工具调用失败: ${toolName}`, error);
-    
+
     return {
       success: false,
-      error: error.message || '工具调用失败',
-      timedOut: isTimeout
+      error: error.message || "工具调用失败",
+      timedOut: isTimeout,
     };
   }
 }
@@ -125,16 +122,12 @@ export async function callToolWithTimeout<T>(
 export class CompletionTriggerOptimizer {
   private lastTriggerTime = 0;
   private minInterval = 50; // 最小触发间隔(ms)
-  private triggerChars = new Set(['.', '(', '[', '{', ':', '>', ' ', ',', '=']);
+  private triggerChars = new Set([".", "(", "[", "{", ":", ">", " ", ",", "="]);
 
   /**
    * 判断是否应该触发补全
    */
-  shouldTrigger(
-    text: string,
-    cursorPosition: number,
-    lastChar: string
-  ): boolean {
+  shouldTrigger(text: string, cursorPosition: number, lastChar: string): boolean {
     const now = Date.now();
 
     // 防抖: 太频繁不触发
@@ -149,24 +142,26 @@ export class CompletionTriggerOptimizer {
     }
 
     // 获取当前行内容
-    const lines = text.substring(0, cursorPosition).split('\n');
-    const currentLine = lines[lines.length - 1] || '';
-    
+    const lines = text.substring(0, cursorPosition).split("\n");
+    const currentLine = lines[lines.length - 1] || "";
+
     // 空行不触发
     if (currentLine.trim().length === 0) {
       return false;
     }
 
     // 注释不触发
-    if (currentLine.trim().startsWith('//') || 
-        currentLine.trim().startsWith('/*') || 
-        currentLine.trim().startsWith('#')) {
+    if (
+      currentLine.trim().startsWith("//") ||
+      currentLine.trim().startsWith("/*") ||
+      currentLine.trim().startsWith("#")
+    ) {
       return false;
     }
 
     // 字符串中不触发(除非在路径)
     const inString = this.isInString(currentLine, currentLine.length);
-    if (inString && !currentLine.includes('/')) {
+    if (inString && !currentLine.includes("/")) {
       return false;
     }
 
@@ -190,16 +185,16 @@ export class CompletionTriggerOptimizer {
 
     for (let i = 0; i < position; i++) {
       const char = line[i];
-      const prevChar = i > 0 ? line[i - 1] : '';
+      const prevChar = i > 0 ? line[i - 1] : "";
 
       // 跳过转义字符
-      if (prevChar === '\\') continue;
+      if (prevChar === "\\") continue;
 
       if (char === '"' && !inSingleQuote && !inBacktick) {
         inDoubleQuote = !inDoubleQuote;
       } else if (char === "'" && !inDoubleQuote && !inBacktick) {
         inSingleQuote = !inSingleQuote;
-      } else if (char === '`' && !inSingleQuote && !inDoubleQuote) {
+      } else if (char === "`" && !inSingleQuote && !inDoubleQuote) {
         inBacktick = !inBacktick;
       }
     }
@@ -225,8 +220,8 @@ export function cleanupMonacoModels() {
 
   // 如果超过100个model,清理不再使用的
   if (models.length > 100) {
-    console.warn('[BugFix] Monaco Models过多,开始清理...');
-    
+    console.warn("[BugFix] Monaco Models过多,开始清理...");
+
     let cleaned = 0;
     models.forEach((model, index) => {
       // 保留最近的50个model
@@ -241,15 +236,26 @@ export function cleanupMonacoModels() {
 }
 
 /**
- * 定期清理任务
+ * 定期清理任务（防重复启动，提供 stop 方法）
  */
-export function startPeriodicCleanup() {
-  // 每5分钟清理一次
-  setInterval(() => {
-    cleanupMonacoModels();
-  }, 5 * 60 * 1000);
+let _cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
-  console.log('[BugFix] 定期清理任务已启动');
+export function startPeriodicCleanup() {
+  if (_cleanupIntervalId) return; // 防重复
+  _cleanupIntervalId = setInterval(
+    () => {
+      cleanupMonacoModels();
+    },
+    5 * 60 * 1000,
+  );
+  console.log("[BugFix] 定期清理任务已启动");
+}
+
+export function stopPeriodicCleanup() {
+  if (_cleanupIntervalId) {
+    clearInterval(_cleanupIntervalId);
+    _cleanupIntervalId = null;
+  }
 }
 
 // 导出单例
