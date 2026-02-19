@@ -5,6 +5,7 @@
  * 支持智能模型路由（自动选择 Haiku/Sonnet/Opus）
  */
 import { useCallback, useRef, useEffect } from "react";
+import { createNamedLogger } from "../../../utils/logger";
 import type { AIMode, Plan, ToolCallStatus, ThinkingUIData } from "../../../stores";
 import { useAIStore } from "../../../stores";
 import { useFileStore } from "../../../stores";
@@ -19,6 +20,8 @@ import type { ToolCallInfo } from "@shared/types/ai";
 import { agentToolService } from "../../../services/agentToolService";
 import { collectCodebaseContext, formatCodebaseContext } from "../../../services/indexService";
 import { messageCompressor } from "../../../../core/ai/messageCompressor";
+
+const log = createNamedLogger("ChatEngine");
 
 // 模型上下文窗口大小（token 数）
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
@@ -209,7 +212,7 @@ export function useChatEngine(options: ChatEngineOptions) {
       lastConversationIdRef.current !== activeConversationId &&
       stopStreamRef.current
     ) {
-      console.log("[ChatEngine] 对话切换，停止当前流式请求");
+      log.info("对话切换，停止当前流式请求");
       stopStreamRef.current();
       stopStreamRef.current = null;
       abortRef.current = true;
@@ -231,8 +234,8 @@ export function useChatEngine(options: ChatEngineOptions) {
       state.buffer += token;
 
       // 调试日志
-      console.log(
-        "[ThinkingParser] token:",
+      log.debug(
+        "ThinkingParser token:",
         JSON.stringify(token.slice(0, 50)),
         "isInThinking:",
         state.isInThinking,
@@ -250,7 +253,7 @@ export function useChatEngine(options: ChatEngineOptions) {
           const startIdx = state.buffer.indexOf("<thinking>");
           if (startIdx !== -1) {
             // 找到完整的开始标签
-            console.log("[ThinkingParser] >>> ENTER thinking mode");
+            log.debug("ThinkingParser >>> ENTER thinking mode");
             const before = state.buffer.slice(0, startIdx);
             if (before) appendStreamingText(before);
             state.isInThinking = true;
@@ -282,10 +285,10 @@ export function useChatEngine(options: ChatEngineOptions) {
           const endIdx = state.buffer.indexOf("</thinking>");
           if (endIdx !== -1) {
             // 找到完整的结束标签
-            console.log("[ThinkingParser] <<< EXIT thinking mode, content length:", endIdx);
+            log.debug("ThinkingParser <<< EXIT thinking mode, content length:", endIdx);
             const thinkContent = state.buffer.slice(0, endIdx);
             if (thinkContent) {
-              console.log("[ThinkingParser] appendThinkingText:", thinkContent.slice(0, 100));
+              log.debug("ThinkingParser appendThinkingText:", thinkContent.slice(0, 100));
               appendThinkingText(thinkContent);
             }
             state.isInThinking = false;
@@ -301,8 +304,8 @@ export function useChatEngine(options: ChatEngineOptions) {
               // 有部分结束标签，输出前面的思考内容
               const safeEnd = state.buffer.length - partialMatch[0].length;
               if (safeEnd > 0) {
-                console.log(
-                  "[ThinkingParser] streaming thinking (partial end):",
+                log.debug(
+                  "ThinkingParser streaming thinking (partial end):",
                   state.buffer.slice(0, safeEnd).slice(0, 50),
                 );
                 appendThinkingText(state.buffer.slice(0, safeEnd));
@@ -311,7 +314,7 @@ export function useChatEngine(options: ChatEngineOptions) {
               // 等待更多数据
             } else {
               // 没有部分标签，全部输出为思考内容
-              console.log("[ThinkingParser] streaming thinking:", state.buffer.slice(0, 50));
+              log.debug("ThinkingParser streaming thinking:", state.buffer.slice(0, 50));
               appendThinkingText(state.buffer);
               state.buffer = "";
             }
@@ -634,7 +637,7 @@ ${thinkingProtocol}`;
   const getTools = useCallback(() => {
     // 没有工作区时，不提供文件系统相关的工具
     if (!workspaceRoot) {
-      console.log("[ChatEngine] 无工作区，不提供工具");
+      log.info("无工作区，不提供工具");
       return [];
     }
 
@@ -789,12 +792,12 @@ ${thinkingProtocol}`;
           if (codebaseCtx.snippets.length > 0) {
             const contextText = formatCodebaseContext(codebaseCtx);
             systemPrompt += `\n\n## 代码库上下文（@codebase 自动收集，共 ${codebaseCtx.snippets.length} 个相关片段）\n${contextText}`;
-            console.log(
-              `[ChatEngine] @codebase 注入 ${codebaseCtx.snippets.length} 个代码片段, ~${codebaseCtx.estimatedTokens} tokens`,
+            log.info(
+              `@codebase 注入 ${codebaseCtx.snippets.length} 个代码片段, ~${codebaseCtx.estimatedTokens} tokens`,
             );
           }
         } catch (e) {
-          console.warn("[ChatEngine] @codebase 上下文收集失败:", e);
+          log.warn("@codebase 上下文收集失败:", e);
         }
       }
 
@@ -819,15 +822,15 @@ ${thinkingProtocol}`;
           reason: routingResult.reason,
         });
         if (effectiveModel !== model) {
-          console.log(
-            `[ChatEngine] 🔀 智能路由: ${model} → ${effectiveModel} (任务: ${routingResult.taskType}, 使用工具: ${willUseTools})`,
+          log.info(
+            `智能路由: ${model} → ${effectiveModel} (任务: ${routingResult.taskType}, 使用工具: ${willUseTools})`,
           );
         }
       }
 
       // 调试日志
-      console.log(
-        "[ChatEngine] 发送消息, 主模型:",
+      log.debug(
+        "发送消息, 主模型:",
         model,
         ", 实际模型:",
         effectiveModel,
@@ -836,7 +839,7 @@ ${thinkingProtocol}`;
         ", 使用工具:",
         willUseTools,
       );
-      console.log("[ChatEngine] 系统提示词前200字:", systemPrompt.slice(0, 200));
+      log.debug("系统提示词前200字:", systemPrompt.slice(0, 200));
 
       // 过滤对话历史中涉及模型身份的内容，防止身份混淆
       // 当用户询问身份问题时，过滤掉所有身份相关的问答对
@@ -847,18 +850,18 @@ ${thinkingProtocol}`;
           if (askingModelIdentity) {
             // 过滤用户的身份问题
             if (m.role === "user" && isModelIdentityQuestion(m.content)) {
-              console.log("[ChatEngine] 过滤身份问题:", m.content.slice(0, 30) + "...");
+              log.debug("过滤身份问题:", m.content.slice(0, 30) + "...");
               return false;
             }
             // 过滤 assistant 的身份声明
             if (m.role === "assistant" && containsModelIdentity(m.content)) {
-              console.log("[ChatEngine] 过滤身份回答:", m.content.slice(0, 50) + "...");
+              log.debug("过滤身份回答:", m.content.slice(0, 50) + "...");
               return false;
             }
           } else {
             // 非身份问题时，仍然过滤掉以身份声明开头的消息（防止污染）
             if (m.role === "assistant" && containsModelIdentity(m.content)) {
-              console.log("[ChatEngine] 过滤身份消息:", m.content.slice(0, 50) + "...");
+              log.debug("过滤身份消息:", m.content.slice(0, 50) + "...");
               return false;
             }
           }
@@ -877,8 +880,8 @@ ${thinkingProtocol}`;
           maxHistoryTokens,
         );
         if (compressed.tokensSaved > 0) {
-          console.log(
-            `[ChatEngine] 历史压缩: ${compressed.originalCount}→${compressed.compressedCount} 条, 节省 ~${compressed.tokensSaved} tokens`,
+          log.info(
+            `历史压缩: ${compressed.originalCount}→${compressed.compressedCount} 条, 节省 ~${compressed.tokensSaved} tokens`,
           );
           chatHistory.splice(
             0,
@@ -901,7 +904,7 @@ ${thinkingProtocol}`;
       if (images && images.length > 0) {
         if (!supportsVision) {
           // 模型不支持图片，添加提示信息
-          console.warn("[ChatEngine] 当前模型不支持图片:", effectiveModel);
+          log.warn("当前模型不支持图片:", effectiveModel);
           userMessageContent = `[注意：当前模型 ${effectiveModel} 不支持图片识别，图片已忽略]\n\n${finalContent}`;
         } else {
           // 使用 Claude Vision API 格式: content 是数组
@@ -937,14 +940,7 @@ ${thinkingProtocol}`;
       // 只有 Agent 和 Debug 模式下的危险操作需要确认
       const requiresConfirm =
         mode === "agent" || mode === "debug" ? ["workspace_writeFile", "terminal_execute"] : [];
-      console.log(
-        "[ChatEngine] 模式:",
-        mode,
-        ", 可用工具数:",
-        tools.length,
-        ", 使用工具:",
-        useTools,
-      );
+      log.debug("模式:", mode, ", 可用工具数:", tools.length, ", 使用工具:", useTools);
 
       let usedFallbackModel: string | null = null;
 
@@ -1031,9 +1027,7 @@ ${thinkingProtocol}`;
 
         while (iterations < maxIterations && !abortRef.current) {
           iterations++;
-          console.log(
-            `[ChatEngine] 工具循环 #${iterations}/${maxIterations}, 消息数: ${apiMessages.length}`,
-          );
+          log.debug(`工具循环 #${iterations}/${maxIterations}, 消息数: ${apiMessages.length}`);
           let responseText = "";
           let toolCalls: ToolCallInfo[] = [];
           try {
@@ -1042,8 +1036,8 @@ ${thinkingProtocol}`;
                 reject(new Error("API 不可用"));
                 return;
               }
-              console.log(
-                "[ChatEngine] 调用 chatStreamWithTools, 工具数:",
+              log.debug(
+                "调用 chatStreamWithTools, 工具数:",
                 tools.length,
                 ", 工具名:",
                 tools.map((t) => t.name).join(", "),
@@ -1057,16 +1051,16 @@ ${thinkingProtocol}`;
                   handleStreamToken(token);
                 },
                 onToolCall: (calls) => {
-                  console.log("[ChatEngine] 收到工具调用:", calls);
+                  log.debug("收到工具调用:", calls);
                   toolCalls = calls;
                 },
                 onComplete: (_fullText, meta) => {
-                  console.log("[ChatEngine] chatStreamWithTools 完成");
+                  log.debug("chatStreamWithTools 完成");
                   if (meta?.usedFallback) usedFallbackModel = meta.model;
                   resolve();
                 },
                 onError: (err) => {
-                  console.error("[ChatEngine] chatStreamWithTools 错误:", err);
+                  log.error("chatStreamWithTools 错误:", err);
                   reject(new Error(err));
                 },
                 onFallback: (from, to) => {
@@ -1076,13 +1070,13 @@ ${thinkingProtocol}`;
               });
             });
           } catch (e: unknown) {
-            console.error("[ChatEngine] 工具调用错误:", e);
+            log.error("工具调用错误:", e);
             updateLastMessage(`错误: ${e instanceof Error ? e.message : "请求失败"}`);
             break;
           }
 
-          console.log(
-            `[ChatEngine] 工具调用完成, 响应长度: ${responseText.length}, 工具调用数: ${toolCalls.length}`,
+          log.debug(
+            `工具调用完成, 响应长度: ${responseText.length}, 工具调用数: ${toolCalls.length}`,
           );
           if (abortRef.current) break;
           if (toolCalls.length === 0) {
@@ -1200,7 +1194,7 @@ ${thinkingProtocol}`;
             processQueue();
           },
           onFallback: (from: string, to: string) => {
-            console.log(`[ChatEngine] Thinking UI fallback: ${from} -> ${to}`);
+            log.info(`Thinking UI fallback: ${from} -> ${to}`);
           },
         });
         stopStreamRef.current = cleanup || null;

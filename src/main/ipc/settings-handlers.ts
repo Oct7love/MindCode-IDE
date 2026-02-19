@@ -7,6 +7,9 @@ import { ipcMain, dialog, app } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import type { IPCContext } from "./types";
+import { logger } from "../../core/logger";
+
+const log = logger.child("Settings");
 
 const settingsPath = path.join(app.getPath("userData"), "settings.json");
 
@@ -17,7 +20,7 @@ function loadSettings(): Record<string, unknown> {
       return JSON.parse(data);
     }
   } catch (error) {
-    console.error("Failed to load settings:", error);
+    log.error("加载设置失败", error);
   }
   return {};
 }
@@ -26,7 +29,7 @@ function saveSettings(settings: Record<string, unknown>): void {
   try {
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
   } catch (error) {
-    console.error("Failed to save settings:", error);
+    log.error("保存设置失败", error);
   }
 }
 

@@ -7,6 +7,9 @@ import type { ChildProcess } from "child_process";
 import { spawn, execFile } from "child_process";
 import { EventEmitter } from "events";
 import { promisify } from "util";
+import { logger } from "../core/logger";
+
+const log = logger.child("LSP");
 
 const execFileAsync = promisify(execFile);
 
@@ -149,23 +152,21 @@ export class LSPManager extends EventEmitter {
       });
       server.process = proc;
       proc.stdout?.on("data", (data) => this.handleData(language, data.toString()));
-      proc.stderr?.on("data", (data) =>
-        console.error(`[LSP:${language}] stderr:`, data.toString()),
-      );
+      proc.stderr?.on("data", (data) => log.error(`[${language}] stderr: ${data.toString()}`));
       proc.on("error", (err) => {
-        console.error(`[LSP:${language}] 启动失败:`, err);
+        log.error(`[${language}] 启动失败`, err);
         server.state = "error";
       });
       proc.on("exit", (code) => {
-        console.warn(`[LSP:${language}] 进程退出: code=${code}`);
+        log.warn(`[${language}] 进程退出: code=${code}`);
         server.state = "stopped";
         this.servers.delete(language);
         // 非正常退出时自动重启（最多3次，指数退避：2s→4s→8s）
         if (code !== 0 && (server as any)._restartCount < 3) {
           (server as any)._restartCount = ((server as any)._restartCount || 0) + 1;
           const backoff = 2000 * Math.pow(2, (server as any)._restartCount - 1);
-          console.log(
-            `[LSP:${language}] 尝试自动重启 (${(server as any)._restartCount}/3), 延迟 ${backoff}ms`,
+          log.info(
+            `[${language}] 尝试自动重启 (${(server as any)._restartCount}/3), 延迟 ${backoff}ms`,
           );
           setTimeout(() => this.start(language, { rootPath: server.rootPath }), backoff);
         }
@@ -190,7 +191,7 @@ export class LSPManager extends EventEmitter {
       server.capabilities = initResult?.capabilities || {};
       server.state = "running";
       await this.notify(language, "initialized", {}); // 发送 initialized 通知
-      console.log(`[LSP:${language}] 启动成功, capabilities:`, Object.keys(server.capabilities));
+      log.info(`[${language}] 启动成功`, { capabilities: Object.keys(server.capabilities) });
       // 启动心跳检测
       this.startHealthCheck(language);
       return { success: true, capabilities: server.capabilities };
@@ -267,7 +268,7 @@ export class LSPManager extends EventEmitter {
         await this.request(language, "$/alive", null, 5000);
       } catch {
         // 心跳失败不立即重启（可能是服务器不支持该方法），仅在连续失败时处理
-        console.warn(`[LSP:${language}] 心跳无响应`);
+        log.warn(`[${language}] 心跳无响应`);
       }
     }, 30000);
     this.healthCheckTimers.set(language, timer);

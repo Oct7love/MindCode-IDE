@@ -25,6 +25,10 @@ export interface AsyncStorageBackend {
   delete(key: string): Promise<void>;
 }
 
+import { logger } from "../logger";
+
+const log = logger.child("Recovery");
+
 const STORAGE_KEY = "mindcode_recovery_state";
 const AUTO_SAVE_INTERVAL = 30000; // 30 秒
 
@@ -48,7 +52,7 @@ class RecoveryManager {
     await this.loadState();
     this.startAutoSave();
     window.addEventListener("beforeunload", this._onBeforeUnload);
-    console.log("[Recovery] 初始化完成");
+    log.info("初始化完成");
   }
 
   /** 销毁，释放监听器和定时器 */
@@ -86,7 +90,7 @@ class RecoveryManager {
       try {
         await this.asyncBackend.set(STORAGE_KEY, this.state);
       } catch (e) {
-        console.warn("[Recovery] IndexedDB 写入失败:", e);
+        log.warn("IndexedDB 写入失败:", e);
       }
     }
   }
@@ -97,7 +101,7 @@ class RecoveryManager {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
     } catch (e) {
-      console.warn("[Recovery] localStorage 写入失败:", e);
+      log.warn("localStorage 写入失败:", e);
     }
   }
 
@@ -108,22 +112,22 @@ class RecoveryManager {
         const data = await this.asyncBackend.get(STORAGE_KEY);
         if (data) {
           this.state = data;
-          console.log("[Recovery] 状态已从 IndexedDB 加载");
+          log.info("状态已从 IndexedDB 加载");
           return this.state;
         }
       } catch (e) {
-        console.warn("[Recovery] IndexedDB 读取失败:", e);
+        log.warn("IndexedDB 读取失败:", e);
       }
     }
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         this.state = JSON.parse(stored);
-        console.log("[Recovery] 状态已从 localStorage 加载");
+        log.info("状态已从 localStorage 加载");
         return this.state;
       }
     } catch (e) {
-      console.error("[Recovery] 加载失败:", e);
+      log.error("加载失败:", e);
     }
     return null;
   }
@@ -156,7 +160,7 @@ class RecoveryManager {
     } catch {
       /* ignore */
     }
-    console.log("[Recovery] 状态已清除");
+    log.info("状态已清除");
   }
 
   /** 监听状态变化 */

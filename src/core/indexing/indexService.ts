@@ -21,6 +21,9 @@ import { createSymbolExtractor } from "./extractor/symbolExtractor";
 import type { HybridSearch } from "./search/hybridSearch";
 import { createHybridSearch } from "./search/hybridSearch";
 import { getEmbeddingsService } from "./embeddings";
+import { logger } from "../logger";
+
+const log = logger.child("IndexService");
 
 /** 索引服务事件 */
 export interface IndexServiceEvents {
@@ -96,7 +99,7 @@ export class IndexService {
    */
   async initialize(): Promise<void> {
     await this.store.initialize();
-    console.log("[IndexService] 索引服务初始化完成");
+    log.info("索引服务初始化完成");
   }
 
   /**
@@ -111,7 +114,7 @@ export class IndexService {
    */
   async indexDirectory(rootPath: string): Promise<void> {
     if (this.isIndexing) {
-      console.warn("[IndexService] 正在索引中，请稍候");
+      log.warn("正在索引中，请稍候");
       return;
     }
 
@@ -133,26 +136,26 @@ export class IndexService {
       // OOM 防护：文件数量上限
       const filesToIndex =
         files.length > INDEX_LIMITS.MAX_FILES
-          ? (console.warn(
-              `[IndexService] 文件数 ${files.length} 超过上限 ${INDEX_LIMITS.MAX_FILES}，仅索引前 ${INDEX_LIMITS.MAX_FILES} 个`,
+          ? (log.warn(
+              `文件数 ${files.length} 超过上限 ${INDEX_LIMITS.MAX_FILES}，仅索引前 ${INDEX_LIMITS.MAX_FILES} 个`,
             ),
             files.slice(0, INDEX_LIMITS.MAX_FILES))
           : files;
 
-      console.log(`[IndexService] 扫描到 ${files.length} 个文件，将索引 ${filesToIndex.length} 个`);
+      log.info(`扫描到 ${files.length} 个文件，将索引 ${filesToIndex.length} 个`);
 
       // 2. 索引文件
       let indexedCount = 0;
       let symbolCount = 0;
       for (const filePath of filesToIndex) {
         if (this.abortController.signal.aborted) {
-          console.warn("[IndexService] 索引已取消");
+          log.warn("索引已取消");
           break;
         }
 
         // OOM 防护：符号数量上限
         if (this.totalSymbolCount > INDEX_LIMITS.MAX_SYMBOLS) {
-          console.warn(`[IndexService] 符号数超过上限 ${INDEX_LIMITS.MAX_SYMBOLS}，停止索引`);
+          log.warn(`符号数超过上限 ${INDEX_LIMITS.MAX_SYMBOLS}，停止索引`);
           break;
         }
 
@@ -160,8 +163,8 @@ export class IndexService {
         if (indexedCount % 100 === 0 && indexedCount > 0) {
           const memMB = process.memoryUsage().heapUsed / 1024 / 1024;
           if (memMB > INDEX_LIMITS.MAX_MEMORY_MB) {
-            console.warn(
-              `[IndexService] 内存使用 ${memMB.toFixed(0)}MB 超过上限 ${INDEX_LIMITS.MAX_MEMORY_MB}MB，停止索引`,
+            log.warn(
+              `内存使用 ${memMB.toFixed(0)}MB 超过上限 ${INDEX_LIMITS.MAX_MEMORY_MB}MB，停止索引`,
             );
             break;
           }
@@ -180,7 +183,7 @@ export class IndexService {
 
           this.events.onFileIndexed?.(filePath, count);
         } catch (err) {
-          console.error(`[IndexService] 索引文件失败: ${filePath}`, err);
+          log.error(`索引文件失败: ${filePath}`, err);
           this.events.onError?.(err as Error, filePath);
         }
       }
@@ -190,9 +193,7 @@ export class IndexService {
       this.updateProgress({ status: "complete" });
 
       const stats = this.store.getStats();
-      console.log(
-        `[IndexService] 索引完成: ${stats.totalFiles} 文件, ${stats.totalSymbols} 符号, 耗时 ${elapsed}ms`,
-      );
+      log.info(`索引完成: ${stats.totalFiles} 文件, ${stats.totalSymbols} 符号, 耗时 ${elapsed}ms`);
 
       this.events.onComplete?.({
         files: stats.totalFiles,
@@ -256,7 +257,7 @@ export class IndexService {
           embeddingModel: this.config.embeddingModel,
         }));
       } catch (e) {
-        console.warn("[IndexService] 向量嵌入生成失败，跳过:", e);
+        log.warn("向量嵌入生成失败，跳过:", e);
       }
     }
     this.store.saveCodeChunks(chunksToSave);
@@ -510,7 +511,7 @@ export class IndexService {
   startWatching(rootPath: string): void {
     if (this.watcher) this.stopWatching();
     this.watchRoot = rootPath;
-    console.log(`[IndexService] 启动文件监听: ${rootPath}`);
+    log.info(`启动文件监听: ${rootPath}`);
     this.watcher = watch(rootPath, {
       ignored: (p: string) => this.shouldExclude(p),
       persistent: true,
@@ -526,7 +527,7 @@ export class IndexService {
   /** 停止文件监听 */
   stopWatching(): void {
     if (this.watcher) {
-      console.log("[IndexService] 停止文件监听");
+      log.info("停止文件监听");
       this.watcher.close();
       this.watcher = null;
     }
@@ -547,12 +548,10 @@ export class IndexService {
         try {
           if (changeType === "unlink") {
             this.store.deleteFileIndex(filePath);
-            console.log(`[IndexService] 文件删除，移除索引: ${filePath}`);
+            log.info(`文件删除，移除索引: ${filePath}`);
           } else {
             const count = await this.indexFile(filePath);
-            console.log(
-              `[IndexService] 增量索引完成: ${filePath} (${count} 符号, ${Date.now() - startTime}ms)`,
-            );
+            log.info(`增量索引完成: ${filePath} (${count} 符号, ${Date.now() - startTime}ms)`);
           }
           this.events.onFileChanged?.(filePath, changeType);
         } catch (err) {

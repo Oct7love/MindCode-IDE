@@ -11,6 +11,10 @@
  * 4. 一键修复
  */
 
+import { createNamedLogger } from "../utils/logger";
+
+const log = createNamedLogger("Review");
+
 // ==================== Types ====================
 
 export type IssueSeverity = "error" | "warning" | "info";
@@ -230,7 +234,7 @@ export async function reviewStagedFiles(workspacePath: string): Promise<ReviewRe
       const ruleIssues = runRuleChecks(file.path, content, changedLines);
       issues.push(...ruleIssues);
     } catch (e) {
-      console.warn(`[Review] 审查文件失败: ${file.path}`, e);
+      log.warn(`审查文件失败: ${file.path}`, e);
     }
   }
 

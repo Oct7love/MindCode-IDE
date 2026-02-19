@@ -14,6 +14,9 @@ import type {
 import { PluginLoader } from "./loader";
 import type { CommandRegistry } from "./commands";
 import { getCommandRegistry } from "./commands";
+import { logger } from "../logger";
+
+const log = logger.child("PluginManager");
 
 /** Monaco 编辑器实例（插件 API 中使用的子集） */
 interface MonacoEditorInstance {
@@ -107,7 +110,7 @@ export class PluginManager {
 
   /** 初始化 - 扫描并加载所有插件 */
   async init(): Promise<void> {
-    console.log("[PluginManager] 初始化插件系统...");
+    log.info("初始化插件系统...");
     await this.scanAndLoadPlugins();
   }
 
@@ -124,7 +127,7 @@ export class PluginManager {
         }
       }
     } catch (err) {
-      console.error("[PluginManager] 扫描插件失败:", err);
+      log.error("扫描插件失败:", err);
     }
   }
 

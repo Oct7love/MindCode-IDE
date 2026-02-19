@@ -12,6 +12,9 @@ import type {
   ActivateFunction,
   DeactivateFunction,
 } from "./types";
+import { logger } from "../logger";
+
+const log = logger.child("PluginLoader");
 
 /** 插件加载器全局 API */
 interface PluginLoaderWindow {
@@ -72,14 +75,12 @@ export class PluginLoader {
 
       // 检查是否已加载
       if (this.plugins.has(manifest.id)) {
-        console.warn(`[PluginLoader] 插件已加载: ${manifest.id}`);
+        log.warn(`插件已加载: ${manifest.id}`);
         return this.plugins.get(manifest.id)!;
       }
 
       // 记录所请求的权限
-      console.log(
-        `[PluginLoader] 插件 ${manifest.id} 请求权限: [${manifest.permissions.join(", ")}]`,
-      );
+      log.info(`插件 ${manifest.id} 请求权限: [${manifest.permissions.join(", ")}]`);
 
       // 创建上下文
       const pluginPath = manifestPath.replace(/[/\\]manifest\.json$/, "");
@@ -94,10 +95,10 @@ export class PluginLoader {
 
       const instance: PluginInstance = { manifest, state: "inactive", context };
       this.plugins.set(manifest.id, instance);
-      console.log(`[PluginLoader] 插件已加载: ${manifest.id}`);
+      log.info(`插件已加载: ${manifest.id}`);
       return instance;
     } catch (err) {
-      console.error(`[PluginLoader] 加载失败: ${manifestPath}`, err);
+      log.error(`加载失败: ${manifestPath}`, err);
       return null;
     }
   }
@@ -106,7 +107,7 @@ export class PluginLoader {
   async activatePlugin(pluginId: string): Promise<boolean> {
     const instance = this.plugins.get(pluginId);
     if (!instance) {
-      console.error(`[PluginLoader] 插件未找到: ${pluginId}`);
+      log.error(`插件未找到: ${pluginId}`);
       return false;
     }
     if (instance.state === "active") return true;
@@ -125,12 +126,10 @@ export class PluginLoader {
       }
       instance.exports = module;
       instance.state = "active";
-      console.log(
-        `[PluginLoader] 插件已激活: ${pluginId} (权限: [${instance.manifest.permissions.join(", ")}])`,
-      );
+      log.info(`插件已激活: ${pluginId} (权限: [${instance.manifest.permissions.join(", ")}])`);
       return true;
     } catch (err) {
-      console.error(`[PluginLoader] 激活失败: ${pluginId}`, err);
+      log.error(`激活失败: ${pluginId}`, err);
       instance.state = "error";
       return false;
     }
@@ -157,10 +156,10 @@ export class PluginLoader {
       }
       instance.context.subscriptions = [];
       instance.state = "inactive";
-      console.log(`[PluginLoader] 插件已停用: ${pluginId}`);
+      log.info(`插件已停用: ${pluginId}`);
       return true;
     } catch (err) {
-      console.error(`[PluginLoader] 停用失败: ${pluginId}`, err);
+      log.error(`停用失败: ${pluginId}`, err);
       instance.state = "error";
       return false;
     }
@@ -194,7 +193,7 @@ export class PluginLoader {
     // 生产环境应使用 Worker 或 iframe 沙箱
     try {
       if (win?.mindcode?.plugins?.loadModule) return await win.mindcode.plugins.loadModule(path);
-      console.warn("[PluginLoader] 插件模块加载未实现");
+      log.warn("插件模块加载未实现");
       return null;
     } catch {
       return null;

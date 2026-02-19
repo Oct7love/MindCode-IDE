@@ -3,6 +3,10 @@
  * 优化并发请求,避免同时发送过多请求
  */
 
+import { logger } from "../logger";
+
+const log = logger.child("Pipeline");
+
 interface PendingRequest<T = unknown> {
   request: () => Promise<T>;
   resolve: (value: T) => void;
@@ -152,7 +156,7 @@ export function getRequestPipeline(): RequestPipeline {
  * 在应用启动时建立连接,减少首次请求延迟
  */
 export async function warmupAIConnections() {
-  console.log("[Pipeline] 预热AI连接...");
+  log.info("预热AI连接...");
 
   // 使用管道发送预热请求
   const pipeline = getRequestPipeline();
@@ -169,5 +173,5 @@ export async function warmupAIConnections() {
   // 添加到管道,低优先级
   pipeline.add(warmupRequest, -1).catch(() => {});
 
-  console.log("[Pipeline] AI连接预热完成");
+  log.info("AI连接预热完成");
 }

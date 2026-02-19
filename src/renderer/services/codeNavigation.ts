@@ -2,6 +2,10 @@
  * CodeNavigation - 代码导航服务
  */
 
+import { createNamedLogger } from "../utils/logger";
+
+const log = createNamedLogger("CodeNavigation");
+
 export interface Position {
   line: number;
   column: number;
@@ -70,7 +74,7 @@ class CodeNavigation {
         }
       }
     } catch (e) {
-      console.error("[CodeNavigation] goToDefinition failed:", e);
+      log.error("goToDefinition failed:", e);
     }
     return null;
   }
@@ -86,7 +90,7 @@ class CodeNavigation {
         }
       }
     } catch (e) {
-      console.error("[CodeNavigation] goToTypeDefinition failed:", e);
+      log.error("goToTypeDefinition failed:", e);
     }
     return null;
   }
@@ -97,7 +101,7 @@ class CodeNavigation {
       if (win.mindcode?.lsp?.implementation)
         return await win.mindcode.lsp.implementation(file, position);
     } catch (e) {
-      console.error("[CodeNavigation] goToImplementation failed:", e);
+      log.error("goToImplementation failed:", e);
     }
     return null;
   }
@@ -114,7 +118,7 @@ class CodeNavigation {
       if (win.mindcode?.lsp?.references)
         return (await win.mindcode.lsp.references(file, position, includeDeclaration)) || [];
     } catch (e) {
-      console.error("[CodeNavigation] findReferences failed:", e);
+      log.error("findReferences failed:", e);
     }
     return [];
   }
@@ -127,7 +131,7 @@ class CodeNavigation {
       if (win.mindcode?.lsp?.documentSymbols)
         return (await win.mindcode.lsp.documentSymbols(file)) || [];
     } catch (e) {
-      console.error("[CodeNavigation] getDocumentSymbols failed:", e);
+      log.error("getDocumentSymbols failed:", e);
     }
     return [];
   }
@@ -138,7 +142,7 @@ class CodeNavigation {
       if (win.mindcode?.lsp?.workspaceSymbols)
         return (await win.mindcode.lsp.workspaceSymbols(query)) || [];
     } catch (e) {
-      console.error("[CodeNavigation] searchWorkspaceSymbols failed:", e);
+      log.error("searchWorkspaceSymbols failed:", e);
     }
     return [];
   }
@@ -154,7 +158,7 @@ class CodeNavigation {
     try {
       if (win.mindcode?.lsp?.rename) return await win.mindcode.lsp.rename(file, position, newName);
     } catch (e) {
-      console.error("[CodeNavigation] renameSymbol failed:", e);
+      log.error("renameSymbol failed:", e);
     }
     return null;
   }
@@ -168,7 +172,7 @@ class CodeNavigation {
       if (win.mindcode?.lsp?.prepareRename)
         return await win.mindcode.lsp.prepareRename(file, position);
     } catch (e) {
-      console.error("[CodeNavigation] prepareRename failed:", e);
+      log.error("prepareRename failed:", e);
     }
     return null;
   }

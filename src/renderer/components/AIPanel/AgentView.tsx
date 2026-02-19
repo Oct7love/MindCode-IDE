@@ -3,6 +3,9 @@ import { useAIStore, useFileStore } from "../../stores";
 import { ModelPicker, TOOL_CAPABLE_MODELS } from "./ModelPicker";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import "./AgentView.css";
+import { createNamedLogger } from "../../utils/logger";
+
+const log = createNamedLogger("Agent");
 
 interface ToolCall {
   id: string;
@@ -62,7 +65,7 @@ export const AgentView: React.FC = memo(() => {
       name: string,
       args: Record<string, any>,
     ): Promise<{ success: boolean; data?: unknown; error?: string }> => {
-      if (process.env.NODE_ENV === "development") console.log(`[Agent] executeTool: ${name}`, args);
+      log.debug(`executeTool: ${name}`, args);
       try {
         switch (name) {
           case "workspace_listDir":
@@ -128,7 +131,7 @@ export const AgentView: React.FC = memo(() => {
             return { success: false, error: `未知工具: ${name}` };
         }
       } catch (e: unknown) {
-        console.error(`[Agent] Tool error: ${name}`, e);
+        log.error(`Tool error: ${name}`, e);
         return { success: false, error: e instanceof Error ? e.message : String(e) };
       }
     },

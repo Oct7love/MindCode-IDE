@@ -9,6 +9,9 @@ import type {
   ToolCallInfo,
 } from "@shared/types/ai";
 import { DEFAULT_BASE_URLS } from "../config";
+import { logger } from "../../logger";
+
+const log = logger.child("Codesuc");
 
 // 延迟导入 electron.net，避免在模块加载阶段访问未初始化的 Electron API
 let electronNet: typeof import("electron").net | null = null;
@@ -71,13 +74,13 @@ export class CodesucProvider extends BaseAIProvider {
     super(config);
     this.apiKey = config.apiKey;
     this.baseUrl = (config.baseUrl || DEFAULT_BASE_URLS.codesuc).replace(/\/$/, "");
-    console.log(`[Codesuc] Init: baseUrl=${this.baseUrl}, apiKey=${this.apiKey?.slice(0, 10)}...`);
+    log.info(`Init: baseUrl=${this.baseUrl}, apiKey=${this.apiKey?.slice(0, 10)}...`);
   }
 
   async probeCapabilities(): Promise<{ tools: boolean; stream: boolean }> {
     // 能力探测（启动时调用一次）
     if (this.capabilitiesCache.probed) return this.capabilitiesCache;
-    console.log(`[Codesuc] Probing capabilities...`);
+    log.info(`Probing capabilities...`);
     const testMsg = [{ role: "user", content: "hi" }];
     const testTool = [
       { name: "test", description: "test", input_schema: { type: "object", properties: {} } },
@@ -93,15 +96,15 @@ export class CodesucProvider extends BaseAIProvider {
       await this.request(body, false);
       this.capabilitiesCache.tools = true;
       this.supportsTools = true;
-      console.log(`[Codesuc] Tools supported: YES`);
+      log.info(`Tools supported: YES`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("400") || msg.includes("渠道")) {
         this.capabilitiesCache.tools = false;
         this.supportsTools = false;
-        console.log(`[Codesuc] Tools supported: NO (${msg})`);
+        log.info(`Tools supported: NO (${msg})`);
       } else {
-        console.log(`[Codesuc] Tools probe error: ${msg}`);
+        log.warn(`Tools probe error: ${msg}`);
       }
     }
     this.capabilitiesCache.probed = true;
@@ -119,7 +122,7 @@ export class CodesucProvider extends BaseAIProvider {
   ): Promise<Record<string, unknown>> {
     const url = `${this.baseUrl}/v1/messages`;
     const bodyStr = JSON.stringify(body);
-    console.log(`[Codesuc] Request: ${url}, model=${body.model}, stream=${stream}`);
+    log.info(`Request: ${url}, model=${body.model}, stream=${stream}`);
     return new Promise((resolve, reject) => {
       const request = getNet().request({ method: "POST", url });
       request.setHeader("Content-Type", "application/json");
@@ -129,7 +132,7 @@ export class CodesucProvider extends BaseAIProvider {
       let statusCode = 0;
       request.on("response", (response) => {
         statusCode = response.statusCode;
-        console.log(`[Codesuc] Response status: ${statusCode}`);
+        log.info(`Response status: ${statusCode}`);
         if (stream) {
           resolve({ response, statusCode });
           return;
@@ -151,7 +154,7 @@ export class CodesucProvider extends BaseAIProvider {
         response.on("error", reject);
       });
       request.on("error", (err) => {
-        console.error(`[Codesuc] Request error:`, err);
+        log.error(`Request error:`, err);
         reject(err);
       });
       request.write(bodyStr);
@@ -200,7 +203,7 @@ export class CodesucProvider extends BaseAIProvider {
         let errData = "";
         response.on("data", (c: Buffer) => (errData += c.toString()));
         response.on("end", () => {
-          console.error(`[Codesuc] Stream Error ${statusCode}: ${errData}`);
+          log.error(`Stream Error ${statusCode}: ${errData}`);
           callbacks.onError(new Error(`API Error ${statusCode}: ${errData}`));
         });
         return;
@@ -236,13 +239,13 @@ export class CodesucProvider extends BaseAIProvider {
         }
       });
       response.on("end", () => {
-        console.log(`[Codesuc] chatStream end: ${chunkCount} chunks, ${fullText.length} chars`);
+        log.info(`chatStream end: ${chunkCount} chunks, ${fullText.length} chars`);
         callbacks.onComplete(fullText);
       });
       response.on("error", (e: Error) => callbacks.onError(e));
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error(`[Codesuc] chatStream error:`, err.message);
+      log.error(`chatStream error:`, err.message);
       callbacks.onError(err);
     }
   }
@@ -356,10 +359,7 @@ export class CodesucProvider extends BaseAIProvider {
         const chunkStr = chunk.toString();
         chunkCount++;
         if (chunkCount <= 3)
-          console.log(
-            `[Codesuc] Chunk #${chunkCount} (${chunkStr.length} bytes):`,
-            chunkStr.slice(0, 200),
-          );
+          log.debug(`Chunk #${chunkCount} (${chunkStr.length} bytes):`, chunkStr.slice(0, 200));
 
         // 检测 API 返回的错误 JSON（状态码200但内容是错误）
         if (
@@ -370,7 +370,7 @@ export class CodesucProvider extends BaseAIProvider {
           try {
             const errJson = JSON.parse(chunkStr);
             if (errJson.error?.message) {
-              console.error(`[Codesuc] API Error in response:`, errJson.error.message);
+              log.error(`API Error in response:`, errJson.error.message);
               errorDetected = true;
               callbacks.onError(new Error(`Codesuc API: ${errJson.error.message}`));
               return;
@@ -407,15 +407,13 @@ export class CodesucProvider extends BaseAIProvider {
                 filterAndEmitToken(p.choices[0].delta.content);
               }
             } catch (e) {
-              console.log(`[Codesuc] Parse error:`, data.slice(0, 100));
+              log.warn(`Parse error:`, data.slice(0, 100));
             }
           }
         }
       });
       response.on("end", () => {
-        console.log(
-          `[Codesuc] Stream end: ${chunkCount} chunks, fullText=${fullText.length} chars`,
-        );
+        log.info(`Stream end: ${chunkCount} chunks, fullText=${fullText.length} chars`);
         const toolCalls = this.parseToolCalls(fullText); // 从纯文本中解析工具调用
         if (toolCalls.length > 0 && callbacks.onToolCall) callbacks.onToolCall(toolCalls);
         callbacks.onComplete(fullText);
@@ -423,7 +421,7 @@ export class CodesucProvider extends BaseAIProvider {
       response.on("error", (e: Error) => callbacks.onError(e));
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
-      console.error(`[Codesuc] chatWithTools error:`, err.message);
+      log.error(`chatWithTools error:`, err.message);
       callbacks.onError(err);
     }
   }
@@ -450,7 +448,7 @@ export class CodesucProvider extends BaseAIProvider {
           arguments: JSON.parse(match[2].trim()),
         });
       } catch {
-        console.warn("[Codesuc] 工具调用参数解析失败:", match[1]?.trim());
+        log.warn("工具调用参数解析失败:", match[1]?.trim());
       }
     }
     return calls;

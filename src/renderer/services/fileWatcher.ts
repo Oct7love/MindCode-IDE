@@ -2,6 +2,10 @@
  * FileWatcher - 文件监控服务
  */
 
+import { createNamedLogger } from "../utils/logger";
+
+const log = createNamedLogger("FileWatcher");
+
 export interface FileChangeEvent {
   type: "create" | "change" | "delete" | "rename";
   path: string;
@@ -51,7 +55,7 @@ class FileWatcher {
         await win.mindcode.fs.watch(path, (event: FileChangeEvent) => this.emit(event));
         return;
       } catch (e) {
-        console.warn("[FileWatcher] IPC watch failed, using polling:", e);
+        log.warn("IPC watch failed, using polling:", e);
       }
     }
 
@@ -76,7 +80,7 @@ class FileWatcher {
     }
     if (win.mindcode?.fs?.unwatch) {
       win.mindcode.fs.unwatch(path).catch((e: unknown) => {
-        console.warn("[FileWatcher] unwatch 失败，回调可能残留:", path, e);
+        log.warn("unwatch 失败，回调可能残留:", path, e);
       });
     }
   }
@@ -100,14 +104,14 @@ class FileWatcher {
       try {
         h(event);
       } catch (e) {
-        console.error("[FileWatcher] handler error:", e);
+        log.error("handler error:", e);
       }
     });
     this.globalHandlers.forEach((h) => {
       try {
         h(event);
       } catch (e) {
-        console.error("[FileWatcher] global handler error:", e);
+        log.error("global handler error:", e);
       }
     });
   }

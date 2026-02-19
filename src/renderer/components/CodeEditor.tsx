@@ -15,6 +15,9 @@ import {
 } from "../services/inlineCompletionProvider";
 import { registerStreamingCompletionProvider } from "../services/streamingCompletionProvider";
 import { useLSP } from "../hooks/useLSP";
+import { createNamedLogger } from "../utils/logger";
+
+const log = createNamedLogger("CodeEditor");
 
 // 配置 Monaco Worker - 使用 Vite 兼容的静态导入方式
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -296,7 +299,7 @@ const _createLocalCompletionProvider = (): monaco.languages.InlineCompletionsPro
       };
     } catch (e: any) {
       if (e?.name === "AbortError" || e?.message?.includes("Canceled")) return { items: [] }; // 静默处理取消
-      console.error("[CodeEditor] 补全请求失败:", e);
+      log.error("补全请求失败:", e);
       return { items: [] };
     }
   },
@@ -345,7 +348,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     inlineCompletionDisposable = registerStreamingCompletionProvider(
       () => file?.path || "",
       editorRef as { current: monaco.editor.IStandaloneCodeEditor | null },
-      (source) => console.log("[CodeEditor] Ghost text accepted:", source),
+      (source) => log.debug("Ghost text accepted:", source),
     );
     return () => {
       inlineCompletionDisposable?.dispose();

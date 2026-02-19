@@ -400,6 +400,19 @@ contextBridge.exposeInMainWorld("mindcode", {
       return () => ipcRenderer.removeListener("index:complete", handler);
     },
   },
+
+  // 日志服务
+  log: {
+    write: (entry: {
+      level: string;
+      message: string;
+      source?: string;
+      data?: unknown;
+      traceId?: string;
+    }) => ipcRenderer.send("log:write", entry),
+    getPath: () => ipcRenderer.invoke("log:getPath") as Promise<string | null>,
+    export: () => ipcRenderer.invoke("log:export") as Promise<string>,
+  },
 });
 
 // ─── 全局类型声明 ────────────────────────────────────────
@@ -731,6 +744,17 @@ declare global {
         onComplete: (
           callback: (stats: import("../shared/types/ipc").IndexCompleteStats) => void,
         ) => () => void;
+      };
+      log: {
+        write: (entry: {
+          level: string;
+          message: string;
+          source?: string;
+          data?: unknown;
+          traceId?: string;
+        }) => void;
+        getPath: () => Promise<string | null>;
+        export: () => Promise<string>;
       };
     };
   }

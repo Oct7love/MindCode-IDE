@@ -14,6 +14,9 @@ import {
   DEFAULT_COMPLETION_REQUEST_CONFIG,
   getModelConfig,
 } from "./completion-config";
+import { logger } from "../logger";
+
+const log = logger.child("Completion");
 
 import { CompletionContext, DiagnosticInfo, buildCompletionContext } from "./completion-context";
 
@@ -386,7 +389,7 @@ export function createMonacoCompletionProvider(service: CompletionService, monac
           })),
         };
       } catch (error) {
-        console.error("Completion error:", error);
+        log.error("Completion error:", error);
         return { items: [] };
       }
     },

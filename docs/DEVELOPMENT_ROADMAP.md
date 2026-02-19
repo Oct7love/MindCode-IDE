@@ -398,11 +398,22 @@ async function applyChange(change: PendingChange): Promise<boolean> {
 - `src/renderer/services/rulesService.ts`
 - `src/renderer/hooks/useProjectRules.ts`
 
-### Phase 5: 代码索引 ⏳ 待开始
-### Phase 6: Composer ⏳ 待开始
+### Phase 5: 代码索引 ✅ 已完成
+- [x] TypeScript AST 解析器 (`src/core/indexing/parser/typescript.ts`)
+- [x] 符号提取器 (`src/core/indexing/extractor/symbolExtractor.ts`)
+- [x] SQLite 存储层 (`src/core/indexing/storage/sqliteStore.ts`)
+- [x] 混合搜索 API (`src/core/indexing/search/hybridSearch.ts`)
+- [x] @codebase 上下文增强 (`src/renderer/services/indexService.ts`)
+- [x] 主进程 IPC 集成
+
+### Phase 6: Composer ✅ 已完成
+- [x] Composer 类型定义 (`src/core/composer/types.ts`)
+- [x] 计划生成器 (`src/core/composer/planGenerator.ts`)
+- [x] 执行引擎 (`src/core/composer/executor.ts`)
+- [x] Composer 面板 UI (`src/renderer/components/Composer/ComposerPanel.tsx`)
 
 ---
 
 ## 九、下一步计划
 
-继续实施 Phase 5 (代码索引) 和 Phase 6 (Composer)，或根据用户反馈调整优先级。
+Phase 1-6 全部完成。后续参见 `ULTIMATE_ROADMAP.md`（Phase 7-10）和 `ARCHITECTURE_AUDIT.md`（P2 待推进项）。

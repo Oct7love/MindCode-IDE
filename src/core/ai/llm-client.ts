@@ -1,6 +1,9 @@
 // LLM 客户端中间件 - 限流/重试/熔断/降级
 import { EventEmitter } from "events";
 import type { ChatMessage, ToolSchema, ToolCallInfo, AIProvider } from "@shared/types/ai";
+import { logger } from "../logger";
+
+const log = logger.child("LLM");
 
 // === 配置 ===
 export const LLM_CONFIG = {
@@ -230,7 +233,7 @@ export class LLMClient extends EventEmitter {
     else if (model.startsWith("deepseek-")) providerName = "deepseek";
     else if (model.startsWith("glm-")) providerName = "glm";
     else if (model.startsWith("gpt-")) providerName = "openai";
-    console.log(`[LLM] getProviderForModel: model=${model} -> provider=${providerName}`);
+    log.info(`getProviderForModel: model=${model} -> provider=${providerName}`);
     return this.providers.get(providerName);
   }
 

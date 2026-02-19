@@ -4,6 +4,9 @@ import {
   loadConversationsAsync,
   saveConversations,
 } from "@services/conversationPersistence";
+import { createNamedLogger } from "../utils/logger";
+
+const log = createNamedLogger("AIStore");
 
 export type AIMode = "chat" | "plan" | "agent" | "debug";
 export type ContextType =
@@ -603,7 +606,7 @@ loadConversationsAsync()
     // IndexedDB 数据比 localStorage 更完整时才替换
     if (idbConversations.length >= current.length) {
       useAIStore.setState({ conversations: idbConversations });
-      console.log("[AIStore] 对话已从 IndexedDB 升级");
+      log.info("对话已从 IndexedDB 升级");
     }
   })
   .catch(() => {

@@ -23,6 +23,7 @@ import {
   warmupAIProviders,
   type IPCContext,
 } from "./ipc";
+import { initLogging } from "./log-setup";
 
 markStartup("main_start");
 
@@ -466,6 +467,9 @@ app.whenReady().then(() => {
       },
     });
   });
+
+  // 初始化日志系统（必须在 IPC 注册之前）
+  initLogging(isDev);
 
   createMenu();
   createWindow();

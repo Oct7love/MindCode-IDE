@@ -4,6 +4,9 @@
  */
 
 import { create } from "zustand";
+import { createNamedLogger } from "../utils/logger";
+
+const log = createNamedLogger("IndexService");
 
 /** 索引状态 */
 interface IndexState {
@@ -58,7 +61,7 @@ export const useIndexStore = create<IndexStore>((set, _get) => ({
 
   startIndexing: async (workspacePath: string) => {
     if (!window.mindcode?.index) {
-      console.warn("[IndexService] 索引服务不可用");
+      log.warn("索引服务不可用");
       return;
     }
 
@@ -81,7 +84,7 @@ export const useIndexStore = create<IndexStore>((set, _get) => ({
       await window.mindcode.index.cancel();
       set({ status: "idle" });
     } catch (err: unknown) {
-      console.error("[IndexService] 取消索引失败:", err);
+      log.error("取消索引失败:", err);
     }
   },
 
@@ -103,7 +106,7 @@ export const useIndexStore = create<IndexStore>((set, _get) => ({
         },
       });
     } catch (err: unknown) {
-      console.error("[IndexService] 清空索引失败:", err);
+      log.error("清空索引失败:", err);
     }
   },
 
@@ -118,7 +121,7 @@ export const useIndexStore = create<IndexStore>((set, _get) => ({
       const stats = await window.mindcode.index.getStats();
       set({ stats });
     } catch (err: unknown) {
-      console.error("[IndexService] 获取统计失败:", err);
+      log.error("获取统计失败:", err);
     }
   },
 }));
@@ -126,7 +129,7 @@ export const useIndexStore = create<IndexStore>((set, _get) => ({
 /** 初始化索引服务监听器 */
 export function initIndexServiceListeners(): () => void {
   if (!window.mindcode?.index) {
-    console.warn("[IndexService] 索引服务不可用");
+    log.warn("索引服务不可用");
     return () => {};
   }
 
@@ -146,9 +149,7 @@ export function initIndexServiceListeners(): () => void {
   const cleanupComplete = window.mindcode.index.onComplete((stats) => {
     store.updateProgress({ status: "complete" });
     store.refreshStats();
-    console.log(
-      `[IndexService] 索引完成: ${stats.files} 文件, ${stats.symbols} 符号, 耗时 ${stats.time}ms`,
-    );
+    log.info(`索引完成: ${stats.files} 文件, ${stats.symbols} 符号, 耗时 ${stats.time}ms`);
   });
 
   return () => {

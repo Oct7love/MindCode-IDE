@@ -6,6 +6,9 @@ import type { DAPStackFrame, DAPVariable } from "./dap-client";
 import { DAPClient } from "./dap-client";
 import { getAdapter, detectAdapter, type LaunchParams } from "./adapter-registry";
 import type { BrowserWindow } from "electron";
+import { logger } from "../../core/logger";
+
+const log = logger.child("Debug");
 
 export interface DebugSessionInfo {
   id: string;
@@ -84,10 +87,10 @@ export class DebugSessionManager {
       this.sessions.set(id, { client, info });
       this.activeSessionId = id;
 
-      console.log(`[Debug] 会话已启动: ${id} (${language})`);
+      log.info(`会话已启动: ${id} (${language})`);
       return { success: true, sessionId: id };
     } catch (err) {
-      console.error("[Debug] 启动失败:", err);
+      log.error("启动失败", err);
       client.destroy();
       return { success: false, error: (err as Error).message };
     }

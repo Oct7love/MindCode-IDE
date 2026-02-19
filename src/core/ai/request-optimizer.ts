@@ -1,6 +1,9 @@
 // AI 请求优化器 - 连接预热、请求去重、响应缓存
 import { requestPipeline } from "../performance";
 import { DEFAULT_BASE_URLS } from "./config";
+import { logger } from "../logger";
+
+const log = logger.child("AI");
 
 // ==================== 连接预热 ====================
 const warmupEndpoints: Record<string, string> = {
@@ -27,7 +30,7 @@ export async function warmupConnections(): Promise<void> {
       }
     }),
   );
-  console.log(`[AI] 连接预热完成: ${Date.now() - start}ms`);
+  log.info(`连接预热完成: ${Date.now() - start}ms`);
 }
 
 // ==================== 请求去重 ====================

@@ -9,14 +9,17 @@ import * as path from "path";
 import * as fs from "fs";
 import { spawn } from "child_process";
 import type { IPCContext } from "./types";
+import { logger } from "../../core/logger";
+
+const log = logger.child("Terminal");
 
 // node-pty 动态导入（原生模块可能不可用）
 let pty: typeof import("node-pty") | null = null;
 try {
   pty = require("node-pty");
-  console.log("[Terminal] node-pty 已加载");
+  log.info("node-pty 已加载");
 } catch (err) {
-  console.warn("[Terminal] node-pty 不可用，回退到 exec 模式", err);
+  log.warn("node-pty 不可用，回退到 exec 模式", err);
 }
 
 /** PTY 会话接口 */
@@ -276,10 +279,10 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
         sessions.delete(id);
       });
 
-      console.log(`[Terminal] PTY 会话已创建: ${id}, shell: ${shell}, cwd: ${cwd}`);
+      log.info(`PTY 会话已创建: ${id}`, { shell, cwd });
       return { success: true, id };
     } catch (error: unknown) {
-      console.error("[Terminal] PTY 创建失败:", error);
+      log.error("PTY 创建失败", error);
       return { success: false, error: (error as Error).message };
     }
   });
@@ -326,7 +329,7 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
         session.pty.kill();
       }
       sessions.delete(id);
-      console.log(`[Terminal] PTY 会话已关闭: ${id}`);
+      log.info(`PTY 会话已关闭: ${id}`);
       return { success: true };
     } catch (error: unknown) {
       return { success: false, error: (error as Error).message };

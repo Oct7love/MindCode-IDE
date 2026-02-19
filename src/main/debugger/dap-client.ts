@@ -6,6 +6,9 @@ import type { ChildProcess } from "child_process";
 import { spawn as cpSpawn } from "child_process";
 import { EventEmitter } from "events";
 import { getSupportedLanguages, getAdapter } from "./adapter-registry";
+import { logger } from "../../core/logger";
+
+const log = logger.child("DAP");
 
 // ============ DAP 协议类型 ============
 
@@ -149,7 +152,7 @@ export class DAPClient extends EventEmitter {
       if (!DAPClient.DANGEROUS_ENV_KEYS.has(key.toUpperCase())) {
         base[key] = val;
       } else {
-        console.warn(`[DAP] 已过滤危险环境变量: ${key}`);
+        log.warn(`已过滤危险环境变量: ${key}`);
       }
     }
     return base;
@@ -185,18 +188,18 @@ export class DAPClient extends EventEmitter {
 
     this.process.stdout!.on("data", (chunk: Buffer) => this.onData(chunk));
     this.process.stderr!.on("data", (chunk: Buffer) => {
-      console.error("[DAP stderr]", chunk.toString());
+      log.error(`stderr: ${chunk.toString()}`);
     });
 
     this.process.on("exit", (code, signal) => {
-      console.log(`[DAP] 适配器退出: code=${code}, signal=${signal}`);
+      log.info(`适配器退出: code=${code}, signal=${signal}`);
       this.state = "stopped";
       this.rejectAllPending(new Error(`适配器退出: code=${code}`));
       this.emit("exit", { code, signal });
     });
 
     this.process.on("error", (err) => {
-      console.error("[DAP] 适配器错误:", err);
+      log.error("适配器错误", err);
       this.state = "error";
       this.emit("error", err);
     });
@@ -235,7 +238,7 @@ export class DAPClient extends EventEmitter {
       const msg: DAPMessage = JSON.parse(body);
       this.handleMessage(msg);
     } catch (e) {
-      console.error("[DAP] 消息解析失败:", e);
+      log.error("消息解析失败", e);
     }
 
     return true;
