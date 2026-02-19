@@ -315,7 +315,7 @@ webPreferences: {
 | T25 | 插件市场 | 签名 + 沙盒 + 分发 |
 | T26 | ✅ 性能监控 Dashboard | IPC 指标汇聚 + MetricsDashboard + BottomPanel 集成 |
 | T27 | ✅ 测试覆盖率提升 | 256 测试全绿，核心模块覆盖 60-95%，新增 Logger/Performance/Pipeline 测试 |
-| T28 | E2E 测试 | Playwright + Electron |
+| T28 | ✅ E2E 测试框架 | Playwright + Electron：启动/布局/IPC/键盘/文件浏览器 14 用例 |
 
 ---
 
@@ -452,4 +452,4 @@ src/renderer/
 
 *报告生成：MindCode 架构审计 v1.0*
 *更新：v1.1 — 审计修复完成 (2026-02-18)*
-*总计发现 47 个问题 | 13 P0 ✅ | 25 P1 ✅ | 9 P2 (5 项待推进)*
+*总计发现 47 个问题 | 13 P0 ✅ | 25 P1 ✅ | 9 P2 (4 项待推进)*

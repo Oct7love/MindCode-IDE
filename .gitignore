@@ -37,6 +37,10 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
+# E2E reports
+e2e-report/
+test-results/
+
 # Cache
 .cache/
 .parcel-cache/
