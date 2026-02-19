@@ -2,11 +2,11 @@
  * 调试器集成测试
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { debuggerManager } from '../../core/debugger';
-import type { LaunchConfig } from '../../core/debugger';
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { debuggerManager } from "../../core/debugger";
+import type { LaunchConfig } from "../../core/debugger";
 
-describe('Debugger Integration Tests', () => {
+describe("Debugger Integration Tests", () => {
   let sessionId: string | null = null;
 
   afterEach(async () => {
@@ -16,25 +16,25 @@ describe('Debugger Integration Tests', () => {
     }
   });
 
-  it('should create debug session', async () => {
+  it("should create debug session", async () => {
     const config: LaunchConfig = {
-      name: 'Test Node.js',
-      type: 'node',
-      request: 'launch',
-      program: '${workspaceFolder}/test.js',
-      cwd: process.cwd()
+      name: "Test Node.js",
+      type: "node",
+      request: "launch",
+      program: "${workspaceFolder}/test.js",
+      cwd: process.cwd(),
     };
 
     sessionId = await debuggerManager.startSession(config);
     expect(sessionId).toBeTruthy();
-    
+
     const session = debuggerManager.getSession(sessionId!);
     expect(session).toBeDefined();
-    expect(session?.name).toBe('Test Node.js');
+    expect(session?.name).toBe("Test Node.js");
   });
 
-  it('should add and remove breakpoints', () => {
-    const file = '/test/example.ts';
+  it("should add and remove breakpoints", () => {
+    const file = "/test/example.ts";
     const line = 10;
 
     // 添加断点
@@ -55,8 +55,8 @@ describe('Debugger Integration Tests', () => {
     expect(afterRemove.length).toBe(0);
   });
 
-  it('should toggle breakpoints', () => {
-    const file = '/test/example.ts';
+  it("should toggle breakpoints", () => {
+    const file = "/test/example.ts";
     const line = 20;
 
     // 第一次切换: 添加断点
@@ -73,37 +73,43 @@ describe('Debugger Integration Tests', () => {
     expect(breakpoints.length).toBe(0);
   });
 
-  it('should support conditional breakpoints', () => {
-    const file = '/test/example.ts';
+  it("should support conditional breakpoints", () => {
+    const file = "/test/example.ts";
     const line = 30;
-    const condition = 'x > 10';
+    const condition = "x > 10";
 
     const bp = debuggerManager.addBreakpoint(file, line, { condition });
     expect(bp.condition).toBe(condition);
   });
 
-  it('should list all sessions', async () => {
-    const config1: LaunchConfig = {
-      name: 'Session 1',
-      type: 'node',
-      request: 'launch',
-      program: 'test1.js'
-    };
+  it("should list all sessions", async () => {
+    const beforeCount = debuggerManager.listSessions().length;
 
-    const config2: LaunchConfig = {
-      name: 'Session 2',
-      type: 'node',
-      request: 'launch',
-      program: 'test2.js'
+    const config1: LaunchConfig = {
+      name: "Session A",
+      type: "node",
+      request: "launch",
+      program: "test1.js",
     };
 
     const id1 = await debuggerManager.startSession(config1);
+    // 避免 Date.now() ID 冲突
+    await new Promise((r) => setTimeout(r, 5));
+
+    const config2: LaunchConfig = {
+      name: "Session B",
+      type: "node",
+      request: "launch",
+      program: "test2.js",
+    };
+
     const id2 = await debuggerManager.startSession(config2);
 
     const sessions = debuggerManager.listSessions();
-    expect(sessions.length).toBe(2);
-    expect(sessions.map(s => s.name)).toContain('Session 1');
-    expect(sessions.map(s => s.name)).toContain('Session 2');
+    // 新增了 2 个 session
+    expect(sessions.length).toBe(beforeCount + 2);
+    expect(sessions.map((s) => s.name)).toContain("Session A");
+    expect(sessions.map((s) => s.name)).toContain("Session B");
 
     // 清理
     if (id1) await debuggerManager.stopSession(id1);

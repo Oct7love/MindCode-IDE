@@ -6,6 +6,8 @@ import type { AIMode, ContextItem } from "@stores/useAIStore";
 vi.mock("@services/conversationPersistence", () => ({
   loadConversations: (fallback: unknown[]) => fallback,
   saveConversations: vi.fn(),
+  loadConversationsAsync: vi.fn().mockResolvedValue(null),
+  saveConversationsAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
 const act = <T>(fn: () => T): T => fn();

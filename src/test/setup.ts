@@ -31,6 +31,22 @@ global.IntersectionObserver = vi
   .fn()
   .mockImplementation(() => ({ observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() }));
 
+// Mock indexedDB
+const indexedDBMock = {
+  open: vi.fn().mockReturnValue({
+    result: {
+      objectStoreNames: { contains: () => false },
+      createObjectStore: vi.fn(),
+      transaction: vi.fn(),
+    },
+    onsuccess: null as ((ev: unknown) => void) | null,
+    onerror: null as ((ev: unknown) => void) | null,
+    onupgradeneeded: null as ((ev: unknown) => void) | null,
+  }),
+  deleteDatabase: vi.fn(),
+};
+Object.defineProperty(window, "indexedDB", { value: indexedDBMock, writable: true });
+
 // Mock localStorage
 const localStorageMock = {
   store: {} as Record<string, string>,
@@ -76,17 +92,15 @@ const mindcodeMock = {
     readFileChunk: vi.fn().mockResolvedValue(mockIPCResult({ lines: [], totalLines: 0 })),
     getLineCount: vi.fn().mockResolvedValue(mockIPCResult(0)),
     writeFile: vi.fn().mockResolvedValue(mockIPCResult(undefined)),
-    stat: vi
-      .fn()
-      .mockResolvedValue(
-        mockIPCResult({
-          size: 0,
-          isFile: true,
-          isDirectory: false,
-          modified: Date.now(),
-          created: Date.now(),
-        }),
-      ),
+    stat: vi.fn().mockResolvedValue(
+      mockIPCResult({
+        size: 0,
+        isFile: true,
+        isDirectory: false,
+        modified: Date.now(),
+        created: Date.now(),
+      }),
+    ),
     getEncodings: vi.fn().mockResolvedValue([]),
     detectEncoding: vi.fn().mockResolvedValue(mockIPCResult(undefined)),
     getAllFiles: vi.fn().mockResolvedValue(mockIPCResult([])),
@@ -170,20 +184,55 @@ const mindcodeMock = {
     listSessions: vi.fn().mockResolvedValue(mockIPCResult([])),
   },
 
+  dashboard: {
+    getStats: vi.fn().mockResolvedValue({
+      system: {
+        memoryRss: 100e6,
+        heapUsed: 50e6,
+        heapTotal: 80e6,
+        external: 5e6,
+        osTotalMem: 16e9,
+        osFreeMem: 8e9,
+        uptime: 120,
+        cpuUser: 1000,
+        cpuSystem: 500,
+        platform: "win32",
+        nodeVersion: "v20.0.0",
+      },
+      ai: {
+        totalRequests: 10,
+        completedRequests: 9,
+        failedRequests: 1,
+        avgLatency: 1500,
+        queueLength: 0,
+        p50Latency: 1200,
+        p95Latency: 3000,
+        p99Latency: 5000,
+        latencyHistory: [1000, 1200, 1500],
+      },
+      startup: { marks: { main_start: 0, app_ready: 50 }, measures: {}, totalMs: 1500 },
+      cache: { size: 42, hotPatterns: 8 },
+    }),
+  },
+
+  log: {
+    write: vi.fn(),
+    getPath: vi.fn().mockResolvedValue("/tmp/logs/mindcode.log"),
+    export: vi.fn().mockResolvedValue(""),
+  },
+
   index: {
     indexWorkspace: vi.fn().mockResolvedValue(mockIPCResult(undefined)),
     getProgress: vi
       .fn()
       .mockResolvedValue(mockIPCResult({ status: "idle", totalFiles: 0, indexedFiles: 0 })),
-    getStats: vi
-      .fn()
-      .mockResolvedValue({
-        totalFiles: 0,
-        totalSymbols: 0,
-        totalCallRelations: 0,
-        totalDependencies: 0,
-        totalChunks: 0,
-      }),
+    getStats: vi.fn().mockResolvedValue({
+      totalFiles: 0,
+      totalSymbols: 0,
+      totalCallRelations: 0,
+      totalDependencies: 0,
+      totalChunks: 0,
+    }),
     search: vi
       .fn()
       .mockResolvedValue(mockIPCResult({ items: [], totalCount: 0, timeTaken: 0, hasMore: false })),
