@@ -382,16 +382,77 @@ class MarketplaceService {
     return true;
   }
 
-  /** 卸载扩展 */
+  /** 卸载扩展（含主进程文件清理） */
   async uninstall(extensionId: string): Promise<boolean> {
     const ext = this.installed.get(extensionId);
     if (!ext) return false;
-    this.deactivate(extensionId); // 先停用
+    this.deactivate(extensionId);
+    // 主进程清理插件文件
+    try {
+      const win =
+        typeof window !== "undefined" ? (window as unknown as Record<string, unknown>) : null;
+      const mindcode = win?.mindcode as Record<string, unknown> | undefined;
+      const plugins = mindcode?.plugins as Record<string, unknown> | undefined;
+      if (typeof plugins?.uninstall === "function") {
+        await (plugins.uninstall as (id: string) => Promise<unknown>)(extensionId);
+      }
+    } catch {
+      // 主进程清理失败不阻塞卸载流程
+    }
+    // 清理 localStorage 中的插件状态
+    try {
+      localStorage.removeItem(`plugin:${extensionId}:global`);
+      localStorage.removeItem(`plugin:${extensionId}:workspace`);
+    } catch {}
     this.installed.delete(extensionId);
     this.saveInstalled();
     this.emit("uninstall", ext);
-    console.log(`[Marketplace] 卸载扩展: ${extensionId}`);
     return true;
+  }
+
+  /** 检查已安装扩展的可用更新 */
+  async checkUpdates(): Promise<Array<{ id: string; current: string; latest: string }>> {
+    const updates: Array<{ id: string; current: string; latest: string }> = [];
+    for (const [id, ext] of this.installed) {
+      try {
+        const [namespace, name] = id.split(".");
+        if (!namespace || !name) continue;
+        const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (!res.ok) continue;
+        const data: OpenVSXExtension = await res.json();
+        if (data.version && data.version !== ext.version) {
+          updates.push({ id, current: ext.version, latest: data.version });
+        }
+      } catch {
+        // 网络错误跳过
+      }
+    }
+    return updates;
+  }
+
+  /** 更新扩展到最新版本 */
+  async update(extensionId: string): Promise<boolean> {
+    const ext = this.installed.get(extensionId);
+    if (!ext) return false;
+    // 获取最新版本信息
+    const [namespace, name] = extensionId.split(".");
+    if (!namespace || !name) return false;
+    try {
+      const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return false;
+      const data: OpenVSXExtension = await res.json();
+      const updated = this.convertExtension(data);
+      this.installed.set(extensionId, { ...updated, installed: true, enabled: ext.enabled });
+      this.saveInstalled();
+      this.emit("update", { ...updated, installed: true, enabled: ext.enabled });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** 启用/禁用扩展 */

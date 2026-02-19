@@ -12,4 +12,5 @@ export { registerDebugHandlers } from "./debug-handlers";
 export { registerLSPHandlers } from "./lsp-handlers";
 export { registerIndexHandlers } from "./index-handlers";
 export { registerDashboardHandlers } from "./dashboard-handlers";
+export { registerPluginHandlers } from "./plugin-handlers";
 export type { IPCContext } from "./types";

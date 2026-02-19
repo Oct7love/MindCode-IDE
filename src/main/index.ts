@@ -21,6 +21,7 @@ import {
   registerLSPHandlers,
   registerIndexHandlers,
   registerDashboardHandlers,
+  registerPluginHandlers,
   warmupAIProviders,
   type IPCContext,
 } from "./ipc";
@@ -485,6 +486,7 @@ app.whenReady().then(() => {
   registerLSPHandlers(ipcContext);
   registerIndexHandlers(ipcContext);
   registerDashboardHandlers(ipcContext);
+  registerPluginHandlers(ipcContext);
 
   // 并行预热 AI Provider
   warmupAIProviders();

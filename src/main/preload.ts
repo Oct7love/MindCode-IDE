@@ -418,6 +418,14 @@ contextBridge.exposeInMainWorld("mindcode", {
     getPath: () => ipcRenderer.invoke("log:getPath") as Promise<string | null>,
     export: () => ipcRenderer.invoke("log:export") as Promise<string>,
   },
+
+  // 插件管理
+  plugins: {
+    list: () => ipcRenderer.invoke("plugins:list"),
+    verify: (pluginId: string) => ipcRenderer.invoke("plugins:verify", pluginId),
+    uninstall: (pluginId: string) => ipcRenderer.invoke("plugins:uninstall", pluginId),
+    getDir: () => ipcRenderer.invoke("plugins:getDir"),
+  },
 });
 
 // ─── 全局类型声明 ────────────────────────────────────────
@@ -797,6 +805,12 @@ declare global {
         }) => void;
         getPath: () => Promise<string | null>;
         export: () => Promise<string>;
+      };
+      plugins: {
+        list: () => Promise<import("./ipc/types").IPCResult>;
+        verify: (pluginId: string) => Promise<import("./ipc/types").IPCResult>;
+        uninstall: (pluginId: string) => Promise<import("./ipc/types").IPCResult>;
+        getDir: () => Promise<import("./ipc/types").IPCResult<string>>;
       };
     };
   }
