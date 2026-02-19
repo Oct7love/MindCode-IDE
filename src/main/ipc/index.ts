@@ -11,4 +11,5 @@ export { registerSettingsHandlers, getSettingsCache } from "./settings-handlers"
 export { registerDebugHandlers } from "./debug-handlers";
 export { registerLSPHandlers } from "./lsp-handlers";
 export { registerIndexHandlers } from "./index-handlers";
+export { registerDashboardHandlers } from "./dashboard-handlers";
 export type { IPCContext } from "./types";

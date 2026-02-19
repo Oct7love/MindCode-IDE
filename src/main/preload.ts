@@ -401,6 +401,11 @@ contextBridge.exposeInMainWorld("mindcode", {
     },
   },
 
+  // 性能 Dashboard
+  dashboard: {
+    getStats: () => ipcRenderer.invoke("dashboard:stats"),
+  },
+
   // 日志服务
   log: {
     write: (entry: {
@@ -744,6 +749,43 @@ declare global {
         onComplete: (
           callback: (stats: import("../shared/types/ipc").IndexCompleteStats) => void,
         ) => () => void;
+      };
+      dashboard: {
+        getStats: () => Promise<{
+          system: {
+            memoryRss: number;
+            heapUsed: number;
+            heapTotal: number;
+            external: number;
+            osTotalMem: number;
+            osFreeMem: number;
+            uptime: number;
+            cpuUser: number;
+            cpuSystem: number;
+            platform: string;
+            nodeVersion: string;
+          };
+          ai: {
+            totalRequests: number;
+            completedRequests: number;
+            failedRequests: number;
+            avgLatency: number;
+            queueLength: number;
+            p50Latency: number;
+            p95Latency: number;
+            p99Latency: number;
+            latencyHistory: number[];
+          };
+          startup: {
+            marks: Record<string, number>;
+            measures: Record<string, number>;
+            totalMs: number;
+          };
+          cache: {
+            size: number;
+            hotPatterns: number;
+          };
+        }>;
       };
       log: {
         write: (entry: {

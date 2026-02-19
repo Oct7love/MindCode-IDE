@@ -2,8 +2,9 @@ import React from "react";
 import { AppIcons } from "./icons";
 import { Terminal } from "./Terminal";
 import { DiagnosticsPanel } from "./LSP";
+import { MetricsDashboard } from "./MetricsDashboard";
 
-export type BottomPanelTab = "terminal" | "diagnostics";
+export type BottomPanelTab = "terminal" | "diagnostics" | "performance";
 
 interface BottomPanelProps {
   height: number;
@@ -43,6 +44,13 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({
         <span>⚠️</span>
         <span>Problems</span>
       </button>
+      <button
+        className={`bottom-tab ${activeTab === "performance" ? "active" : ""}`}
+        onClick={() => onTabChange("performance")}
+      >
+        <span>📊</span>
+        <span>Performance</span>
+      </button>
       <button className="bottom-tab-close" onClick={onClose} title="Close Panel">
         <AppIcons.Close16 />
       </button>
@@ -58,6 +66,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({
           }}
         />
       )}
+      {activeTab === "performance" && <MetricsDashboard />}
     </div>
   </div>
 );

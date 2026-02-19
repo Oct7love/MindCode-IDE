@@ -311,9 +311,9 @@ webPreferences: {
 |------|------|----------|
 | T22 | Multi-file Edit | 多文件联动编辑能力 |
 | T23 | @ Mentions | 上下文引用系统 |
-| T24 | 结构化日志 | winston/pino 替代 console.log |
+| T24 | ✅ 结构化日志 | Logger Transport 抽象 + FileTransport + IPC 桥接 (commit 77e3f57) |
 | T25 | 插件市场 | 签名 + 沙盒 + 分发 |
-| T26 | 性能监控 Dashboard | 主进程 + 渲染进程指标 |
+| T26 | ✅ 性能监控 Dashboard | IPC 指标汇聚 + MetricsDashboard + BottomPanel 集成 |
 | T27 | 测试覆盖率 60% | 关键路径集成测试 |
 | T28 | E2E 测试 | Playwright + Electron |
 

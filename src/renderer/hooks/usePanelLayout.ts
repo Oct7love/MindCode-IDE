@@ -41,7 +41,9 @@ export function usePanelLayout() {
   const [showBottomPanel, setShowBottomPanel] = useState(false);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(BOTTOM_PANEL_DEFAULT_HEIGHT);
   const [isResizingBottomPanel, setIsResizingBottomPanel] = useState(false);
-  const [bottomPanelTab, setBottomPanelTab] = useState<"terminal" | "diagnostics">("terminal");
+  const [bottomPanelTab, setBottomPanelTab] = useState<"terminal" | "diagnostics" | "performance">(
+    "terminal",
+  );
 
   // Diff 面板
   const [showDiffPanel, setShowDiffPanel] = useState(false);

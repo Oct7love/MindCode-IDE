@@ -122,6 +122,11 @@ export class RequestPipeline {
     return { ...this.stats };
   }
 
+  /** 获取延迟历史（用于百分位计算） */
+  getLatencies(): number[] {
+    return [...this.latencies];
+  }
+
   /**
    * 清空队列
    */
