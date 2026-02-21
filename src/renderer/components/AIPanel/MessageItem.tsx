@@ -1,6 +1,9 @@
 import React, { useState, useCallback, memo } from "react";
 import { MarkdownRenderer } from "../MarkdownRenderer";
+import { MultiFileChanges } from "./MultiFileChanges";
+import { useMultiFileEdit } from "../../hooks/useMultiFileEdit";
 import type { Message as StoreMessage } from "../../stores";
+import { useAIStore } from "../../stores";
 import "./MessageItem.css";
 
 export interface Message extends StoreMessage {
@@ -16,6 +19,31 @@ interface Props {
   onEdit?: (content: string) => void;
 }
 
+// 多文件编辑面板子组件（Hooks 不能条件调用，故抽离）
+const FileChangesPanel: React.FC<{ message: Message }> = ({ message }) => {
+  const updateMessageFileChanges = useAIStore((s) => s.updateMessageFileChanges);
+  const [visible, setVisible] = useState(true);
+  const { changes, isApplying, handleAccept, handleReject, handleAcceptAll, handleRejectAll } =
+    useMultiFileEdit({
+      messageId: message.id,
+      initialChanges: message.fileChanges || [],
+      onChangesUpdate: (next) => updateMessageFileChanges(message.id, next),
+    });
+
+  if (!visible || changes.length === 0) return null;
+  return (
+    <MultiFileChanges
+      changes={changes}
+      onAccept={handleAccept}
+      onReject={handleReject}
+      onAcceptAll={handleAcceptAll}
+      onRejectAll={handleRejectAll}
+      onClose={() => setVisible(false)}
+      isApplying={isApplying}
+    />
+  );
+};
+
 export const MessageItem: React.FC<Props> = memo(
   ({ message, isStreaming, onRetry, onContinue, onCopy, onEdit }) => {
     const [showActions, setShowActions] = useState(false);
@@ -24,6 +52,7 @@ export const MessageItem: React.FC<Props> = memo(
     const isError = message.status === "error" || message.content.startsWith("错误:");
     const isInterrupted =
       message.status === "interrupted" || message.content.includes("[已停止生成]");
+    const hasFileChanges = !!(message.fileChanges && message.fileChanges.length > 0);
 
     const handleCopy = useCallback(async () => {
       await navigator.clipboard.writeText(message.content);
@@ -59,6 +88,7 @@ export const MessageItem: React.FC<Props> = memo(
             />
             {isStreaming && <span className="chat-message__cursor">▌</span>}
           </div>
+          {hasFileChanges && <FileChangesPanel message={message} />}
           {isError && (
             <div className="chat-message__status chat-message__status--error">
               <ErrorIcon /> <span>请求失败</span>

@@ -18,6 +18,8 @@ interface ContextPickerProps {
   onClose: () => void;
   position?: { x: number; y: number };
   inputRef?: React.RefObject<HTMLTextAreaElement>;
+  /** T23: 从输入框 @ 后传入的即时查询文本 */
+  initialQuery?: string;
 }
 
 export const ContextPicker: React.FC<ContextPickerProps> = ({
@@ -25,6 +27,7 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({
   onClose,
   position,
   inputRef: _inputRef,
+  initialQuery,
 }) => {
   const { addContext } = useAIStore();
   const { fileTree, workspaceRoot, getActiveFile } = useFileStore();
@@ -58,6 +61,23 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({
       setResults([]);
     }
   }, [isOpen]);
+
+  // T23: 响应 initialQuery 变化，自动进入搜索模式
+  useEffect(() => {
+    if (!isOpen || !initialQuery) return;
+    // 支持类型前缀: @file:xxx, @symbol:xxx 等
+    const prefixMatch = initialQuery.match(/^(file|symbol|folder|codebase|web|docs|git):(.*)$/);
+    if (prefixMatch) {
+      const targetMode = prefixMatch[1] as PickerMode;
+      const query = prefixMatch[2];
+      if (mode !== targetMode) setMode(targetMode);
+      if (search !== query) setSearch(query);
+    } else {
+      // 默认进入 file 搜索模式
+      if (mode === "menu") setMode("file");
+      if (search !== initialQuery) setSearch(initialQuery);
+    }
+  }, [isOpen, initialQuery]);
 
   useEffect(() => {
     // 点击外部关闭

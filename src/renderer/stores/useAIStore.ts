@@ -80,6 +80,7 @@ export interface Message {
   plan?: Plan; // Plan 模式生成的计划
   thinkingUI?: ThinkingUIData; // Thinking UI 结构化数据
   thinkingContent?: string; // 思考过程内容（完成后保留用于折叠显示）
+  fileChanges?: import("../components/AIPanel/MultiFileChanges").FileChange[]; // 多文件编辑变更
 }
 
 export interface Conversation {
@@ -204,6 +205,11 @@ interface AIActions {
   setUseSmartRouting: (use: boolean) => void;
   setLastRoutingDecision: (
     decision: { model: string; taskType: string; reason: string } | null,
+  ) => void;
+  // T22: 多文件编辑
+  updateMessageFileChanges: (
+    messageId: string,
+    changes: import("../components/AIPanel/MultiFileChanges").FileChange[],
   ) => void;
 }
 
@@ -595,6 +601,24 @@ export const useAIStore = create<AIState & AIActions>((set, get) => {
     setUseSmartRouting: (useSmartRouting) => set({ useSmartRouting }),
 
     setLastRoutingDecision: (lastRoutingDecision) => set({ lastRoutingDecision }),
+
+    // T22: 按 messageId 更新消息的 fileChanges
+    updateMessageFileChanges: (messageId, changes) =>
+      set((state) => {
+        const convId = state.activeConversationId;
+        if (!convId) return state;
+        const updatedConversations = state.conversations.map((c) => {
+          if (c.id !== convId) return c;
+          return {
+            ...c,
+            messages: c.messages.map((m) =>
+              m.id === messageId ? { ...m, fileChanges: changes } : m,
+            ),
+          };
+        });
+        saveConversations(updatedConversations);
+        return { conversations: updatedConversations };
+      }),
   };
 });
 
