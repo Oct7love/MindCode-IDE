@@ -11,7 +11,7 @@
 // 在所有模块加载前注入环境变量
 import { config as loadDotenv } from "dotenv";
 import * as _path from "path";
-loadDotenv({ path: _path.resolve(__dirname, "../../.env") });
+loadDotenv({ path: _path.resolve(__dirname, "../../../.env") });
 
 import type { MenuItemConstructorOptions } from "electron";
 import { app, BrowserWindow, ipcMain, dialog, Menu, session } from "electron";
@@ -85,7 +85,7 @@ function createWindow(): void {
     mainWindow.loadURL(DEV_SERVER_URL);
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+    mainWindow.loadFile(path.join(__dirname, "../../renderer/index.html"));
   }
 
   mainWindow.on("closed", () => {

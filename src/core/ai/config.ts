@@ -19,7 +19,7 @@ export const DEFAULT_BASE_URLS: Record<keyof AIConfig, string> = {
   openai: "https://sub2.willapi.one/v1",
   gemini: "https://2api.novai.su/v1",
   deepseek: "https://api.deepseek.com",
-  glm: "https://open.bigmodel.cn/api/coding/paas/v4",
+  glm: "https://open.bigmodel.cn/api/anthropic",
   codesuc: "", // 已弃用
 };
 
@@ -29,7 +29,7 @@ const DEFAULT_MODELS: Record<keyof AIConfig, string> = {
   openai: "gpt-4o",
   gemini: "[次]gemini-3-pro-preview",
   deepseek: "deepseek-chat",
-  glm: "glm-4.7-flashx",
+  glm: "glm-5",
   codesuc: "", // 已弃用
 };
 

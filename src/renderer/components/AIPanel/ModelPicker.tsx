@@ -105,6 +105,14 @@ export const MODELS: ModelInfo[] = [
   },
   // GLM 系列
   {
+    id: "glm-5",
+    name: "GLM-5",
+    icon: "🏆",
+    desc: "744B 旗舰，Coding & Agent",
+    provider: "glm",
+    toolCapable: true,
+  },
+  {
     id: "glm-4.7",
     name: "GLM-4.7",
     icon: "🔮",

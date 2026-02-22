@@ -29,7 +29,7 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   codesuc: 180000, // 已弃用，保留兼容
   gemini: 900000,
   deepseek: 120000,
-  glm: 120000,
+  glm: 128000,
   gpt: 120000,
 };
 
