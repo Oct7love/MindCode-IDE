@@ -244,11 +244,11 @@ webPreferences: {
 
 | 功能 | Cursor | MindCode | 差距 |
 |------|--------|----------|------|
-| Multi-file Edit | ✅ 多文件联动编辑 | ❌ 单文件 | 高 |
+| Multi-file Edit | ✅ 多文件联动编辑 | ✅ 多文件 Diff 预览/批量接受拒绝 | 已消除 |
 | Codebase-aware AI | ✅ 全项目上下文 | ⚠️ 仅当前文件 | 高 |
 | Inline Diff | ✅ 内联差异预览 | ⚠️ 独立 DiffEditor | 中 |
 | AI Terminal | ✅ 终端 AI 辅助 | ❌ 无 | 中 |
-| @ Mentions | ✅ @file @folder | ❌ 无 | 高 |
+| @ Mentions | ✅ @file @folder | ✅ @file/@symbol/@folder 等 8 种 + 即时过滤 | 已消除 |
 | Tab Completion | ✅ 多候选 Tab | ⚠️ 单候选 Ghost Text | 中 |
 | Extension Market | ✅ VSCode 生态 | ❌ 无市场 | 高 |
 
@@ -309,8 +309,8 @@ webPreferences: {
 
 | 编号 | 任务 | 核心操作 |
 |------|------|----------|
-| T22 | Multi-file Edit | 多文件联动编辑能力 |
-| T23 | @ Mentions | 上下文引用系统 |
+| T22 | ✅ Multi-file Edit | 多文件 Diff 预览 + 批量接受/拒绝 + ```lang:path 解析 (commit 7edc514) |
+| T23 | ✅ @ Mentions 增强 | 输入框 @ 即时过滤 + initialQuery + 类型前缀路由 (commit 7edc514) |
 | T24 | ✅ 结构化日志 | Logger Transport 抽象 + FileTransport + IPC 桥接 (commit 77e3f57) |
 | T25 | ✅ 插件市场基础设施 | 完整性验证 + IPC 通道 + 权限确认 + 版本更新 + 卸载清理 |
 | T26 | ✅ 性能监控 Dashboard | IPC 指标汇聚 + MetricsDashboard + BottomPanel 集成 |
@@ -396,9 +396,12 @@ src/renderer/
   ├── components/
   │   ├── CodeEditor.tsx     # Monaco 集成 (702行)
   │   └── DiffEditor.tsx     # 差异编辑器
+  ├── utils/
+  │   └── parseFileEdits.ts  # AI 回复多文件编辑解析器
   └── hooks/
       ├── useWorkspace.ts    # 工作区 Hook
       ├── useEditorFiles.ts  # 编辑器文件 Hook
+      ├── useMultiFileEdit.ts # 多文件编辑操作 Hook
       └── useLSP.ts          # LSP Hook
 ```
 
@@ -450,6 +453,19 @@ src/renderer/
 | #28 | 未使用导入/变量清理 | 138→31 (↓78%) | `cf4168d` |
 | #29 | any 类型收窄 | 311→215 (↓31%) | `cf4168d` |
 
+### 7.4 P2 架构演进记录
+
+| 编号 | 修复内容 | 提交 |
+|------|----------|------|
+| T22 | 多文件编辑：`parseFileEdits.ts` 解析 `` ```lang:path `` + `useMultiFileEdit` Hook + `MessageItem` 渲染 `MultiFileChanges` + `MarkdownRenderer` filename 支持 | `7edc514` |
+| T23 | @ 提及增强：`ChatView` mentionQuery 追踪 + `ContextPicker` initialQuery 自动搜索 + 类型前缀 `@file:` `@symbol:` 路由 | `7edc514` |
+| T24 | 结构化日志 Logger Transport + FileTransport + IPC 桥接 | `77e3f57` |
+| T25 | 插件市场基础设施：完整性验证 + IPC 通道 + 权限确认 + 版本更新 | `00de68d` |
+| T26 | 性能监控 Dashboard：IPC 指标汇聚 + MetricsDashboard + BottomPanel | `608e47b` |
+| T27 | 测试覆盖率提升：256 测试全绿，核心模块覆盖 60-95% | `50bfef5` |
+| T28 | E2E 测试框架：Playwright + Electron 14 用例 | `e4972ff` |
+
 *报告生成：MindCode 架构审计 v1.0*
 *更新：v1.1 — 审计修复完成 (2026-02-18)*
-*总计发现 47 个问题 | 13 P0 ✅ | 25 P1 ✅ | 9 P2 (3 项待推进)*
+*更新：v1.2 — T22 多文件编辑 + T23 @ 提及增强 (2026-02-20)*
+*总计发现 47 个问题 | 13 P0 ✅ | 25 P1 ✅ | 9 P2 (1 项待推进)*
