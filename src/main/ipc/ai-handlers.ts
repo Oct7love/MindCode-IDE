@@ -53,6 +53,9 @@ const FAST_MODEL_TIMEOUT_MS = 2000;
 const aiPipeline = getRequestPipeline();
 aiPipeline.setMaxConcurrent(AI_MAX_CONCURRENT);
 
+/** 活跃流式请求跟踪（用于取消） */
+const activeStreams = new Map<string, { buffer: StreamBuffer; cancelled: boolean }>();
+
 // 懒加载 AI Providers
 let _providers: Record<string, AIProvider> | null = null;
 let _llmClient: LLMClient | null = null;
@@ -121,7 +124,7 @@ function getProviderForModel(model: string): AIProvider {
   if (model.startsWith("deepseek-")) return providers.deepseek;
   if (model.startsWith("glm-")) return providers.glm;
   if (model.startsWith("gpt-")) return providers.openai;
-  return providers.codesuc;
+  return providers.claude;
 }
 
 /** 预热 Provider 和连接 */
@@ -154,10 +157,14 @@ export function registerAIHandlers(_ctx: IPCContext): void {
 
   // AI 聊天（流式）
   ipcMain.on("ai-chat-stream", async (event, { model, messages, requestId }) => {
-    const buffer = new StreamBuffer(
-      (text) => event.sender.send("ai-stream-token", { requestId, token: text }),
-      STREAM_BUFFER_INTERVAL_MS,
-    );
+    const streamState = { buffer: null as unknown as StreamBuffer, cancelled: false };
+    const buffer = new StreamBuffer((text) => {
+      if (!streamState.cancelled) {
+        event.sender.send("ai-stream-token", { requestId, token: text });
+      }
+    }, STREAM_BUFFER_INTERVAL_MS);
+    streamState.buffer = buffer;
+    activeStreams.set(requestId, streamState);
 
     aiPipeline
       .add(
@@ -165,26 +172,37 @@ export function registerAIHandlers(_ctx: IPCContext): void {
           getLLMClient().chatStream(
             { model, messages },
             {
-              onToken: (token) => buffer.push(token),
+              onToken: (token) => {
+                if (streamState.cancelled) return;
+                buffer.push(token);
+              },
               onComplete: (fullText, meta) => {
                 buffer.destroy();
-                event.sender.send("ai-stream-complete", {
-                  requestId,
-                  fullText,
-                  model: meta.model,
-                  usedFallback: meta.usedFallback,
-                });
+                activeStreams.delete(requestId);
+                if (!streamState.cancelled) {
+                  event.sender.send("ai-stream-complete", {
+                    requestId,
+                    fullText,
+                    model: meta.model,
+                    usedFallback: meta.usedFallback,
+                  });
+                }
               },
               onError: (error) => {
                 buffer.destroy();
-                event.sender.send("ai-stream-error", {
-                  requestId,
-                  error: getUserFriendlyError(error),
-                  errorType: error.type,
-                });
+                activeStreams.delete(requestId);
+                if (!streamState.cancelled) {
+                  event.sender.send("ai-stream-error", {
+                    requestId,
+                    error: getUserFriendlyError(error),
+                    errorType: error.type,
+                  });
+                }
               },
               onFallback: (from, to) => {
-                event.sender.send("ai-stream-fallback", { requestId, from, to });
+                if (!streamState.cancelled) {
+                  event.sender.send("ai-stream-fallback", { requestId, from, to });
+                }
               },
             },
           ),
@@ -192,62 +210,96 @@ export function registerAIHandlers(_ctx: IPCContext): void {
       )
       .catch((e) => {
         buffer.destroy();
-        event.sender.send("ai-stream-error", {
-          requestId,
-          error: (e as Error)?.message || "Request failed",
-          errorType: "unknown",
-        });
+        activeStreams.delete(requestId);
+        if (!streamState.cancelled) {
+          event.sender.send("ai-stream-error", {
+            requestId,
+            error: (e as Error)?.message || "Request failed",
+            errorType: "unknown",
+          });
+        }
       });
   });
 
   // AI 聊天（流式 + 工具调用）
   ipcMain.on("ai-chat-stream-with-tools", async (event, { model, messages, tools, requestId }) => {
-    const buffer = new StreamBuffer(
-      (text) => event.sender.send("ai-stream-token", { requestId, token: text }),
-      STREAM_BUFFER_INTERVAL_MS,
-    );
+    const streamState = { buffer: null as unknown as StreamBuffer, cancelled: false };
+    const buffer = new StreamBuffer((text) => {
+      if (!streamState.cancelled) {
+        event.sender.send("ai-stream-token", { requestId, token: text });
+      }
+    }, STREAM_BUFFER_INTERVAL_MS);
+    streamState.buffer = buffer;
+    activeStreams.set(requestId, streamState);
+
     try {
       await getLLMClient().chatStream(
         { model, messages, tools },
         {
-          onToken: (token) => buffer.push(token),
+          onToken: (token) => {
+            if (streamState.cancelled) return;
+            buffer.push(token);
+          },
           onToolCall: (calls) => {
-            event.sender.send("ai-stream-tool-call", { requestId, toolCalls: calls });
+            if (!streamState.cancelled) {
+              event.sender.send("ai-stream-tool-call", { requestId, toolCalls: calls });
+            }
           },
           onComplete: (fullText, meta) => {
             buffer.destroy();
-            event.sender.send("ai-stream-complete", {
-              requestId,
-              fullText,
-              model: meta.model,
-              usedFallback: meta.usedFallback,
-            });
+            activeStreams.delete(requestId);
+            if (!streamState.cancelled) {
+              event.sender.send("ai-stream-complete", {
+                requestId,
+                fullText,
+                model: meta.model,
+                usedFallback: meta.usedFallback,
+              });
+            }
           },
           onError: (error) => {
             buffer.destroy();
-            event.sender.send("ai-stream-error", {
-              requestId,
-              error: getUserFriendlyError(error),
-              errorType: error.type,
-            });
+            activeStreams.delete(requestId);
+            if (!streamState.cancelled) {
+              event.sender.send("ai-stream-error", {
+                requestId,
+                error: getUserFriendlyError(error),
+                errorType: error.type,
+              });
+            }
           },
           onFallback: (from, to) => {
-            event.sender.send("ai-stream-fallback", { requestId, from, to });
+            if (!streamState.cancelled) {
+              event.sender.send("ai-stream-fallback", { requestId, from, to });
+            }
           },
         },
       );
     } catch (e) {
       buffer.destroy();
-      event.sender.send("ai-stream-error", {
-        requestId,
-        error: (e as Error)?.message || "Request failed",
-        errorType: "unknown",
-      });
+      activeStreams.delete(requestId);
+      if (!streamState.cancelled) {
+        event.sender.send("ai-stream-error", {
+          requestId,
+          error: (e as Error)?.message || "Request failed",
+          errorType: "unknown",
+        });
+      }
     }
   });
 
   // LLM 状态查询
   ipcMain.handle("ai-stats", () => getLLMClient().getStats());
+
+  // AI 流式请求取消
+  ipcMain.on("ai-stream-cancel", (_event, { requestId }: { requestId: string }) => {
+    const stream = activeStreams.get(requestId);
+    if (stream) {
+      stream.cancelled = true;
+      stream.buffer.destroy();
+      activeStreams.delete(requestId);
+    }
+  });
 
   // 代码补全
   ipcMain.handle(
@@ -262,7 +314,13 @@ export function registerAIHandlers(_ctx: IPCContext): void {
         model?: string;
       },
     ) => {
-      const { filePath, code, cursorLine, cursorColumn, model = "codesuc-sonnet" } = request;
+      const {
+        filePath,
+        code,
+        cursorLine,
+        cursorColumn,
+        model = "claude-sonnet-4-5-20250929",
+      } = request;
       const _start = Date.now();
 
       // 生成缓存 key
@@ -293,7 +351,7 @@ export function registerAIHandlers(_ctx: IPCContext): void {
         });
 
         // 多模型并行补全
-        const fastModel = "codesuc-haiku";
+        const fastModel = "claude-haiku-4-5-20251001";
         const primaryModel = model;
         const useDualModel = primaryModel !== fastModel;
 
@@ -369,7 +427,7 @@ export function registerAIHandlers(_ctx: IPCContext): void {
         code,
         cursorLine,
         cursorColumn,
-        model = "codesuc-sonnet",
+        model = "claude-sonnet-4-5-20250929",
         requestId,
       } = request;
 

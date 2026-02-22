@@ -114,16 +114,16 @@ export class LSPManager extends EventEmitter {
   /** 启动语言服务器 */
   async start(
     language: string,
-    options?: { command?: string; args?: string[]; rootPath?: string },
+    options?: { rootPath?: string },
   ): Promise<{ success: boolean; capabilities?: any; error?: string }> {
     if (this.servers.has(language)) {
       const server = this.servers.get(language)!;
       if (server.state === "running") return { success: true, capabilities: server.capabilities };
     }
     const config = LANGUAGE_SERVERS[language];
-    if (!config && !options?.command) return { success: false, error: `不支持的语言: ${language}` };
-    const cmd = options?.command || config.command;
-    const args = options?.args || config.args;
+    if (!config) return { success: false, error: `不支持的语言: ${language}` };
+    const cmd = config.command;
+    const args = config.args;
     const server: LSPServer = {
       process: null,
       state: "starting",

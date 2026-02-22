@@ -173,7 +173,6 @@ export interface EncodingInfo {
 
 export interface TerminalCreateOptions {
   cwd?: string;
-  shell?: string;
 }
 
 export interface TerminalExecResult {
@@ -240,8 +239,6 @@ export interface MessageBoxOptions {
 // ─── LSP 模块类型 ───────────────────────────────────────
 
 export interface LSPStartOptions {
-  command?: string;
-  args?: string[];
   rootPath?: string;
 }
 

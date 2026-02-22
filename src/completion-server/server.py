@@ -3,6 +3,7 @@ MindCode Completion Server - AI 驱动版
 使用 DeepSeek Coder 进行真正的代码补全
 """
 
+import os
 import time
 import asyncio
 import httpx
@@ -12,24 +13,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # ============================================================================
-# 配置
+# 配置 - 所有密钥从环境变量读取，禁止硬编码
 # ============================================================================
 
 # ====== AI 提供商配置 ======
-# 混合模式：inline 用 Haiku（快），block 用 Sonnet（智能）
-AI_PROVIDER_INLINE = "claude"    # 单行补全：用 Haiku
-AI_PROVIDER_BLOCK = "claude"     # 多行代码：用 Sonnet
+AI_PROVIDER_INLINE = "claude"
+AI_PROVIDER_BLOCK = "claude"
 
 # DeepSeek 配置
-DEEPSEEK_API_KEY = "sk-cdbe9cd807884f3fb0adaea29c4ac05b"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEEPSEEK_API_KEY = os.environ.get("MINDCODE_DEEPSEEK_API_KEY", "")
+DEEPSEEK_BASE_URL = os.environ.get("MINDCODE_DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = "deepseek-coder"
 
-# Claude (Antigravity 反代) 配置
-CLAUDE_API_KEY = "sk-2193ee6b1da84eeaa112fbbcf2e81632"
-CLAUDE_BASE_URL = "http://127.0.0.1:8045"
-CLAUDE_MODEL_INLINE = "claude-haiku-4-5-20251001"   # Haiku：快速补全
-CLAUDE_MODEL_BLOCK = "claude-sonnet-4-5-20250929"   # Sonnet：复杂代码
+# Claude 配置
+CLAUDE_API_KEY = os.environ.get("MINDCODE_CLAUDE_API_KEY", "")
+CLAUDE_BASE_URL = os.environ.get("MINDCODE_CLAUDE_BASE_URL", "https://sub2.willapi.one")
+CLAUDE_MODEL_INLINE = "claude-haiku-4-5-20251001"
+CLAUDE_MODEL_BLOCK = "claude-sonnet-4-5-20250929"
 
 # 补全参数
 MAX_TOKENS_INLINE = 200   # inline 模式：单行补全

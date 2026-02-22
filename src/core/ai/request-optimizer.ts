@@ -11,7 +11,7 @@ const warmupEndpoints: Record<string, string> = {
   openai: DEFAULT_BASE_URLS.openai,
   deepseek: DEFAULT_BASE_URLS.deepseek,
   glm: DEFAULT_BASE_URLS.glm,
-  codesuc: DEFAULT_BASE_URLS.codesuc,
+  // codesuc 已弃用
 };
 
 let warmedUp = false;

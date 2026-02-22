@@ -8,7 +8,7 @@ import { ipcMain } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import { spawn } from "child_process";
-import type { IPCContext } from "./types";
+import { type IPCContext, validateSender } from "./types";
 import { logger } from "../../core/logger";
 
 const log = logger.child("Terminal");
@@ -239,7 +239,14 @@ function getDefaultShell(): string {
 
 export function registerTerminalHandlers(ctx: IPCContext): void {
   // 创建 PTY 会话
-  ipcMain.handle("terminal:create", async (_event, options?: { cwd?: string; shell?: string }) => {
+  ipcMain.handle("terminal:create", async (event, options?: { cwd?: string }) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
+    // Workspace Trust：必须先打开工作区才能创建终端
+    if (!ctx.getWorkspacePath()) {
+      return { success: false, error: "请先打开工作区后再使用终端", errorCode: "ERR_NO_WORKSPACE" };
+    }
     try {
       if (!pty) {
         return { success: false, error: "node-pty 不可用，请使用 terminal:execute 回退模式" };
@@ -247,7 +254,7 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
 
       const id = `pty-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const cwd = options?.cwd || process.cwd();
-      const shell = options?.shell || getDefaultShell();
+      const shell = getDefaultShell();
 
       // 验证工作目录
       if (!fs.existsSync(cwd)) {
@@ -339,7 +346,14 @@ export function registerTerminalHandlers(ctx: IPCContext): void {
   // ========== 以下是原有的回退模式（node-pty 不可用时使用） ==========
 
   // 执行命令（带安全检查，使用 spawn + shell:false 防注入）
-  ipcMain.handle("terminal:execute", async (_event, command: string, cwd?: string) => {
+  ipcMain.handle("terminal:execute", async (event, command: string, cwd?: string) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
+    // Workspace Trust：必须先打开工作区
+    if (!ctx.getWorkspacePath()) {
+      return { success: false, error: "请先打开工作区后再执行命令", errorCode: "ERR_NO_WORKSPACE" };
+    }
     try {
       const safetyCheck = isCommandSafe(command);
       if (!safetyCheck.safe) {

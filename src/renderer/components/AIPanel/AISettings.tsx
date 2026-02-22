@@ -25,14 +25,20 @@ const PROVIDERS = {
   google: { name: "Google", models: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"] },
   local: {
     name: "本地/代理",
-    models: ["codesuc-opus", "codesuc-sonnet", "codesuc-haiku", "deepseek-chat", "qwen-turbo"],
+    models: [
+      "claude-opus-4-6",
+      "claude-sonnet-4-5-20250929",
+      "claude-haiku-4-5-20251001",
+      "deepseek-chat",
+      "qwen-turbo",
+    ],
   },
 };
 
 const STORAGE_KEY = "mindcode_ai_config";
 const DEFAULT_CONFIG: AIConfig = {
   provider: "local",
-  model: "codesuc-sonnet",
+  model: "claude-sonnet-4-5-20250929",
   temperature: 0.7,
   maxTokens: 4096,
   topP: 1,

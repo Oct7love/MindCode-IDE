@@ -26,7 +26,7 @@ const log = createNamedLogger("ChatEngine");
 // 模型上下文窗口大小（token 数）
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   claude: 180000,
-  codesuc: 180000,
+  codesuc: 180000, // 已弃用，保留兼容
   gemini: 900000,
   deepseek: 120000,
   glm: 120000,
@@ -89,9 +89,9 @@ const VISION_CAPABLE_MODELS = [
   "claude-opus-4-6",
   "claude-sonnet-4-5-20250929",
   "claude-haiku-4-5-20251001",
-  "codesuc-opus",
-  "codesuc-sonnet",
-  "codesuc-haiku",
+  "claude-opus-4-6",
+  "claude-sonnet-4-5-20250929",
+  "claude-haiku-4-5-20251001",
   // OpenAI 也支持，但格式不同，暂不处理
 ];
 

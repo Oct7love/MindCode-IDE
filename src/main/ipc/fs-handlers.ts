@@ -7,6 +7,7 @@
 import { ipcMain, dialog } from "electron";
 import * as path from "path";
 import * as fs from "fs";
+import * as fsp from "fs/promises";
 import {
   readFileWithEncoding,
   writeFileWithEncoding,
@@ -14,9 +15,9 @@ import {
   SUPPORTED_ENCODINGS,
   type EncodingId,
 } from "../../core/encoding";
-import type { IPCContext } from "./types";
+import { type IPCContext, validateSender } from "./types";
 
-/** 当前工作区路径（用于路径验证） */
+/** @deprecated 使用 ctx.getWorkspacePath() 替代 */
 let currentWorkspacePath: string | null = null;
 
 /** 文件搜索的最大递归深度 */
@@ -157,9 +158,19 @@ export function registerFSHandlers(ctx: IPCContext): void {
   const mainWindow = ctx.getMainWindow;
 
   // 设置工作区路径
-  ipcMain.handle("fs:setWorkspace", async (_event, workspacePath: string) => {
-    if (workspacePath && fs.existsSync(workspacePath)) {
-      currentWorkspacePath = path.resolve(workspacePath);
+  ipcMain.handle("fs:setWorkspace", async (event, workspacePath: string) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
+    try {
+      await fsp.access(workspacePath);
+    } catch {
+      return { success: false, error: "Invalid workspace path" };
+    }
+    if (workspacePath) {
+      const resolved = path.resolve(workspacePath);
+      currentWorkspacePath = resolved;
+      ctx.setWorkspacePath(resolved);
       return { success: true };
     }
     return { success: false, error: "Invalid workspace path" };
@@ -180,7 +191,7 @@ export function registerFSHandlers(ctx: IPCContext): void {
       if (!isPathAllowed(dirPath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
-      const items = fs.readdirSync(dirPath, { withFileTypes: true });
+      const items = await fsp.readdir(dirPath, { withFileTypes: true });
       const result = items
         .filter((item) => !item.name.startsWith(".") && item.name !== "node_modules")
         .map((item) => ({
@@ -258,10 +269,13 @@ export function registerFSHandlers(ctx: IPCContext): void {
   // 写入文件（支持多编码）
   ipcMain.handle(
     "fs:writeFile",
-    async (_event, filePath: string, content: string, encoding: EncodingId = "utf8") => {
+    async (event, filePath: string, content: string, encoding: EncodingId = "utf8") => {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       try {
-        if (!isPathAllowed(filePath)) {
-          return { success: false, error: "Access denied: path is not in the allowed scope" };
+        if (!currentWorkspacePath || !isPathAllowed(filePath, currentWorkspacePath)) {
+          return { success: false, error: "Access denied: can only write files within workspace" };
         }
         writeFileWithEncoding(filePath, content, encoding);
         mainWindow()?.webContents.send("fs:fileChanged", { filePath, type: "write" });
@@ -283,7 +297,7 @@ export function registerFSHandlers(ctx: IPCContext): void {
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
-      const buffer = fs.readFileSync(filePath);
+      const buffer = await fsp.readFile(filePath);
       return { success: true, encoding: detectEncoding(buffer) };
     } catch (error: unknown) {
       return { success: false, error: (error as Error).message };
@@ -296,14 +310,14 @@ export function registerFSHandlers(ctx: IPCContext): void {
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
-      const stat = fs.statSync(filePath);
+      const fileStat = await fsp.stat(filePath);
       return {
         success: true,
         data: {
-          isFile: stat.isFile(),
-          isDirectory: stat.isDirectory(),
-          size: stat.size,
-          mtime: stat.mtime.toISOString(),
+          isFile: fileStat.isFile(),
+          isDirectory: fileStat.isDirectory(),
+          size: fileStat.size,
+          mtime: fileStat.mtime.toISOString(),
         },
       };
     } catch (error: unknown) {
@@ -403,15 +417,21 @@ export function registerFSHandlers(ctx: IPCContext): void {
   );
 
   // 创建文件夹
-  ipcMain.handle("fs:createFolder", async (_event, folderPath: string) => {
+  ipcMain.handle("fs:createFolder", async (event, folderPath: string) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
     try {
-      if (!isPathAllowed(folderPath)) {
-        return { success: false, error: "Access denied: path is not in the allowed scope" };
+      if (!currentWorkspacePath || !isPathAllowed(folderPath, currentWorkspacePath)) {
+        return { success: false, error: "Access denied: can only create folders within workspace" };
       }
-      if (fs.existsSync(folderPath)) {
+      try {
+        await fsp.access(folderPath);
         return { success: false, error: "Folder already exists" };
+      } catch {
+        /* 不存在则继续 */
       }
-      fs.mkdirSync(folderPath, { recursive: true });
+      await fsp.mkdir(folderPath, { recursive: true });
       return { success: true };
     } catch (error: unknown) {
       return { success: false, error: (error as Error).message };
@@ -419,19 +439,23 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 创建文件
-  ipcMain.handle("fs:createFile", async (_event, filePath: string, content: string = "") => {
+  ipcMain.handle("fs:createFile", async (event, filePath: string, content: string = "") => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
     try {
-      if (!isPathAllowed(filePath)) {
-        return { success: false, error: "Access denied: path is not in the allowed scope" };
+      if (!currentWorkspacePath || !isPathAllowed(filePath, currentWorkspacePath)) {
+        return { success: false, error: "Access denied: can only create files within workspace" };
       }
-      if (fs.existsSync(filePath)) {
+      try {
+        await fsp.access(filePath);
         return { success: false, error: "File already exists" };
+      } catch {
+        /* 不存在则继续 */
       }
       const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(filePath, content, "utf-8");
+      await fsp.mkdir(dir, { recursive: true });
+      await fsp.writeFile(filePath, content, "utf-8");
       return { success: true };
     } catch (error: unknown) {
       return { success: false, error: (error as Error).message };
@@ -439,19 +463,24 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 删除文件或文件夹
-  ipcMain.handle("fs:delete", async (_event, targetPath: string) => {
+  ipcMain.handle("fs:delete", async (event, targetPath: string) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
     try {
       if (!currentWorkspacePath || !isPathAllowed(targetPath, currentWorkspacePath)) {
         return { success: false, error: "Access denied: can only delete files within workspace" };
       }
-      if (!fs.existsSync(targetPath)) {
+      try {
+        await fsp.access(targetPath);
+      } catch {
         return { success: false, error: "Target does not exist" };
       }
-      const stat = fs.statSync(targetPath);
-      if (stat.isDirectory()) {
-        fs.rmSync(targetPath, { recursive: true, force: true });
+      const targetStat = await fsp.stat(targetPath);
+      if (targetStat.isDirectory()) {
+        await fsp.rm(targetPath, { recursive: true, force: true });
       } else {
-        fs.unlinkSync(targetPath);
+        await fsp.unlink(targetPath);
       }
       return { success: true };
     } catch (error: unknown) {
@@ -460,18 +489,30 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 重命名文件或文件夹
-  ipcMain.handle("fs:rename", async (_event, oldPath: string, newPath: string) => {
+  ipcMain.handle("fs:rename", async (event, oldPath: string, newPath: string) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
     try {
-      if (!isPathAllowed(oldPath) || !isPathAllowed(newPath)) {
-        return { success: false, error: "Access denied: path is not in the allowed scope" };
+      if (
+        !currentWorkspacePath ||
+        !isPathAllowed(oldPath, currentWorkspacePath) ||
+        !isPathAllowed(newPath, currentWorkspacePath)
+      ) {
+        return { success: false, error: "Access denied: can only rename within workspace" };
       }
-      if (!fs.existsSync(oldPath)) {
+      try {
+        await fsp.access(oldPath);
+      } catch {
         return { success: false, error: "Source does not exist" };
       }
-      if (fs.existsSync(newPath)) {
+      try {
+        await fsp.access(newPath);
         return { success: false, error: "Target name already exists" };
+      } catch {
+        /* 不存在则继续 */
       }
-      fs.renameSync(oldPath, newPath);
+      await fsp.rename(oldPath, newPath);
       return { success: true };
     } catch (error: unknown) {
       return { success: false, error: (error as Error).message };
@@ -479,19 +520,28 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 复制文件或文件夹
-  ipcMain.handle("fs:copy", async (_event, srcPath: string, destPath: string) => {
+  ipcMain.handle("fs:copy", async (event, srcPath: string, destPath: string) => {
+    if (!validateSender(event, ctx)) {
+      return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+    }
     try {
-      if (!isPathAllowed(srcPath) || !isPathAllowed(destPath)) {
-        return { success: false, error: "Access denied: path is not in the allowed scope" };
+      if (
+        !currentWorkspacePath ||
+        !isPathAllowed(srcPath, currentWorkspacePath) ||
+        !isPathAllowed(destPath, currentWorkspacePath)
+      ) {
+        return { success: false, error: "Access denied: can only copy within workspace" };
       }
-      if (!fs.existsSync(srcPath)) {
+      try {
+        await fsp.access(srcPath);
+      } catch {
         return { success: false, error: "Source does not exist" };
       }
-      const stat = fs.statSync(srcPath);
-      if (stat.isDirectory()) {
-        fs.cpSync(srcPath, destPath, { recursive: true });
+      const srcStat = await fsp.stat(srcPath);
+      if (srcStat.isDirectory()) {
+        await fsp.cp(srcPath, destPath, { recursive: true });
       } else {
-        fs.copyFileSync(srcPath, destPath);
+        await fsp.copyFile(srcPath, destPath);
       }
       return { success: true };
     } catch (error: unknown) {
@@ -505,7 +555,12 @@ export function registerFSHandlers(ctx: IPCContext): void {
       if (!isPathAllowed(targetPath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
-      return { success: true, data: fs.existsSync(targetPath) };
+      try {
+        await fsp.access(targetPath);
+        return { success: true, data: true };
+      } catch {
+        return { success: true, data: false };
+      }
     } catch (error: unknown) {
       return { success: false, error: (error as Error).message };
     }

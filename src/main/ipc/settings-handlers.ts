@@ -114,7 +114,7 @@ export function registerSettingsHandlers(ctx: IPCContext): void {
   // 补全设置
   ipcMain.handle("ai:completion-settings", async () => {
     const enabled = settingsCache["completion.enabled"] ?? true;
-    const model = settingsCache["completion.model"] ?? "codesuc-sonnet";
+    const model = settingsCache["completion.model"] ?? "claude-haiku-4-5-20251001";
     const debounceMs = settingsCache["completion.debounceMs"] ?? 150;
     return { enabled, model, debounceMs };
   });

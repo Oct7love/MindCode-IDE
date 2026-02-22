@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld("mindcode", {
     chat: (model: string, messages: ChatMessage[]) =>
       ipcRenderer.invoke("ai-chat", { model, messages }),
     getStats: () => ipcRenderer.invoke("ai-stats"),
+    cancelStream: (requestId: string) => ipcRenderer.send("ai-stream-cancel", { requestId }),
     // 代码补全
     completion: (request: CompletionRequest) => ipcRenderer.invoke("ai:completion", request),
     getCompletionSettings: () => ipcRenderer.invoke("ai:completion-settings"),
@@ -170,6 +171,7 @@ contextBridge.exposeInMainWorld("mindcode", {
 
   // 文件系统操作
   fs: {
+    setWorkspace: (workspacePath: string) => ipcRenderer.invoke("fs:setWorkspace", workspacePath),
     openFolder: () => ipcRenderer.invoke("fs:openFolder"),
     readDir: (dirPath: string) => ipcRenderer.invoke("fs:readDir", dirPath),
     readFile: (filePath: string, encoding?: string) =>
@@ -206,8 +208,7 @@ contextBridge.exposeInMainWorld("mindcode", {
     cd: (currentDir: string, newDir: string) =>
       ipcRenderer.invoke("terminal:cd", currentDir, newDir),
     pwd: () => ipcRenderer.invoke("terminal:pwd"),
-    create: (options?: { cwd?: string; shell?: string }) =>
-      ipcRenderer.invoke("terminal:create", options),
+    create: (options?: { cwd?: string }) => ipcRenderer.invoke("terminal:create", options),
     write: (id: string, data: string) => ipcRenderer.invoke("terminal:write", id, data),
     resize: (id: string, cols: number, rows: number) =>
       ipcRenderer.invoke("terminal:resize", id, cols, rows),
@@ -322,7 +323,7 @@ contextBridge.exposeInMainWorld("mindcode", {
 
   // LSP 语言服务器
   lsp: {
-    start: (language: string, options?: { command?: string; args?: string[]; rootPath?: string }) =>
+    start: (language: string, options?: { rootPath?: string }) =>
       ipcRenderer.invoke("lsp:start", language, options),
     stop: (language: string) => ipcRenderer.invoke("lsp:stop", language),
     request: (language: string, method: string, params: unknown) =>
@@ -448,6 +449,7 @@ declare global {
           messages: import("../shared/types/ai").ChatMessage[],
         ) => Promise<import("../shared/types/ipc").AIChatResult>;
         getStats: () => Promise<import("../shared/types/ipc").AIStatsResult>;
+        cancelStream: (requestId: string) => void;
         chatStream: (
           model: string,
           messages: import("../shared/types/ai").ChatMessage[],
@@ -472,6 +474,7 @@ declare global {
         ) => () => void;
       };
       fs: {
+        setWorkspace: (workspacePath: string) => Promise<import("../shared/types/ipc").IPCResult>;
         openFolder: () => Promise<string | null>;
         readDir: (
           dirPath: string,
@@ -548,9 +551,9 @@ declare global {
           newDir: string,
         ) => Promise<import("../shared/types/ipc").IPCResult<string>>;
         pwd: () => Promise<import("../shared/types/ipc").IPCResult<string>>;
-        create: (
-          options?: import("../shared/types/ipc").TerminalCreateOptions,
-        ) => Promise<import("../shared/types/ipc").IPCResult & { id?: string }>;
+        create: (options?: {
+          cwd?: string;
+        }) => Promise<import("../shared/types/ipc").IPCResult & { id?: string }>;
         write: (id: string, data: string) => Promise<import("../shared/types/ipc").IPCResult>;
         resize: (
           id: string,
@@ -687,7 +690,7 @@ declare global {
       lsp: {
         start: (
           language: string,
-          options?: import("../shared/types/ipc").LSPStartOptions,
+          options?: { rootPath?: string },
         ) => Promise<
           import("../shared/types/ipc").IPCResult & { capabilities?: Record<string, unknown> }
         >;

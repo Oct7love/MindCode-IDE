@@ -25,9 +25,9 @@ export interface ModelPriority {
 
 /** 默认模型优先级 */
 export const DEFAULT_MODEL_PRIORITIES: ModelPriority[] = [
-  { model: "codesuc-sonnet", latencyWeight: 1.0, qualityWeight: 0.9, timeout: 3000 },
+  { model: "claude-sonnet-4-5-20250929", latencyWeight: 1.0, qualityWeight: 0.9, timeout: 3000 },
   { model: "deepseek-coder", latencyWeight: 0.8, qualityWeight: 0.8, timeout: 2000 },
-  { model: "codesuc-haiku", latencyWeight: 0.6, qualityWeight: 0.7, timeout: 1500 },
+  { model: "claude-haiku-4-5-20251001", latencyWeight: 0.6, qualityWeight: 0.7, timeout: 1500 },
 ];
 
 /**

@@ -31,8 +31,8 @@ export const APP_CONFIG = {
 
   // AI 默认配置
   ai: {
-    defaultModel: "codesuc-sonnet",
-    defaultProvider: "codesuc",
+    defaultModel: "claude-sonnet-4-5-20250929",
+    defaultProvider: "claude",
     maxTokens: 4096,
     temperature: 0.3,
     streamingEnabled: true,

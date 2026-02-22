@@ -120,31 +120,7 @@ export const MODELS: ModelInfo[] = [
     provider: "glm",
     toolCapable: true,
   },
-  // ===== 特价渠道 (智能路由：Opus/Sonnet 简单任务自动调用 Haiku) =====
-  {
-    id: "codesuc-opus",
-    name: "Claude Opus 4.6 [特价]",
-    icon: "💎",
-    desc: "特价渠道 (含智能路由)",
-    provider: "codesuc",
-    toolCapable: true,
-  },
-  {
-    id: "codesuc-sonnet",
-    name: "Claude Sonnet 4.5 [特价]",
-    icon: "💰",
-    desc: "特价渠道 (含智能路由)",
-    provider: "codesuc",
-    toolCapable: true,
-  },
-  {
-    id: "codesuc-haiku",
-    name: "Claude Haiku 4.5 [特价]",
-    icon: "🏷️",
-    desc: "特价渠道",
-    provider: "codesuc",
-    toolCapable: true,
-  },
+  // codesuc 已弃用，模型列表中不再显示
 ];
 
 // 支持工具调用的模型列表
@@ -198,8 +174,8 @@ const Dropdown: React.FC<DropdownProps> = ({ anchorRef, models, current, onSelec
     };
   }, [onClose, anchorRef]);
 
-  const normalModels = models.filter((m) => m.provider !== "codesuc");
-  const specialModels = models.filter((m) => m.provider === "codesuc");
+  const normalModels = models;
+  const specialModels: ModelInfo[] = [];
 
   // 计算位置：放在按钮上方，超出视口时右对齐
   const getStyle = (): React.CSSProperties => {

@@ -25,10 +25,10 @@ const ITEMS: SettingItem[] = [
     desc: "Model used for code completion",
     type: "select",
     cat: "AI",
-    value: "codesuc-sonnet",
+    value: "claude-haiku-4-5-20251001",
     opts: [
-      { label: "Codesuc Sonnet", value: "codesuc-sonnet" },
-      { label: "Codesuc Haiku (faster)", value: "codesuc-haiku" },
+      { label: "Claude Haiku 4.5 (推荐)", value: "claude-haiku-4-5-20251001" },
+      { label: "Claude Sonnet 4.5", value: "claude-sonnet-4-5-20250929" },
       { label: "DeepSeek Coder", value: "deepseek-coder" },
     ],
   },

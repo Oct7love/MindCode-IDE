@@ -7,6 +7,12 @@
  * - 注册所有 IPC 处理器（模块化）
  * - 启动性能追踪
  */
+
+// 在所有模块加载前注入环境变量
+import { config as loadDotenv } from "dotenv";
+import * as _path from "path";
+loadDotenv({ path: _path.resolve(__dirname, "../../.env") });
+
 import type { MenuItemConstructorOptions } from "electron";
 import { app, BrowserWindow, ipcMain, dialog, Menu, session } from "electron";
 import * as path from "path";
@@ -46,9 +52,14 @@ const MIN_WINDOW_WIDTH = 800;
 const MIN_WINDOW_HEIGHT = 600;
 
 // ==================== IPC Context ====================
+let _workspacePath: string | null = null;
 const ipcContext: IPCContext = {
   getMainWindow: () => mainWindow,
   isDev,
+  getWorkspacePath: () => _workspacePath,
+  setWorkspacePath: (p) => {
+    _workspacePath = p;
+  },
 };
 
 // ==================== Window Management ====================
@@ -463,8 +474,8 @@ app.whenReady().then(() => {
         ...details.responseHeaders,
         "Content-Security-Policy": [
           isDev
-            ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*; font-src 'self' data:; img-src 'self' data: blob:;"
-            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:;",
+            ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*; font-src 'self' data:; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';"
+            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self' data:; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';",
         ],
       },
     });

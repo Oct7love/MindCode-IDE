@@ -71,6 +71,8 @@ export function useWorkspace() {
     }
     const folderPath = await window.mindcode.fs.openFolder();
     if (folderPath) {
+      // 同步工作区路径到主进程（安全边界验证依赖此调用）
+      await window.mindcode.fs.setWorkspace?.(folderPath);
       setWorkspaceRoot(folderPath);
       setWorkspaceName(folderPath.split(/[/\\]/).pop() || "Workspace");
       const tree = await loadDirectory(folderPath, true);
@@ -86,6 +88,8 @@ export function useWorkspace() {
   // 通过路径打开文件夹（供菜单/拖拽使用）
   const openFolderByPath = useCallback(
     async (folderPath: string) => {
+      // 同步工作区路径到主进程（安全边界验证依赖此调用）
+      await window.mindcode.fs.setWorkspace?.(folderPath);
       setWorkspaceRoot(folderPath);
       setWorkspaceName(folderPath.split(/[/\\]/).pop() || "Workspace");
       const tree = await loadDirectory(folderPath, true);
@@ -115,6 +119,8 @@ export function useWorkspace() {
       if (saved) {
         workspaceRestoredRef.current = true;
         try {
+          // 恢复时同步工作区路径到主进程
+          await window.mindcode.fs.setWorkspace?.(saved);
           const tree = await loadDirectory(saved, true);
           if (tree.length > 0) {
             const name = saved.split(/[/\\]/).pop() || "Workspace";

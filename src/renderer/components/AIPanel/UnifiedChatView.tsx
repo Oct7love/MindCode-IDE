@@ -33,9 +33,9 @@ const VISION_CAPABLE_MODELS = [
   "claude-opus-4-6",
   "claude-sonnet-4-5-20250929",
   "claude-haiku-4-5-20251001",
-  "codesuc-opus",
-  "codesuc-sonnet",
-  "codesuc-haiku",
+  "claude-opus-4-6",
+  "claude-sonnet-4-5-20250929",
+  "claude-haiku-4-5-20251001",
 ];
 
 // 图片预览组件 - 处理加载状态和错误，支持自动回退

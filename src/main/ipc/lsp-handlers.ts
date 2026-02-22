@@ -11,16 +11,9 @@ export function registerLSPHandlers(ctx: IPCContext): void {
   const lspManager = getLSPManager();
   const mainWindow = ctx.getMainWindow;
 
-  ipcMain.handle(
-    "lsp:start",
-    async (
-      _event,
-      language: string,
-      options?: { command?: string; args?: string[]; rootPath?: string },
-    ) => {
-      return lspManager.start(language, options);
-    },
-  );
+  ipcMain.handle("lsp:start", async (_event, language: string, options?: { rootPath?: string }) => {
+    return lspManager.start(language, options);
+  });
 
   ipcMain.handle("lsp:stop", async (_event, language: string) => {
     await lspManager.stop(language);

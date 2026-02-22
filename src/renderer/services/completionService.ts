@@ -72,13 +72,13 @@ class CompletionService {
         code: request.content,
         cursorLine: request.cursor_line,
         cursorColumn: request.cursor_column,
-        model: "codesuc-sonnet",
+        model: "claude-haiku-4-5-20251001",
       });
       if (result.success && result.data) {
         return {
           completion: result.data,
           finish_reason: "complete",
-          model: "codesuc-sonnet",
+          model: "claude-haiku-4-5-20251001",
           latency_ms: Date.now() - startTime,
           cached: result.cached || false,
         };

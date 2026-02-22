@@ -10,17 +10,17 @@ export interface AIConfig {
   gemini: AIProviderSettings;
   deepseek: AIProviderSettings;
   glm: AIProviderSettings;
-  codesuc: AIProviderSettings; // 特价渠道
+  codesuc: AIProviderSettings; // 已弃用，保留类型兼容性
 }
 
 // 默认 Base URL 配置 - 所有 URL 均可通过环境变量覆盖
 export const DEFAULT_BASE_URLS: Record<keyof AIConfig, string> = {
   claude: "https://sub2.willapi.one",
   openai: "https://sub2.willapi.one/v1",
-  gemini: "https://once.novai.su/v1",
+  gemini: "https://2api.novai.su/v1",
   deepseek: "https://api.deepseek.com",
-  glm: "https://open.bigmodel.cn/api/anthropic",
-  codesuc: "https://main.codesuc.top/api",
+  glm: "https://open.bigmodel.cn/api/coding/paas/v4",
+  codesuc: "", // 已弃用
 };
 
 // 默认模型配置
@@ -30,7 +30,7 @@ const DEFAULT_MODELS: Record<keyof AIConfig, string> = {
   gemini: "[次]gemini-3-pro-preview",
   deepseek: "deepseek-chat",
   glm: "glm-4.7-flashx",
-  codesuc: "codesuc-opus",
+  codesuc: "", // 已弃用
 };
 
 /** 安全读取环境变量，避免在日志中泄露 */
@@ -38,29 +38,20 @@ function getEnvVar(key: string, fallback: string = ""): string {
   return process.env[key] || fallback;
 }
 
-// 默认配置 - API Key 从环境变量读取，请勿在源码中硬编码密钥
+// 默认配置 - API Key 仅从环境变量读取（.env），源码中不存储任何密钥
 export const defaultAIConfig: AIConfig = {
   claude: {
-    apiKey: getEnvVar(
-      "MINDCODE_CLAUDE_API_KEY",
-      "sk-f93353a9533590344fb3b40994a52a702a675e3b7812e778f42353f3ee9773e1",
-    ),
+    apiKey: getEnvVar("MINDCODE_CLAUDE_API_KEY"),
     baseUrl: getEnvVar("MINDCODE_CLAUDE_BASE_URL", DEFAULT_BASE_URLS.claude),
     model: DEFAULT_MODELS.claude,
   },
   openai: {
-    apiKey: getEnvVar(
-      "MINDCODE_OPENAI_API_KEY",
-      "sk-f93353a9533590344fb3b40994a52a702a675e3b7812e778f42353f3ee9773e1",
-    ),
+    apiKey: getEnvVar("MINDCODE_OPENAI_API_KEY"),
     baseUrl: getEnvVar("MINDCODE_OPENAI_BASE_URL", DEFAULT_BASE_URLS.openai),
     model: DEFAULT_MODELS.openai,
   },
   gemini: {
-    apiKey: getEnvVar(
-      "MINDCODE_GEMINI_API_KEY",
-      "sk-EJimY2nf8Xc9ucR1YdEZwMdFULr2mdbKGJsf0XnIyagRUOkF",
-    ),
+    apiKey: getEnvVar("MINDCODE_GEMINI_API_KEY"),
     baseUrl: getEnvVar("MINDCODE_GEMINI_BASE_URL", DEFAULT_BASE_URLS.gemini),
     model: DEFAULT_MODELS.gemini,
   },
@@ -75,9 +66,9 @@ export const defaultAIConfig: AIConfig = {
     model: DEFAULT_MODELS.glm,
   },
   codesuc: {
-    apiKey: getEnvVar("MINDCODE_CODESUC_API_KEY"),
-    baseUrl: getEnvVar("MINDCODE_CODESUC_BASE_URL", DEFAULT_BASE_URLS.codesuc),
-    model: DEFAULT_MODELS.codesuc,
+    apiKey: "", // 已弃用，不再配置
+    baseUrl: "",
+    model: "",
   },
 };
 

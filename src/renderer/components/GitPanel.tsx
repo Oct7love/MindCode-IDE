@@ -307,7 +307,7 @@ export const GitPanel: React.FC<GitPanelProps> = ({ workspacePath }) => {
 Diff:
 ${diffSummary.slice(0, 3000)}`;
 
-      const result = await window.mindcode.ai.chat("codesuc-haiku", [
+      const result = await window.mindcode.ai.chat("claude-haiku-4-5-20251001", [
         { role: "user", content: prompt },
       ]);
       if (result?.success && result.data) {
