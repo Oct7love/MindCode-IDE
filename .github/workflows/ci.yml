@@ -12,6 +12,39 @@ on:
       - main
 
 jobs:
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 需要完整历史以按提交范围扫描
+      - name: Install gitleaks
+        run: |
+          VER=8.30.1
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" -o /tmp/gl.tgz
+          tar -xzf /tmp/gl.tgz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan new commits for secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          # 只扫本次 PR/push 新引入的提交，阻断新泄露；不因历史遗留 key 而失败
+          # （历史遗留见 docs/refactor/04_SECRET_REMEDIATION_PLAN.md，需另行处置）。
+          if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+            echo "无有效基线，改扫工作树"
+            gitleaks detect --source . --no-git --config .gitleaks.toml --redact --verbose
+          else
+            echo "扫描范围: ${BASE}..${{ github.sha }}"
+            gitleaks detect --source . --config .gitleaks.toml --log-opts "${BASE}..${{ github.sha }}" --redact --verbose
+          fi
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +68,7 @@ jobs:
       - run: npm run test
 
   build:
-    needs: [lint, test]
+    needs: [secret-scan, lint, test]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

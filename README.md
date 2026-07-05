@@ -64,6 +64,28 @@ npm run dev
 npm run build
 ```
 
+## 🔑 配置 AI 密钥（本地）
+
+AI 能力需要你自己的 API Key。**密钥只从环境变量读取，绝不写入源码或提交到 Git。**
+
+```bash
+# 1. 从模板创建本地 .env（.env 已被 .gitignore 忽略，不会被提交）
+cp .env.example .env
+
+# 2. 编辑 .env，填入你自己的 Key（至少配置一个 Provider 即可使用）
+#    MINDCODE_CLAUDE_API_KEY=sk-...
+#    MINDCODE_OPENAI_API_KEY=sk-...
+#    MINDCODE_DEEPSEEK_API_KEY=sk-...
+```
+
+约定与安全要求：
+
+- 默认 `*_BASE_URL` 指向各厂商**官方端点**；如需自建/第三方中转，自行在 `.env` 里覆盖对应 `MINDCODE_*_BASE_URL`。
+- **禁止**把真实 Key 写进任何源码、测试、快照或文档；`.env`、`*.pem`、`*.key` 等已被 `.gitignore` 忽略。
+- 仓库启用了 gitleaks（`.gitleaks.toml`）：pre-commit 会扫描暂存区、CI 会扫描新提交，含密钥的提交会被拦截。
+  本地建议安装：`brew install gitleaks`。
+- 若不慎提交了密钥：立即到对应控制台**吊销/轮换**，并参见 `docs/refactor/04_SECRET_REMEDIATION_PLAN.md`。
+
 ## 📁 项目结构
 
 ```

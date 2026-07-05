@@ -1,1 +1,15 @@
 npx lint-staged
+
+# Secret 扫描：阻止把密钥提交进暂存区。
+# gitleaks 未安装时仅告警不阻断（CI 里的 secret-scan job 是强制关卡）。
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --config .gitleaks.toml || {
+    echo ""
+    echo "❌ gitleaks 在暂存改动中检测到疑似密钥，提交已中止。"
+    echo "   请移除密钥后重试；确属误报可在 .gitleaks.toml 的 allowlist 中登记。"
+    exit 1
+  }
+else
+  echo "⚠️  未检测到 gitleaks，跳过本地 secret 扫描（建议安装：brew install gitleaks）。"
+  echo "   注意：CI 的 secret-scan 关卡仍会强制检查。"
+fi

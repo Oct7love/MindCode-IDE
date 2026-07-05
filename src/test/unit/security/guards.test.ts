@@ -70,8 +70,11 @@ describe("isWithinWorkspace", () => {
 
 describe("日志脱敏 redact", () => {
   it("掩码 sk- 密钥与 Bearer token", () => {
-    expect(redactString("key=sk-abcdef123456 done")).not.toContain("sk-abcdef123456");
-    expect(redactString("Authorization: Bearer abcdef123456")).not.toContain("abcdef123456");
+    // 从片段拼接的假凭据（非真实密钥，且不以字面量形式出现，避免被 secret 扫描误报）。
+    const fakeKey = "sk-" + "f".repeat(8) + "TEST00";
+    const fakeToken = "t0ken" + "PLACEHOLDER" + "00";
+    expect(redactString(`key=${fakeKey} done`)).not.toContain(fakeKey);
+    expect(redactString(`Authorization: Bearer ${fakeToken}`)).not.toContain(fakeToken);
   });
 
   it("对象中的敏感字段名整值掩码", () => {
