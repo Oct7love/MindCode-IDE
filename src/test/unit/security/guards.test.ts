@@ -73,12 +73,20 @@ describe("isWithinWorkspace", () => {
 });
 
 // F2：未打开工作区时的兜底 denylist，需抵御 macOS realpath 绕过（/etc→/private/etc）。
-describe("isDeniedSystemPath (F2)", () => {
-  it("系统关键目录被拒（含 macOS /private 映射）", () => {
+// 说明：跨平台断言用 /etc、/usr（posix 通用）；/private/* 直连路径仅在 macOS 存在，
+// 故对其单独断言只在 darwin 运行，避免在 Linux CI 上误判。
+describe.skipIf(process.platform === "win32")("isDeniedSystemPath (F2)", () => {
+  it("系统关键目录被拒（/etc、/usr 在所有 posix 平台）", () => {
+    // 关键回归点：即便 macOS 上 realpath('/etc/hosts')='/private/etc/hosts'，
+    // isDeniedSystemPath 仍应拒绝（denylist 已同步 realpath 规范化）。
     expect(isDeniedSystemPath("/etc/hosts")).toBe(true);
-    expect(isDeniedSystemPath("/private/etc/hosts")).toBe(true);
     expect(isDeniedSystemPath("/etc/passwd")).toBe(true);
     expect(isDeniedSystemPath("/usr/bin/env")).toBe(true);
+  });
+
+  it.runIf(process.platform === "darwin")("macOS /private 直连映射路径被拒", () => {
+    expect(isDeniedSystemPath("/private/etc/hosts")).toBe(true);
+    expect(isDeniedSystemPath("/private/var")).toBe(true);
   });
 
   it("主目录敏感凭据位置被拒", () => {
