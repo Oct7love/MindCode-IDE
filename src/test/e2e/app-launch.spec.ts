@@ -23,7 +23,10 @@ test.describe("应用启动", () => {
   });
 
   test("窗口尺寸不小于最小值", async () => {
-    const { width, height } = page.viewportSize() ?? { width: 0, height: 0 };
+    // 用真实 BrowserWindow 尺寸判断（viewportSize 反映的是 web 视口，在 Electron 下
+    // 与窗口尺寸口径不同，会误报）。
+    const window = await app.browserWindow(page);
+    const [width, height] = await window.evaluate((w) => w.getSize());
     expect(width).toBeGreaterThanOrEqual(800);
     expect(height).toBeGreaterThanOrEqual(600);
   });

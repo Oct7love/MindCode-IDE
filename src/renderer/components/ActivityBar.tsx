@@ -9,7 +9,7 @@ interface ActivityBarProps {
 }
 
 export const ActivityBar: React.FC<ActivityBarProps> = ({ tab, onTabChange }) => (
-  <div className="activitybar">
+  <div className="activitybar" data-testid="activity-bar">
     <div className="activitybar-top">
       <button
         className={`activity-action${tab === "files" ? " active" : ""}`}
