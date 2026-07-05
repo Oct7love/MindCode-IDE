@@ -77,7 +77,8 @@ export class CodesucProvider extends BaseAIProvider {
     super(config);
     this.apiKey = config.apiKey;
     this.baseUrl = (config.baseUrl || DEFAULT_BASE_URLS.codesuc).replace(/\/$/, "");
-    log.info(`Init: baseUrl=${this.baseUrl}, apiKey=${this.apiKey?.slice(0, 10)}...`);
+    // 不记录 API Key 片段：即使前缀也会缩小暴力空间并指纹化用户。
+    log.info(`Init: baseUrl=${this.baseUrl}, apiKey=${this.apiKey ? "set" : "unset"}`);
   }
 
   async probeCapabilities(): Promise<{ tools: boolean; stream: boolean }> {

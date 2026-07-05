@@ -7,18 +7,21 @@
 import { ipcMain } from "electron";
 import { spawn } from "child_process";
 import type { IPCContext } from "./types";
+import { sanitizeSecretEnv } from "../security/guards";
 
 /** Git 命令超时时间（ms） */
 const GIT_COMMAND_TIMEOUT_MS = 30000;
 
 /**
- * 执行 Git 命令的辅助函数 - 使用 spawn 避免 shell 注入
+ * 执行 Git 命令的辅助函数 - 使用 spawn 避免 shell 注入。
+ * env 经 sanitizeSecretEnv 剔除 AI API Key 等敏感变量，防止恶意仓库的 git hook /
+ * 凭证助手窃取密钥。
  */
 async function execGit(args: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const proc = spawn("git", args, {
       cwd,
-      env: { ...process.env },
+      env: sanitizeSecretEnv(),
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       timeout: GIT_COMMAND_TIMEOUT_MS,

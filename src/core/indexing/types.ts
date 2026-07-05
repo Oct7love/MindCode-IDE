@@ -6,21 +6,21 @@
 // ============ 符号类型 ============
 
 /** 符号类型枚举 */
-export type SymbolKind = 
-  | 'function' 
-  | 'class' 
-  | 'interface' 
-  | 'type' 
-  | 'variable' 
-  | 'constant'
-  | 'enum'
-  | 'method'
-  | 'property'
-  | 'parameter'
-  | 'import'
-  | 'export'
-  | 'namespace'
-  | 'module';
+export type SymbolKind =
+  | "function"
+  | "class"
+  | "interface"
+  | "type"
+  | "variable"
+  | "constant"
+  | "enum"
+  | "method"
+  | "property"
+  | "parameter"
+  | "import"
+  | "export"
+  | "namespace"
+  | "module";
 
 /** 代码符号 */
 export interface CodeSymbol {
@@ -57,7 +57,7 @@ export interface CodeSymbol {
   /** 导入来源 */
   importSource?: string;
   /** 导出类型 */
-  exportType?: 'named' | 'default' | 're-export';
+  exportType?: "named" | "default" | "re-export";
 }
 
 /** 参数信息 */
@@ -71,7 +71,7 @@ export interface ParameterInfo {
 // ============ 调用关系 ============
 
 /** 调用类型 */
-export type CallType = 'direct' | 'indirect' | 'dynamic' | 'constructor';
+export type CallType = "direct" | "indirect" | "dynamic" | "constructor";
 
 /** 调用关系 */
 export interface CallRelation {
@@ -90,7 +90,7 @@ export interface CallRelation {
 // ============ 文件索引 ============
 
 /** 文件索引状态 */
-export type IndexStatus = 'pending' | 'indexing' | 'indexed' | 'error';
+export type IndexStatus = "pending" | "indexing" | "indexed" | "error";
 
 /** 文件索引信息 */
 export interface FileIndex {
@@ -137,7 +137,7 @@ export interface CodeChunk {
 // ============ 搜索相关 ============
 
 /** 搜索类型 */
-export type SearchType = 'symbol' | 'semantic' | 'hybrid';
+export type SearchType = "symbol" | "semantic" | "hybrid";
 
 /** 搜索查询 */
 export interface SearchQuery {
@@ -162,7 +162,7 @@ export interface SearchResult {
   /** 相关性得分 (0-1) */
   score: number;
   /** 匹配类型 */
-  matchType: 'exact' | 'fuzzy' | 'semantic';
+  matchType: "exact" | "fuzzy" | "semantic";
   /** 高亮片段 */
   highlights?: string[];
   /** 上下文代码 */
@@ -184,7 +184,7 @@ export interface SearchResults {
 // ============ 依赖关系 ============
 
 /** 依赖类型 */
-export type DependencyType = 'import' | 'require' | 'dynamic';
+export type DependencyType = "import" | "require" | "dynamic";
 
 /** 文件依赖 */
 export interface FileDependency {
@@ -211,7 +211,7 @@ export interface IndexProgress {
   /** 当前正在索引的文件 */
   currentFile?: string;
   /** 索引状态 */
-  status: 'idle' | 'scanning' | 'indexing' | 'complete' | 'error';
+  status: "idle" | "scanning" | "indexing" | "complete" | "error";
   /** 开始时间 */
   startTime?: number;
   /** 预计剩余时间（秒） */
@@ -245,32 +245,33 @@ export interface IndexConfig {
 /** 默认索引配置 */
 export const DEFAULT_INDEX_CONFIG: IndexConfig = {
   includePatterns: [
-    '**/*.ts',
-    '**/*.tsx',
-    '**/*.js',
-    '**/*.jsx',
-    '**/*.py',
-    '**/*.go',
-    '**/*.rs',
-    '**/*.java',
-    '**/*.c',
-    '**/*.cpp',
-    '**/*.h',
-    '**/*.hpp',
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.py",
+    "**/*.go",
+    "**/*.rs",
+    "**/*.java",
+    "**/*.c",
+    "**/*.cpp",
+    "**/*.h",
+    "**/*.hpp",
   ],
   excludePatterns: [
-    '**/node_modules/**',
-    '**/dist/**',
-    '**/build/**',
-    '**/.git/**',
-    '**/coverage/**',
-    '**/*.min.js',
-    '**/*.bundle.js',
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.git/**",
+    "**/coverage/**",
+    "**/*.min.js",
+    "**/*.bundle.js",
   ],
   maxFileSize: 1024 * 1024, // 1MB
-  enableEmbeddings: true,
-  embeddingModel: 'openai-text-embedding-3-small',
+  // 安全默认：关闭向量嵌入，避免在未告知用户的情况下把源代码上传到 embedding 端点。
+  enableEmbeddings: false,
+  embeddingModel: "openai-text-embedding-3-small",
   incrementalIndex: true,
   concurrency: 4,
-  supportedLanguages: ['typescript', 'javascript', 'python', 'go', 'rust', 'java', 'c', 'cpp'],
+  supportedLanguages: ["typescript", "javascript", "python", "go", "rust", "java", "c", "cpp"],
 };

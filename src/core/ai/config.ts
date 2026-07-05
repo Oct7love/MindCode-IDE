@@ -13,11 +13,16 @@ export interface AIConfig {
   codesuc: AIProviderSettings; // 已弃用，保留类型兼容性
 }
 
-// 默认 Base URL 配置 - 所有 URL 均可通过环境变量覆盖
+// 默认 Base URL 配置 —— 一律指向各厂商官方端点，与 .env.example 保持一致。
+// 安全默认（secure by default）：不设置任何 MINDCODE_*_BASE_URL 时，API Key 与
+// 请求内容（含用户源代码）只会发往官方端点，绝不经任何第三方中转。
+// 如需使用自建/第三方中转，必须由用户显式设置对应的 MINDCODE_*_BASE_URL 环境变量。
+// 注：GLM 走 Anthropic 兼容协议（glm.ts 使用 @anthropic-ai/sdk），故用 /api/anthropic；
+//     .env.example 中的 /api/paas/v4（OpenAI 协议）与此不一致，属已知文档差异（见 M4）。
 export const DEFAULT_BASE_URLS: Record<keyof AIConfig, string> = {
-  claude: "https://sub2.willapi.one",
-  openai: "https://sub2.willapi.one/v1",
-  gemini: "https://2api.novai.su/v1",
+  claude: "https://api.anthropic.com",
+  openai: "https://api.openai.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1",
   deepseek: "https://api.deepseek.com",
   glm: "https://open.bigmodel.cn/api/anthropic",
   codesuc: "", // 已弃用

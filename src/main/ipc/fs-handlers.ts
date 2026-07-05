@@ -6,6 +6,7 @@
  */
 import { ipcMain, dialog } from "electron";
 import * as path from "path";
+import * as os from "os";
 import * as fs from "fs";
 import * as fsp from "fs/promises";
 import * as readline from "readline";
@@ -101,11 +102,27 @@ function isPathAllowed(targetPath: string, basePath?: string): boolean {
       );
     }
 
-    // 检查是否尝试访问系统关键目录
-    const dangerousPaths =
+    // 未打开工作区时的兜底：拒绝访问系统关键目录 + 用户主目录下的敏感凭据位置。
+    // 注：denylist 本质不完备，仅作深度防御；「未打开工作区仅允许用户经对话框显式
+    // 选择的文件」这一 allowlist 模型属 M3 架构任务（见 03_REFACTOR_ROADMAP.md）。
+    const home = os.homedir();
+    const homeSecretDirs = [
+      ".ssh",
+      ".aws",
+      ".gnupg",
+      ".kube",
+      ".docker",
+      ".config",
+      ".netrc",
+      ".npmrc",
+      ".git-credentials",
+      ".env",
+    ].map((d) => path.join(home, d));
+    const dangerousPaths = (
       process.platform === "win32"
         ? ["C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\ProgramData"]
-        : ["/etc", "/usr", "/bin", "/sbin", "/var", "/root", "/boot", "/sys", "/proc"];
+        : ["/etc", "/usr", "/bin", "/sbin", "/var", "/root", "/boot", "/sys", "/proc"]
+    ).concat(homeSecretDirs);
 
     return !dangerousPaths.some((dangerous) =>
       normalizedTarget.toLowerCase().startsWith(dangerous.toLowerCase()),
@@ -187,8 +204,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 读取目录结构
-  ipcMain.handle("fs:readDir", async (_event, dirPath: string) => {
+  ipcMain.handle("fs:readDir", async (event, dirPath: string) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!isPathAllowed(dirPath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
@@ -211,8 +231,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 读取文件内容（支持多编码）
-  ipcMain.handle("fs:readFile", async (_event, filePath: string, encoding?: EncodingId) => {
+  ipcMain.handle("fs:readFile", async (event, filePath: string, encoding?: EncodingId) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
@@ -226,8 +249,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   // 大文件分片读取
   ipcMain.handle(
     "fs:readFileChunk",
-    async (_event, filePath: string, startLine: number, endLine: number) => {
+    async (event, filePath: string, startLine: number, endLine: number) => {
       try {
+        if (!validateSender(event, ctx)) {
+          return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+        }
         if (!isPathAllowed(filePath)) {
           return { success: false, error: "Access denied: path is not in the allowed scope" };
         }
@@ -249,8 +275,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   );
 
   // 获取文件行数
-  ipcMain.handle("fs:getLineCount", async (_event, filePath: string) => {
+  ipcMain.handle("fs:getLineCount", async (event, filePath: string) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
@@ -291,8 +320,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 检测文件编码
-  ipcMain.handle("fs:detectEncoding", async (_event, filePath: string) => {
+  ipcMain.handle("fs:detectEncoding", async (event, filePath: string) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
@@ -304,8 +336,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 获取文件信息
-  ipcMain.handle("fs:stat", async (_event, filePath: string) => {
+  ipcMain.handle("fs:stat", async (event, filePath: string) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
@@ -325,10 +360,18 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 获取工作区所有文件
-  ipcMain.handle("fs:getAllFiles", async (_event, workspacePath: string) => {
+  ipcMain.handle("fs:getAllFiles", async (event, workspacePath: string) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!workspacePath || !fs.existsSync(workspacePath)) {
         return { success: false, error: "Invalid workspace path" };
+      }
+      // 目录枚举必须限定在受信路径内（打开工作区时=工作区内；否则走系统/主目录敏感目录 denylist），
+      // 防止渲染进程借此递归枚举任意目录。
+      if (!isPathAllowed(workspacePath)) {
+        return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
       const files = getAllFilesRecursive(workspacePath, workspacePath);
       return { success: true, data: files };
@@ -341,7 +384,7 @@ export function registerFSHandlers(ctx: IPCContext): void {
   ipcMain.handle(
     "fs:searchInFiles",
     async (
-      _event,
+      event,
       {
         workspacePath,
         query,
@@ -353,8 +396,15 @@ export function registerFSHandlers(ctx: IPCContext): void {
       },
     ) => {
       try {
+        if (!validateSender(event, ctx)) {
+          return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+        }
         if (!workspacePath || !query) {
           return { success: false, error: "Invalid parameters" };
+        }
+        // 内容搜索会读取目录下文件内容，必须限定在受信路径内，防止读取 /etc、~/.ssh 等敏感文件。
+        if (!isPathAllowed(workspacePath)) {
+          return { success: false, error: "Access denied: path is not in the allowed scope" };
         }
 
         const files = getAllFilesRecursive(workspacePath, workspacePath);
@@ -549,8 +599,11 @@ export function registerFSHandlers(ctx: IPCContext): void {
   });
 
   // 检查路径是否存在
-  ipcMain.handle("fs:exists", async (_event, targetPath: string) => {
+  ipcMain.handle("fs:exists", async (event, targetPath: string) => {
     try {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+      }
       if (!isPathAllowed(targetPath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }

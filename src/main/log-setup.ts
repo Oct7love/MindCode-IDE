@@ -13,6 +13,14 @@ import { FileTransport } from "../core/logger/file-transport";
 
 let fileTransport: FileTransport | null = null;
 
+/** 合法日志级别白名单（防止渲染进程传入任意字符串触发动态方法调用） */
+const VALID_LOG_LEVELS: ReadonlySet<LogLevel> = new Set<LogLevel>([
+  "debug",
+  "info",
+  "warn",
+  "error",
+]);
+
 /** 初始化主进程日志（在 app.whenReady 后调用） */
 export function initLogging(isDev: boolean): void {
   // 开发模式输出 debug，生产模式输出 info
@@ -36,10 +44,12 @@ export function initLogging(isDev: boolean): void {
         traceId?: string;
       },
     ) => {
+      // 校验 level 合法，非法值回退到 info，避免 logger[任意字符串] 动态方法调用。
+      const level: LogLevel = VALID_LOG_LEVELS.has(entry.level) ? entry.level : "info";
       // 直接写入 logger（会同时输出到控制台和文件）
       const prevTrace = logger.getTraceId();
       if (entry.traceId) logger.setTraceId(entry.traceId);
-      logger[entry.level](entry.message, entry.data, entry.source ?? "renderer");
+      logger[level](entry.message, entry.data, entry.source ?? "renderer");
       logger.setTraceId(prevTrace);
     },
   );
