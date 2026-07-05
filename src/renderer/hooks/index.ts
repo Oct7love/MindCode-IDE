@@ -62,7 +62,7 @@ export interface AsyncState<T> {
   loading: boolean;
   error: Error | null;
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export function useAsync<T>(
   asyncFn: () => Promise<T>,
   deps: any[] = [],

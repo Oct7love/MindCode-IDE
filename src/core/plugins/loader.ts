@@ -46,7 +46,7 @@ export class PluginLoader {
       return "Missing or invalid 'version'";
     if (!Array.isArray(manifest.permissions)) return "Missing 'permissions' array";
     // id 格式校验：仅允许字母、数字、点、连字符
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9.\-]*$/.test(manifest.id))
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(manifest.id))
       return `Invalid plugin id format: ${manifest.id}`;
     // main 路径不能包含路径穿越
     if (manifest.main.includes("..")) return "Plugin 'main' path traversal detected";

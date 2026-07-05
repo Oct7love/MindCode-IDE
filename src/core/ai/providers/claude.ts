@@ -276,9 +276,9 @@ export class ClaudeProvider extends BaseAIProvider {
       messages: chatMessages,
       tools: claudeTools,
     });
-    let fullText = "",
-      toolCalls: ToolCallInfo[] = [],
-      currentToolUse: { id: string; name: string; input: string } | null = null;
+    let fullText = "";
+    const toolCalls: ToolCallInfo[] = [];
+    let currentToolUse: { id: string; name: string; input: string } | null = null;
     try {
       const result = await this.request(body, true);
       if (result.error) {

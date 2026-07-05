@@ -944,7 +944,7 @@ const renderInline = (text: string): React.ReactNode => {
       continue;
     }
     // 查找下一个特殊字符
-    const nextSpecial = remaining.search(/[`*~\[]/);
+    const nextSpecial = remaining.search(/[`*~[]/);
     if (nextSpecial === -1) {
       parts.push(remaining);
       break;
@@ -1037,13 +1037,14 @@ export const MarkdownRenderer: React.FC<MarkdownProps> = memo(
               );
             case "table":
               return <React.Fragment key={i}>{renderTable(block.content)}</React.Fragment>;
-            case "heading":
+            case "heading": {
               const H = `h${block.level}` as keyof JSX.IntrinsicElements;
               return (
                 <H key={i} className="md-heading">
                   {renderInline(block.content)}
                 </H>
               );
+            }
             case "hr":
               return <hr key={i} className="md-hr" />;
             case "blockquote":

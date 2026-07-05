@@ -155,7 +155,7 @@ export function cached(ttl?: number) {
     descriptor: TypedPropertyDescriptor<T>,
   ) {
     const original = descriptor.value!;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     descriptor.value = function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
       const key = `${propertyKey}:${JSON.stringify(args)}`;
       return globalCache.getOrSet(

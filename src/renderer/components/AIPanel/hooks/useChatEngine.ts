@@ -6,7 +6,13 @@
  */
 import { useCallback, useRef, useEffect } from "react";
 import { createNamedLogger } from "../../../utils/logger";
-import type { AIMode, Plan, ToolCallStatus, ThinkingUIData } from "../../../stores";
+import type {
+  AIMode,
+  Plan,
+  ToolCallStatus,
+  ThinkingUIData,
+  ImageAttachment,
+} from "../../../stores";
 import { useAIStore } from "../../../stores";
 import { useFileStore } from "../../../stores";
 import { MODELS, TOOL_CAPABLE_MODELS } from "../ModelPicker";
@@ -742,7 +748,7 @@ ${thinkingProtocol}`;
 
   // 发送消息核心逻辑（支持图片）
   const handleSend = useCallback(
-    async (input: string, images?: import("../../../stores").ImageAttachment[]) => {
+    async (input: string, images?: ImageAttachment[]) => {
       if (!input.trim() && (!images || images.length === 0)) return;
       const userContent = input.trim();
 

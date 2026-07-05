@@ -8,6 +8,7 @@ import { ipcMain, dialog } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import * as fsp from "fs/promises";
+import * as readline from "readline";
 import {
   readFileWithEncoding,
   writeFileWithEncoding,
@@ -230,7 +231,6 @@ export function registerFSHandlers(ctx: IPCContext): void {
         if (!isPathAllowed(filePath)) {
           return { success: false, error: "Access denied: path is not in the allowed scope" };
         }
-        const readline = require("readline");
         const lines: string[] = [];
         const stream = fs.createReadStream(filePath, { encoding: "utf8" });
         const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -254,7 +254,6 @@ export function registerFSHandlers(ctx: IPCContext): void {
       if (!isPathAllowed(filePath)) {
         return { success: false, error: "Access denied: path is not in the allowed scope" };
       }
-      const readline = require("readline");
       const stream = fs.createReadStream(filePath);
       const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
       let count = 0;

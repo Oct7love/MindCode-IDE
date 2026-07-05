@@ -237,7 +237,8 @@ ${errorInput}
                 onChange={() =>
                   setCompletedSteps((s) => {
                     const n = new Set(s);
-                    n.has(step.order) ? n.delete(step.order) : n.add(step.order);
+                    if (n.has(step.order)) n.delete(step.order);
+                    else n.add(step.order);
                     return n;
                   })
                 }

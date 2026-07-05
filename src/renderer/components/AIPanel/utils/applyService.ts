@@ -9,7 +9,7 @@ export interface PendingChange {
   originalContent: string;
   newContent: string;
   language: string;
-  status: 'pending' | 'previewing' | 'applied' | 'rejected';
+  status: "pending" | "previewing" | "applied" | "rejected";
   isNewFile: boolean;
   timestamp: Date;
 }
@@ -29,32 +29,32 @@ export interface ParsedCodeBlock {
  * 3. 上文提及 "修改 src/App.tsx"
  */
 export function detectFilePath(
-  codeBlock: string, 
-  language: string, 
-  contextText?: string
+  codeBlock: string,
+  language: string,
+  contextText?: string,
 ): string | null {
   // 1. 检查代码块第一行的文件路径注释
-  const lines = codeBlock.split('\n');
-  const firstLine = lines[0]?.trim() || '';
-  
+  const lines = codeBlock.split("\n");
+  const firstLine = lines[0]?.trim() || "";
+
   // 格式: // filepath: xxx 或 // file: xxx
   const filePathCommentMatch = firstLine.match(/^\/\/\s*(?:filepath|file|path):\s*(.+)/i);
   if (filePathCommentMatch) {
     return normalizeFilePath(filePathCommentMatch[1].trim());
   }
-  
+
   // 格式: # filepath: xxx (Python/Shell)
   const hashCommentMatch = firstLine.match(/^#\s*(?:filepath|file|path):\s*(.+)/i);
   if (hashCommentMatch) {
     return normalizeFilePath(hashCommentMatch[1].trim());
   }
-  
+
   // 格式: // src/utils/helper.ts
   const simplePathMatch = firstLine.match(/^\/\/\s*([^\s]+\.\w+)\s*$/);
   if (simplePathMatch && isLikelyFilePath(simplePathMatch[1])) {
     return normalizeFilePath(simplePathMatch[1]);
   }
-  
+
   // 2. 检查上文提及的文件路径
   if (contextText) {
     // 格式: "修改 xxx 文件" 或 "创建 xxx" 或 "更新 xxx"
@@ -62,7 +62,7 @@ export function detectFilePath(
       /(?:修改|更新|编辑|创建|新建|添加到|写入)\s*[`"']?([^\s`"']+\.\w+)[`"']?/gi,
       /(?:in|to|file|update|edit|create|modify)\s*[`"']?([^\s`"']+\.\w+)[`"']?/gi,
     ];
-    
+
     for (const pattern of mentionPatterns) {
       const matches = [...contextText.matchAll(pattern)];
       if (matches.length > 0) {
@@ -73,7 +73,7 @@ export function detectFilePath(
       }
     }
   }
-  
+
   // 3. 根据语言推断可能的文件扩展名（用于新文件）
   return null;
 }
@@ -83,31 +83,58 @@ export function detectFilePath(
  */
 function isLikelyFilePath(str: string): boolean {
   // 必须包含扩展名
-  if (!str.includes('.')) return false;
-  
+  if (!str.includes(".")) return false;
+
   // 排除 URL
-  if (str.startsWith('http://') || str.startsWith('https://')) return false;
-  
+  if (str.startsWith("http://") || str.startsWith("https://")) return false;
+
   // 排除版本号格式
   if (/^\d+\.\d+\.\d+$/.test(str)) return false;
-  
+
   // 排除包含中文字符的路径（防止误识别中文文本）
   if (/[\u4e00-\u9fff]/.test(str)) return false;
-  
+
   // 排除以标点符号开头的（如 "，如stm32f4xx_hal.h"）
   if (/^[,，。！？：；、]/.test(str)) return false;
-  
+
   // 必须以字母、数字或路径符号开头
-  if (!/^[a-zA-Z0-9_.\-\/\\]/.test(str)) return false;
-  
+  if (!/^[a-zA-Z0-9_.\-/\\]/.test(str)) return false;
+
   // 常见代码文件扩展名
   const codeExtensions = [
-    'ts', 'tsx', 'js', 'jsx', 'py', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'hpp',
-    'css', 'scss', 'less', 'html', 'vue', 'svelte', 'json', 'yaml', 'yml',
-    'md', 'txt', 'sh', 'bash', 'sql', 'graphql', 'prisma', 'toml', 'xml',
+    "ts",
+    "tsx",
+    "js",
+    "jsx",
+    "py",
+    "go",
+    "rs",
+    "java",
+    "c",
+    "cpp",
+    "h",
+    "hpp",
+    "css",
+    "scss",
+    "less",
+    "html",
+    "vue",
+    "svelte",
+    "json",
+    "yaml",
+    "yml",
+    "md",
+    "txt",
+    "sh",
+    "bash",
+    "sql",
+    "graphql",
+    "prisma",
+    "toml",
+    "xml",
   ];
-  
-  const ext = str.split('.').pop()?.toLowerCase();
+
+  const ext = str.split(".").pop()?.toLowerCase();
   return ext ? codeExtensions.includes(ext) : false;
 }
 
@@ -116,16 +143,16 @@ function isLikelyFilePath(str: string): boolean {
  */
 function normalizeFilePath(path: string): string {
   // 移除引号
-  path = path.replace(/^["'`]|["'`]$/g, '');
-  
+  path = path.replace(/^["'`]|["'`]$/g, "");
+
   // 统一使用正斜杠
-  path = path.replace(/\\/g, '/');
-  
+  path = path.replace(/\\/g, "/");
+
   // 移除开头的 ./
-  if (path.startsWith('./')) {
+  if (path.startsWith("./")) {
     path = path.slice(2);
   }
-  
+
   return path;
 }
 
@@ -134,34 +161,34 @@ function normalizeFilePath(path: string): string {
  */
 export function getExtensionForLanguage(language: string): string {
   const extensionMap: Record<string, string> = {
-    typescript: 'ts',
-    typescriptreact: 'tsx',
-    javascript: 'js',
-    javascriptreact: 'jsx',
-    python: 'py',
-    go: 'go',
-    rust: 'rs',
-    java: 'java',
-    c: 'c',
-    cpp: 'cpp',
-    csharp: 'cs',
-    css: 'css',
-    scss: 'scss',
-    less: 'less',
-    html: 'html',
-    vue: 'vue',
-    svelte: 'svelte',
-    json: 'json',
-    yaml: 'yaml',
-    markdown: 'md',
-    shell: 'sh',
-    bash: 'sh',
-    sql: 'sql',
-    graphql: 'graphql',
-    plaintext: 'txt',
+    typescript: "ts",
+    typescriptreact: "tsx",
+    javascript: "js",
+    javascriptreact: "jsx",
+    python: "py",
+    go: "go",
+    rust: "rs",
+    java: "java",
+    c: "c",
+    cpp: "cpp",
+    csharp: "cs",
+    css: "css",
+    scss: "scss",
+    less: "less",
+    html: "html",
+    vue: "vue",
+    svelte: "svelte",
+    json: "json",
+    yaml: "yaml",
+    markdown: "md",
+    shell: "sh",
+    bash: "sh",
+    sql: "sql",
+    graphql: "graphql",
+    plaintext: "txt",
   };
-  
-  return extensionMap[language.toLowerCase()] || 'txt';
+
+  return extensionMap[language.toLowerCase()] || "txt";
 }
 
 /**
@@ -175,10 +202,10 @@ export function generateChangeId(): string {
  * 清理代码块中的文件路径注释（应用时不需要）
  */
 export function cleanCodeForApply(code: string): string {
-  const lines = code.split('\n');
-  
+  const lines = code.split("\n");
+
   // 检查第一行是否是文件路径注释
-  const firstLine = lines[0]?.trim() || '';
+  const firstLine = lines[0]?.trim() || "";
   if (
     /^\/\/\s*(?:filepath|file|path):/i.test(firstLine) ||
     /^#\s*(?:filepath|file|path):/i.test(firstLine) ||
@@ -186,12 +213,12 @@ export function cleanCodeForApply(code: string): string {
   ) {
     lines.shift();
     // 如果第二行是空行，也移除
-    if (lines[0]?.trim() === '') {
+    if (lines[0]?.trim() === "") {
       lines.shift();
     }
   }
-  
-  return lines.join('\n');
+
+  return lines.join("\n");
 }
 
 /**
@@ -212,9 +239,9 @@ export function isFullFileReplacement(code: string, language: string): boolean {
     css: [/^@import/, /^:root/, /^\*\s*\{/],
     json: [/^\s*\{/, /^\s*\[/],
   };
-  
+
   const patterns = fullFilePatterns[language.toLowerCase()] || [];
-  const firstLines = code.split('\n').slice(0, 5).join('\n');
-  
-  return patterns.some(pattern => pattern.test(firstLines));
+  const firstLines = code.split("\n").slice(0, 5).join("\n");
+
+  return patterns.some((pattern) => pattern.test(firstLines));
 }

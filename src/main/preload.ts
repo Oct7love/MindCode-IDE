@@ -25,7 +25,37 @@ import type {
   IndexFileEvent,
   IndexCompleteStats,
   SearchInFilesParams,
+  AIChatResult,
+  AIStatsResult,
+  BreakpointInfo,
+  CompletionResult,
+  CompletionSettings,
+  DebugSessionInfo,
+  DebugVariable,
+  EncodingInfo,
+  EvaluateResult,
+  FileChunkData,
+  FileEntry,
+  FileListEntry,
+  FileStat,
+  GitBranch,
+  GitCommitLog,
+  GitFileStatus,
+  IndexSearchQuery,
+  IndexSearchResult,
+  IndexStats,
+  IndexSymbol,
+  IPCResult,
+  LSPDetectResult,
+  LSPStatus,
+  MessageBoxOptions,
+  OpenDialogOptions,
+  RelatedCodeEntry,
+  SaveDialogOptions,
+  SearchMatch,
+  TerminalExecResult,
 } from "../shared/types/ipc";
+import type { IPCResult as MainIPCResult } from "./ipc/types";
 
 // 窗口控制 API (TitleBar 使用)
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -444,322 +474,151 @@ declare global {
     mindcode: {
       getVersion: () => Promise<string>;
       ai: {
-        chat: (
-          model: string,
-          messages: import("../shared/types/ai").ChatMessage[],
-        ) => Promise<import("../shared/types/ipc").AIChatResult>;
-        getStats: () => Promise<import("../shared/types/ipc").AIStatsResult>;
+        chat: (model: string, messages: ChatMessage[]) => Promise<AIChatResult>;
+        getStats: () => Promise<AIStatsResult>;
         cancelStream: (requestId: string) => void;
         chatStream: (
           model: string,
-          messages: import("../shared/types/ai").ChatMessage[],
-          callbacks: import("../shared/types/ipc").ChatStreamCallbacks,
+          messages: ChatMessage[],
+          callbacks: ChatStreamCallbacks,
         ) => () => void;
         chatStreamWithTools: (
           model: string,
-          messages: import("../shared/types/ai").ChatMessage[],
-          tools: import("../shared/types/ai").ToolSchema[],
-          callbacks: import("../shared/types/ipc").ChatStreamWithToolsCallbacks,
+          messages: ChatMessage[],
+          tools: ToolSchema[],
+          callbacks: ChatStreamWithToolsCallbacks,
         ) => () => void;
-        completion: (
-          request: import("../shared/types/ipc").CompletionRequest,
-        ) => Promise<import("../shared/types/ipc").CompletionResult>;
-        getCompletionSettings: () => Promise<import("../shared/types/ipc").CompletionSettings>;
-        setCompletionSettings: (
-          settings: Partial<import("../shared/types/ipc").CompletionSettings>,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
+        completion: (request: CompletionRequest) => Promise<CompletionResult>;
+        getCompletionSettings: () => Promise<CompletionSettings>;
+        setCompletionSettings: (settings: Partial<CompletionSettings>) => Promise<IPCResult>;
         completionStream: (
-          request: import("../shared/types/ipc").CompletionRequest,
-          callbacks: import("../shared/types/ipc").CompletionStreamCallbacks,
+          request: CompletionRequest,
+          callbacks: CompletionStreamCallbacks,
         ) => () => void;
       };
       fs: {
-        setWorkspace: (workspacePath: string) => Promise<import("../shared/types/ipc").IPCResult>;
+        setWorkspace: (workspacePath: string) => Promise<IPCResult>;
         openFolder: () => Promise<string | null>;
-        readDir: (
-          dirPath: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").FileEntry[]>
-        >;
+        readDir: (dirPath: string) => Promise<IPCResult<FileEntry[]>>;
         readFile: (
           filePath: string,
           encoding?: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult<string> & { encoding?: string }>;
+        ) => Promise<IPCResult<string> & { encoding?: string }>;
         readFileChunk: (
           filePath: string,
           startLine: number,
           endLine: number,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").FileChunkData>
-        >;
-        getLineCount: (
-          filePath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult<number>>;
-        writeFile: (
-          filePath: string,
-          content: string,
-          encoding?: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        stat: (
-          filePath: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").FileStat>
-        >;
-        getEncodings: () => Promise<import("../shared/types/ipc").EncodingInfo[]>;
-        detectEncoding: (
-          filePath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult & { encoding?: string }>;
-        getAllFiles: (
-          workspacePath: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").FileListEntry[]>
-        >;
-        searchInFiles: (
-          params: import("../shared/types/ipc").SearchInFilesParams,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").SearchMatch[]>
-        >;
-        createFolder: (folderPath: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        createFile: (
-          filePath: string,
-          content?: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        delete: (targetPath: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        rename: (
-          oldPath: string,
-          newPath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        copy: (
-          srcPath: string,
-          destPath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        exists: (targetPath: string) => Promise<import("../shared/types/ipc").IPCResult<boolean>>;
+        ) => Promise<IPCResult<FileChunkData>>;
+        getLineCount: (filePath: string) => Promise<IPCResult<number>>;
+        writeFile: (filePath: string, content: string, encoding?: string) => Promise<IPCResult>;
+        stat: (filePath: string) => Promise<IPCResult<FileStat>>;
+        getEncodings: () => Promise<EncodingInfo[]>;
+        detectEncoding: (filePath: string) => Promise<IPCResult & { encoding?: string }>;
+        getAllFiles: (workspacePath: string) => Promise<IPCResult<FileListEntry[]>>;
+        searchInFiles: (params: SearchInFilesParams) => Promise<IPCResult<SearchMatch[]>>;
+        createFolder: (folderPath: string) => Promise<IPCResult>;
+        createFile: (filePath: string, content?: string) => Promise<IPCResult>;
+        delete: (targetPath: string) => Promise<IPCResult>;
+        rename: (oldPath: string, newPath: string) => Promise<IPCResult>;
+        copy: (srcPath: string, destPath: string) => Promise<IPCResult>;
+        exists: (targetPath: string) => Promise<IPCResult<boolean>>;
       };
       settings: {
-        get: (key: string) => Promise<import("../shared/types/ipc").SettingValue>;
-        set: (key: string, value: import("../shared/types/ipc").SettingValue) => Promise<void>;
+        get: (key: string) => Promise<SettingValue>;
+        set: (key: string, value: SettingValue) => Promise<void>;
       };
       terminal: {
-        execute: (
-          command: string,
-          cwd?: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").TerminalExecResult>
-        >;
-        cd: (
-          currentDir: string,
-          newDir: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult<string>>;
-        pwd: () => Promise<import("../shared/types/ipc").IPCResult<string>>;
-        create: (options?: {
-          cwd?: string;
-        }) => Promise<import("../shared/types/ipc").IPCResult & { id?: string }>;
-        write: (id: string, data: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        resize: (
-          id: string,
-          cols: number,
-          rows: number,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        close: (id: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        onData: (
-          callback: (data: import("../shared/types/ipc").TerminalDataEvent) => void,
-        ) => () => void;
-        onExit: (
-          callback: (data: import("../shared/types/ipc").TerminalExitEvent) => void,
-        ) => () => void;
+        execute: (command: string, cwd?: string) => Promise<IPCResult<TerminalExecResult>>;
+        cd: (currentDir: string, newDir: string) => Promise<IPCResult<string>>;
+        pwd: () => Promise<IPCResult<string>>;
+        create: (options?: { cwd?: string }) => Promise<IPCResult & { id?: string }>;
+        write: (id: string, data: string) => Promise<IPCResult>;
+        resize: (id: string, cols: number, rows: number) => Promise<IPCResult>;
+        close: (id: string) => Promise<IPCResult>;
+        onData: (callback: (data: TerminalDataEvent) => void) => () => void;
+        onExit: (callback: (data: TerminalExitEvent) => void) => () => void;
       };
       git: {
-        isRepo: (
-          workspacePath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult<boolean>>;
-        status: (
-          workspacePath: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").GitFileStatus[]>
-        >;
-        currentBranch: (
-          workspacePath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult<string>>;
-        branches: (
-          workspacePath: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").GitBranch[]>
-        >;
-        stage: (
-          workspacePath: string,
-          filePaths: string[],
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        unstage: (
-          workspacePath: string,
-          filePaths: string[],
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        commit: (
-          workspacePath: string,
-          message: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
+        isRepo: (workspacePath: string) => Promise<IPCResult<boolean>>;
+        status: (workspacePath: string) => Promise<IPCResult<GitFileStatus[]>>;
+        currentBranch: (workspacePath: string) => Promise<IPCResult<string>>;
+        branches: (workspacePath: string) => Promise<IPCResult<GitBranch[]>>;
+        stage: (workspacePath: string, filePaths: string[]) => Promise<IPCResult>;
+        unstage: (workspacePath: string, filePaths: string[]) => Promise<IPCResult>;
+        commit: (workspacePath: string, message: string) => Promise<IPCResult>;
         diff: (
           workspacePath: string,
           filePath: string,
           staged?: boolean,
-        ) => Promise<import("../shared/types/ipc").IPCResult<string>>;
-        checkout: (
-          workspacePath: string,
-          branchName: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        createBranch: (
-          workspacePath: string,
-          branchName: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        log: (
-          workspacePath: string,
-          limit?: number,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").GitCommitLog[]>
-        >;
-        discard: (
-          workspacePath: string,
-          filePath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
+        ) => Promise<IPCResult<string>>;
+        checkout: (workspacePath: string, branchName: string) => Promise<IPCResult>;
+        createBranch: (workspacePath: string, branchName: string) => Promise<IPCResult>;
+        log: (workspacePath: string, limit?: number) => Promise<IPCResult<GitCommitLog[]>>;
+        discard: (workspacePath: string, filePath: string) => Promise<IPCResult>;
       };
-      onMenuEvent: (
-        callback: (event: import("../shared/types/ipc").MenuEvent, data?: unknown) => void,
-      ) => () => void;
+      onMenuEvent: (callback: (event: MenuEvent, data?: unknown) => void) => () => void;
       onThemeChange: (callback: (themeId: string) => void) => () => void;
       onFileSystemChange: (
         callback: (data: { filePath: string; type: string }) => void,
       ) => () => void;
       dialog: {
         showSaveDialog: (
-          options: import("../shared/types/ipc").SaveDialogOptions,
+          options: SaveDialogOptions,
         ) => Promise<{ canceled: boolean; filePath?: string }>;
         showOpenDialog: (
-          options: import("../shared/types/ipc").OpenDialogOptions,
+          options: OpenDialogOptions,
         ) => Promise<{ canceled: boolean; filePaths?: string[] }>;
-        showMessageBox: (
-          options: import("../shared/types/ipc").MessageBoxOptions,
-        ) => Promise<{ response: number }>;
+        showMessageBox: (options: MessageBoxOptions) => Promise<{ response: number }>;
       };
       debug: {
-        start: (
-          config: import("../shared/types/ipc").DebugConfig,
-        ) => Promise<import("../shared/types/ipc").IPCResult & { sessionId?: string }>;
-        stop: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        continue: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        stepOver: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        stepInto: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        stepOut: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        pause: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        restart: (sessionId?: string) => Promise<import("../shared/types/ipc").IPCResult>;
+        start: (config: DebugConfig) => Promise<IPCResult & { sessionId?: string }>;
+        stop: (sessionId?: string) => Promise<IPCResult>;
+        continue: (sessionId?: string) => Promise<IPCResult>;
+        stepOver: (sessionId?: string) => Promise<IPCResult>;
+        stepInto: (sessionId?: string) => Promise<IPCResult>;
+        stepOut: (sessionId?: string) => Promise<IPCResult>;
+        pause: (sessionId?: string) => Promise<IPCResult>;
+        restart: (sessionId?: string) => Promise<IPCResult>;
         addBreakpoint: (
           file: string,
           line: number,
-          options?: import("../shared/types/ipc").BreakpointOptions,
-        ) => Promise<import("../shared/types/ipc").IPCResult & { id?: string }>;
-        removeBreakpoint: (
-          breakpointId: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        toggleBreakpoint: (
-          file: string,
-          line: number,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        getBreakpoints: (
-          file?: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").BreakpointInfo[]>
-        >;
-        getVariables: (
-          frameId?: number,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").DebugVariable[]>
-        >;
-        evaluate: (
-          expression: string,
-          frameId?: number,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").EvaluateResult>
-        >;
-        getSession: (
-          sessionId?: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").DebugSessionInfo>
-        >;
-        listSessions: () => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").DebugSessionInfo[]>
-        >;
+          options?: BreakpointOptions,
+        ) => Promise<IPCResult & { id?: string }>;
+        removeBreakpoint: (breakpointId: string) => Promise<IPCResult>;
+        toggleBreakpoint: (file: string, line: number) => Promise<IPCResult>;
+        getBreakpoints: (file?: string) => Promise<IPCResult<BreakpointInfo[]>>;
+        getVariables: (frameId?: number) => Promise<IPCResult<DebugVariable[]>>;
+        evaluate: (expression: string, frameId?: number) => Promise<IPCResult<EvaluateResult>>;
+        getSession: (sessionId?: string) => Promise<IPCResult<DebugSessionInfo>>;
+        listSessions: () => Promise<IPCResult<DebugSessionInfo[]>>;
       };
       lsp: {
         start: (
           language: string,
           options?: { rootPath?: string },
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult & { capabilities?: Record<string, unknown> }
-        >;
-        stop: (language: string) => Promise<import("../shared/types/ipc").IPCResult>;
-        request: (
-          language: string,
-          method: string,
-          params: unknown,
-        ) => Promise<import("../shared/types/ipc").IPCResult<unknown>>;
-        notify: (
-          language: string,
-          method: string,
-          params: unknown,
-        ) => Promise<import("../shared/types/ipc").IPCResult>;
-        status: (language: string) => Promise<import("../shared/types/ipc").LSPStatus | null>;
-        detect: (language: string) => Promise<import("../shared/types/ipc").LSPDetectResult>;
-        onNotification: (
-          callback: (data: import("../shared/types/ipc").LSPNotificationData) => void,
-        ) => () => void;
+        ) => Promise<IPCResult & { capabilities?: Record<string, unknown> }>;
+        stop: (language: string) => Promise<IPCResult>;
+        request: (language: string, method: string, params: unknown) => Promise<IPCResult<unknown>>;
+        notify: (language: string, method: string, params: unknown) => Promise<IPCResult>;
+        status: (language: string) => Promise<LSPStatus | null>;
+        detect: (language: string) => Promise<LSPDetectResult>;
+        onNotification: (callback: (data: LSPNotificationData) => void) => () => void;
       };
       index: {
-        indexWorkspace: (
-          workspacePath: string,
-        ) => Promise<import("../shared/types/ipc").IPCResult & { message?: string }>;
-        getProgress: () => Promise<import("../shared/types/ipc").IndexProgress>;
-        getStats: () => Promise<import("../shared/types/ipc").IndexStats>;
-        search: (
-          query: import("../shared/types/ipc").IndexSearchQuery,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").IndexSearchResult>
-        >;
-        searchSymbols: (
-          name: string,
-          limit?: number,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").IndexSymbol[]>
-        >;
-        getFileSymbols: (
-          filePath: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").IndexSymbol[]>
-        >;
-        findDefinition: (
-          symbolName: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").IndexSymbol>
-        >;
-        findReferences: (
-          symbolId: string,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").IndexSymbol[]>
-        >;
-        getRelatedCode: (
-          query: string,
-          limit?: number,
-        ) => Promise<
-          import("../shared/types/ipc").IPCResult<import("../shared/types/ipc").RelatedCodeEntry[]>
-        >;
-        cancel: () => Promise<import("../shared/types/ipc").IPCResult>;
-        clear: () => Promise<import("../shared/types/ipc").IPCResult>;
-        onProgress: (
-          callback: (progress: import("../shared/types/ipc").IndexProgress) => void,
-        ) => () => void;
-        onFileIndexed: (
-          callback: (data: import("../shared/types/ipc").IndexFileEvent) => void,
-        ) => () => void;
-        onComplete: (
-          callback: (stats: import("../shared/types/ipc").IndexCompleteStats) => void,
-        ) => () => void;
+        indexWorkspace: (workspacePath: string) => Promise<IPCResult & { message?: string }>;
+        getProgress: () => Promise<IndexProgress>;
+        getStats: () => Promise<IndexStats>;
+        search: (query: IndexSearchQuery) => Promise<IPCResult<IndexSearchResult>>;
+        searchSymbols: (name: string, limit?: number) => Promise<IPCResult<IndexSymbol[]>>;
+        getFileSymbols: (filePath: string) => Promise<IPCResult<IndexSymbol[]>>;
+        findDefinition: (symbolName: string) => Promise<IPCResult<IndexSymbol>>;
+        findReferences: (symbolId: string) => Promise<IPCResult<IndexSymbol[]>>;
+        getRelatedCode: (query: string, limit?: number) => Promise<IPCResult<RelatedCodeEntry[]>>;
+        cancel: () => Promise<IPCResult>;
+        clear: () => Promise<IPCResult>;
+        onProgress: (callback: (progress: IndexProgress) => void) => () => void;
+        onFileIndexed: (callback: (data: IndexFileEvent) => void) => () => void;
+        onComplete: (callback: (stats: IndexCompleteStats) => void) => () => void;
       };
       dashboard: {
         getStats: () => Promise<{
@@ -810,10 +669,10 @@ declare global {
         export: () => Promise<string>;
       };
       plugins: {
-        list: () => Promise<import("./ipc/types").IPCResult>;
-        verify: (pluginId: string) => Promise<import("./ipc/types").IPCResult>;
-        uninstall: (pluginId: string) => Promise<import("./ipc/types").IPCResult>;
-        getDir: () => Promise<import("./ipc/types").IPCResult<string>>;
+        list: () => Promise<MainIPCResult>;
+        verify: (pluginId: string) => Promise<MainIPCResult>;
+        uninstall: (pluginId: string) => Promise<MainIPCResult>;
+        getDir: () => Promise<MainIPCResult<string>>;
       };
     };
   }

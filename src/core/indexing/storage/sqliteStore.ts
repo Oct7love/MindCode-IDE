@@ -3,6 +3,7 @@
  * 使用 sql.js（纯 JS 实现的 SQLite）
  */
 
+import path from "path";
 import type { CodeSymbol, FileIndex, CallRelation, FileDependency, CodeChunk } from "../types";
 
 // sql.js 类型（运行时动态加载）
@@ -38,7 +39,7 @@ export interface StoreConfig {
 /** sql.js WASM 文件定位（Electron 环境必须用本地路径） */
 function sqlJsLocateFile(file: string): string {
   try {
-    return require("path").join(require.resolve("sql.js"), "..", "dist", file);
+    return path.join(require.resolve("sql.js"), "..", "dist", file);
   } catch {
     return file;
   }
@@ -64,7 +65,8 @@ export class IndexStore {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // 动态加载 sql.js
+    // 动态加载 sql.js：延迟到真正需要索引时才加载 WASM 模块，避免拖慢应用启动
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const initSqlJs = require("sql.js");
     this.sqlJs = await initSqlJs({ locateFile: sqlJsLocateFile });
 
@@ -756,6 +758,8 @@ export class IndexStore {
    */
   async loadFrom(data: Uint8Array): Promise<void> {
     if (!this.sqlJs) {
+      // 动态加载 sql.js：延迟到真正需要索引时才加载 WASM 模块，避免拖慢应用启动
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const initSqlJs = require("sql.js");
       this.sqlJs = await initSqlJs({ locateFile: sqlJsLocateFile });
     }

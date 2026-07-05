@@ -52,13 +52,11 @@ export const SearchPanel: React.FC<Props> = ({ workspacePath, onOpenFile }) => {
             const fp = it.filePath || it.file || "";
             if (!fp) continue;
             if (!map.has(fp)) map.set(fp, { filePath: fp, matches: [] });
-            map
-              .get(fp)!
-              .matches.push({
-                line: it.line || 0,
-                text: it.text || it.lineContent || "",
-                column: it.column || 0,
-              });
+            map.get(fp)!.matches.push({
+              line: it.line || 0,
+              text: it.text || it.lineContent || "",
+              column: it.column || 0,
+            });
           }
           const arr = Array.from(map.values());
           setResults(arr);
@@ -88,7 +86,8 @@ export const SearchPanel: React.FC<Props> = ({ workspacePath, onOpenFile }) => {
   const toggle = (fp: string) =>
     setExpanded((p) => {
       const n = new Set(p);
-      n.has(fp) ? n.delete(fp) : n.add(fp);
+      if (n.has(fp)) n.delete(fp);
+      else n.add(fp);
       return n;
     });
 
