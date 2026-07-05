@@ -304,7 +304,8 @@ export class LSPManager extends EventEmitter {
           if (pending) {
             clearTimeout(pending.timer);
             server.pendingRequests.delete(msg.id);
-            msg.error ? pending.reject(msg.error) : pending.resolve(msg.result);
+            if (msg.error) pending.reject(msg.error);
+            else pending.resolve(msg.result);
           }
         } else if (msg.method) {
           // 通知

@@ -10,12 +10,14 @@ import * as fs from "fs";
 import { spawn } from "child_process";
 import { type IPCContext, validateSender } from "./types";
 import { logger } from "../../core/logger";
+import type * as NodePty from "node-pty";
 
 const log = logger.child("Terminal");
 
-// node-pty 动态导入（原生模块可能不可用）
-let pty: typeof import("node-pty") | null = null;
+// node-pty 动态导入（原生模块可能不可用，try/catch 中失败回退到 exec 模式）
+let pty: typeof NodePty | null = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- 原生模块可选加载，失败需回退，不能用静态 import
   pty = require("node-pty");
   log.info("node-pty 已加载");
 } catch (err) {
@@ -25,7 +27,7 @@ try {
 /** PTY 会话接口 */
 interface PtySession {
   id: string;
-  pty: import("node-pty").IPty | null;
+  pty: NodePty.IPty | null;
   cwd: string;
 }
 

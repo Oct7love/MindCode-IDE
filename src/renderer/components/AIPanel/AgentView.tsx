@@ -4,6 +4,7 @@ import { ModelPicker, TOOL_CAPABLE_MODELS } from "./ModelPicker";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import "./AgentView.css";
 import { createNamedLogger } from "../../utils/logger";
+import type { ChatMessage } from "@shared/types/ai";
 
 const log = createNamedLogger("Agent");
 
@@ -60,7 +61,6 @@ export const AgentView: React.FC = memo(() => {
   );
 
   const executeTool = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (
       name: string,
       args: Record<string, any>,
@@ -252,8 +252,8 @@ export const AgentView: React.FC = memo(() => {
       { role: "user", content: userMsg.content },
     ];
     const requiresConfirm = ["workspace_writeFile", "terminal_execute"];
-    let iterations = 0,
-      maxIterations = 15;
+    let iterations = 0;
+    const maxIterations = 15;
 
     while (iterations < maxIterations && !abortRef.current) {
       iterations++;
@@ -266,22 +266,17 @@ export const AgentView: React.FC = memo(() => {
             reject(new Error("API 不可用"));
             return;
           }
-          window.mindcode.ai.chatStreamWithTools(
-            model,
-            apiMessages as import("@shared/types/ai").ChatMessage[],
-            tools,
-            {
-              onToken: (token) => {
-                responseText += token;
-                setStreamingText((prev) => prev + token);
-              },
-              onToolCall: (calls) => {
-                toolCalls = calls;
-              },
-              onComplete: () => resolve(),
-              onError: (err) => reject(new Error(err)),
+          window.mindcode.ai.chatStreamWithTools(model, apiMessages as ChatMessage[], tools, {
+            onToken: (token) => {
+              responseText += token;
+              setStreamingText((prev) => prev + token);
             },
-          );
+            onToolCall: (calls) => {
+              toolCalls = calls;
+            },
+            onComplete: () => resolve(),
+            onError: (err) => reject(new Error(err)),
+          });
         });
       } catch (e: unknown) {
         setMessages((m) => [

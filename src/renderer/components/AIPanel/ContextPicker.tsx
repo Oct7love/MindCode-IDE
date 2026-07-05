@@ -389,7 +389,8 @@ export const ContextPicker: React.FC<ContextPickerProps> = ({
       if (items[selectedIndex]) handleSelect(items[selectedIndex] as any);
     } else if (e.key === "Escape") {
       e.preventDefault();
-      mode === "menu" ? onClose() : setMode("menu");
+      if (mode === "menu") onClose();
+      else setMode("menu");
     } else if (e.key === "Backspace" && !search && mode !== "menu") setMode("menu");
   };
 

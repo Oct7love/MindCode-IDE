@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useAIStore } from "../../stores";
+import type { ContextItem } from "../../stores";
 import { ContextPicker } from "./ContextPicker";
 import { ContextChip } from "./ContextChip";
 import { MessageItem } from "./MessageItem";
@@ -11,7 +12,7 @@ import "./ChatView.css";
 interface ChatViewProps {
   model: string;
   onModelChange: (model: string) => void;
-  contexts: import("../../stores").ContextItem[];
+  contexts: ContextItem[];
 }
 
 export const ChatView: React.FC<ChatViewProps> = memo(({ model, onModelChange }) => {

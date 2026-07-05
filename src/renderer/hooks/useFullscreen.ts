@@ -9,9 +9,7 @@ interface FullscreenState {
   isSupported: boolean;
 }
 
-export function useFullscreen(
-  element?: HTMLElement | null,
-): FullscreenState & {
+export function useFullscreen(element?: HTMLElement | null): FullscreenState & {
   enter: () => Promise<void>;
   exit: () => Promise<void>;
   toggle: () => Promise<void>;
@@ -62,7 +60,8 @@ export function useFullscreen(
   }, []);
 
   const toggle = useCallback(async () => {
-    isFullscreen ? await exit() : await enter();
+    if (isFullscreen) await exit();
+    else await enter();
   }, [isFullscreen, enter, exit]);
 
   return { isFullscreen, isSupported, enter, exit, toggle };
@@ -138,7 +137,8 @@ export function useZoom(config?: {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        e.deltaY < 0 ? zoomIn() : zoomOut();
+        if (e.deltaY < 0) zoomIn();
+        else zoomOut();
       }
     };
     window.addEventListener("wheel", handleWheel, { passive: false });
@@ -191,7 +191,8 @@ export function useZenMode(): {
   }, [fullscreen]);
 
   const toggle = useCallback(() => {
-    isZenMode ? exit() : enter();
+    if (isZenMode) exit();
+    else enter();
   }, [isZenMode, enter, exit]);
 
   // F11 快捷键

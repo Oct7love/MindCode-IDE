@@ -1,0 +1,35 @@
+# gitleaks 配置 —— MindCode-IDE
+# 目标：在默认规则基础上，排除已知的良性误报（测试假凭据、构建产物、审计文档指纹、
+# 空模板），同时【不】排除任何真实源码路径，使历史中泄露的真实 key 仍被检出。
+#
+# 用法：
+#   gitleaks detect --source . --verbose      # 扫描全部 git 历史（会报出历史中未清理的真实 key）
+#   gitleaks detect --source . --no-git       # 只扫工作树
+#   gitleaks protect --staged                 # 扫暂存区（pre-commit 用）
+
+title = "MindCode gitleaks config"
+
+[extend]
+# 继承 gitleaks 内置规则集（AWS/GitHub/OpenAI/generic-api-key 等）。
+useDefault = true
+
+[allowlist]
+description = "良性误报排除：测试假凭据 / 构建产物 / 审计文档指纹 / 空模板"
+
+# 按路径排除（正则，匹配文件路径）。
+# 注意：这里【不包含】src/core/ai/config.ts 与 src/completion-server/server.py ——
+# 它们的历史版本含真实 key，必须保持可检出。
+paths = [
+  '''src/test/.*''',              # 测试内的假凭据 fixture
+  '''dist/.*''',                  # 构建产物（压缩代码高熵字符串误报）
+  '''release/.*''',
+  '''coverage/.*''',
+  '''docs/refactor/.*''',         # 审计/整改文档中的脱敏指纹（如 sk-****1632）
+  '''\.env\.example$''',          # 密钥模板（值恒为空）
+  '''package-lock\.json$''',      # 依赖完整性哈希非密钥
+]
+
+# 按正则排除明显的占位/示例值（避免把 example/placeholder/xxxx 当真实凭据）。
+regexes = [
+  '''(?i)(example|placeholder|dummy|test|fake|your[_-]?key|xxxx+|<[^>]+>)''',
+]

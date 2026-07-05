@@ -1,6 +1,6 @@
 /**
  * CopyService - 剪贴板复制服务
- * 
+ *
  * 功能：
  * 1. navigator.clipboard API (优先)
  * 2. document.execCommand 降级方案
@@ -11,7 +11,7 @@
 // 类型定义
 // ============================================
 
-export type CopyFormat = 'markdown' | 'plaintext';
+export type CopyFormat = "markdown" | "plaintext";
 
 export interface CopyResult {
   success: boolean;
@@ -19,13 +19,13 @@ export interface CopyResult {
 }
 
 export interface ParsedContent {
-  type: 'paragraph' | 'heading' | 'list' | 'code' | 'blockquote' | 'link' | 'hr';
+  type: "paragraph" | "heading" | "list" | "code" | "blockquote" | "link" | "hr";
   content: string;
-  level?: number;           // heading level
-  language?: string;        // code language
-  ordered?: boolean;        // list ordered
-  items?: string[];         // list items
-  url?: string;             // link url
+  level?: number; // heading level
+  language?: string; // code language
+  ordered?: boolean; // list ordered
+  items?: string[]; // list items
+  url?: string; // link url
 }
 
 // ============================================
@@ -37,31 +37,31 @@ export interface ParsedContent {
  */
 export async function copyToClipboard(text: string): Promise<CopyResult> {
   // 方案1: 使用现代 Clipboard API
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
     try {
       await navigator.clipboard.writeText(text);
       return { success: true };
     } catch (err) {
-      console.warn('[CopyService] Clipboard API failed, trying fallback:', err);
+      console.warn("[CopyService] Clipboard API failed, trying fallback:", err);
     }
   }
 
   // 方案2: 使用 execCommand 降级
   try {
-    const textarea = document.createElement('textarea');
+    const textarea = document.createElement("textarea");
     textarea.value = text;
-    textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+    textarea.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;";
     document.body.appendChild(textarea);
     textarea.select();
     textarea.setSelectionRange(0, text.length);
-    
-    const success = document.execCommand('copy');
+
+    const success = document.execCommand("copy");
     document.body.removeChild(textarea);
-    
+
     if (success) {
       return { success: true };
     }
-    return { success: false, error: 'execCommand failed' };
+    return { success: false, error: "execCommand failed" };
   } catch (err) {
     return { success: false, error: String(err) };
   }
@@ -76,7 +76,7 @@ export async function copyToClipboard(text: string): Promise<CopyResult> {
  */
 export function parseMarkdownContent(markdown: string): ParsedContent[] {
   const blocks: ParsedContent[] = [];
-  const lines = markdown.split('\n');
+  const lines = markdown.split("\n");
   let i = 0;
 
   while (i < lines.length) {
@@ -90,18 +90,18 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
     }
 
     // 代码块 ```
-    if (trimmedLine.startsWith('```')) {
-      const language = trimmedLine.slice(3).trim() || 'text';
+    if (trimmedLine.startsWith("```")) {
+      const language = trimmedLine.slice(3).trim() || "text";
       const codeLines: string[] = [];
       i++;
-      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
         codeLines.push(lines[i]);
         i++;
       }
       blocks.push({
-        type: 'code',
-        content: codeLines.join('\n'),
-        language
+        type: "code",
+        content: codeLines.join("\n"),
+        language,
       });
       i++; // 跳过结束的 ```
       continue;
@@ -111,9 +111,9 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
     const headingMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
       blocks.push({
-        type: 'heading',
+        type: "heading",
         content: headingMatch[2],
-        level: headingMatch[1].length
+        level: headingMatch[1].length,
       });
       i++;
       continue;
@@ -121,21 +121,21 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
 
     // 分割线 ---
     if (/^[-*_]{3,}$/.test(trimmedLine)) {
-      blocks.push({ type: 'hr', content: '' });
+      blocks.push({ type: "hr", content: "" });
       i++;
       continue;
     }
 
     // 引用块 >
-    if (trimmedLine.startsWith('>')) {
+    if (trimmedLine.startsWith(">")) {
       const quoteLines: string[] = [];
-      while (i < lines.length && lines[i].trim().startsWith('>')) {
+      while (i < lines.length && lines[i].trim().startsWith(">")) {
         quoteLines.push(lines[i].trim().slice(1).trim());
         i++;
       }
       blocks.push({
-        type: 'blockquote',
-        content: quoteLines.join('\n')
+        type: "blockquote",
+        content: quoteLines.join("\n"),
       });
       continue;
     }
@@ -150,7 +150,7 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
         if (listItemMatch) {
           items.push(listItemMatch[2]);
           i++;
-        } else if (lines[i].trim() === '') {
+        } else if (lines[i].trim() === "") {
           i++;
           // 检查下一行是否还是列表项
           if (i < lines.length && lines[i].trim().match(/^([-*]|\d+\.)\s+/)) {
@@ -162,10 +162,10 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
         }
       }
       blocks.push({
-        type: 'list',
-        content: '',
+        type: "list",
+        content: "",
         ordered,
-        items
+        items,
       });
       continue;
     }
@@ -173,18 +173,21 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
     // 普通段落
     const paragraphLines: string[] = [trimmedLine];
     i++;
-    while (i < lines.length && lines[i].trim() && 
-           !lines[i].trim().startsWith('#') &&
-           !lines[i].trim().startsWith('```') &&
-           !lines[i].trim().startsWith('>') &&
-           !lines[i].trim().match(/^([-*]|\d+\.)\s+/) &&
-           !lines[i].trim().match(/^[-*_]{3,}$/)) {
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !lines[i].trim().startsWith("#") &&
+      !lines[i].trim().startsWith("```") &&
+      !lines[i].trim().startsWith(">") &&
+      !lines[i].trim().match(/^([-*]|\d+\.)\s+/) &&
+      !lines[i].trim().match(/^[-*_]{3,}$/)
+    ) {
       paragraphLines.push(lines[i].trim());
       i++;
     }
     blocks.push({
-      type: 'paragraph',
-      content: paragraphLines.join(' ')
+      type: "paragraph",
+      content: paragraphLines.join(" "),
     });
   }
 
@@ -199,17 +202,19 @@ export function parseMarkdownContent(markdown: string): ParsedContent[] {
  * 处理内联元素 (粗体、斜体、链接等) 转为纯文本
  */
 function inlineToPlainText(text: string): string {
-  return text
-    // 链接 [text](url) -> text (url)
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
-    // 粗体 **text** -> text
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    // 斜体 *text* -> text
-    .replace(/\*([^*]+)\*/g, '$1')
-    // 删除线 ~~text~~ -> text
-    .replace(/~~([^~]+)~~/g, '$1')
-    // 行内代码 `code` -> code
-    .replace(/`([^`]+)`/g, '$1');
+  return (
+    text
+      // 链接 [text](url) -> text (url)
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+      // 粗体 **text** -> text
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      // 斜体 *text* -> text
+      .replace(/\*([^*]+)\*/g, "$1")
+      // 删除线 ~~text~~ -> text
+      .replace(/~~([^~]+)~~/g, "$1")
+      // 行内代码 `code` -> code
+      .replace(/`([^`]+)`/g, "$1")
+  );
 }
 
 /**
@@ -221,49 +226,53 @@ export function serializeToPlainText(markdown: string): string {
 
   for (const block of blocks) {
     switch (block.type) {
-      case 'paragraph':
+      case "paragraph":
         result.push(inlineToPlainText(block.content));
-        result.push('');
+        result.push("");
         break;
 
-      case 'heading':
+      case "heading":
         result.push(inlineToPlainText(block.content));
-        result.push('');
+        result.push("");
         break;
 
-      case 'list':
+      case "list":
         if (block.items) {
           block.items.forEach((item, index) => {
-            const bullet = block.ordered ? `${index + 1}.` : '-';
+            const bullet = block.ordered ? `${index + 1}.` : "-";
             result.push(`${bullet} ${inlineToPlainText(item)}`);
           });
         }
-        result.push('');
+        result.push("");
         break;
 
-      case 'code':
+      case "code":
         // 代码块不加围栏，直接输出代码
         result.push(block.content);
-        result.push('');
+        result.push("");
         break;
 
-      case 'blockquote':
-        const quoteLines = block.content.split('\n');
-        quoteLines.forEach(line => {
+      case "blockquote": {
+        const quoteLines = block.content.split("\n");
+        quoteLines.forEach((line) => {
           result.push(`> ${inlineToPlainText(line)}`);
         });
-        result.push('');
+        result.push("");
         break;
+      }
 
-      case 'hr':
-        result.push('---');
-        result.push('');
+      case "hr":
+        result.push("---");
+        result.push("");
         break;
     }
   }
 
   // 清理多余空行
-  return result.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return result
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
@@ -275,50 +284,55 @@ export function serializeToMarkdown(markdown: string): string {
 
   for (const block of blocks) {
     switch (block.type) {
-      case 'paragraph':
+      case "paragraph":
         result.push(block.content);
-        result.push('');
+        result.push("");
         break;
 
-      case 'heading':
-        const hashes = '#'.repeat(block.level || 1);
+      case "heading": {
+        const hashes = "#".repeat(block.level || 1);
         result.push(`${hashes} ${block.content}`);
-        result.push('');
+        result.push("");
         break;
+      }
 
-      case 'list':
+      case "list":
         if (block.items) {
           block.items.forEach((item, index) => {
-            const bullet = block.ordered ? `${index + 1}.` : '-';
+            const bullet = block.ordered ? `${index + 1}.` : "-";
             result.push(`${bullet} ${item}`);
           });
         }
-        result.push('');
+        result.push("");
         break;
 
-      case 'code':
-        result.push(`\`\`\`${block.language || ''}`);
+      case "code":
+        result.push(`\`\`\`${block.language || ""}`);
         result.push(block.content);
-        result.push('```');
-        result.push('');
+        result.push("```");
+        result.push("");
         break;
 
-      case 'blockquote':
-        const quoteLines = block.content.split('\n');
-        quoteLines.forEach(line => {
+      case "blockquote": {
+        const quoteLines = block.content.split("\n");
+        quoteLines.forEach((line) => {
           result.push(`> ${line}`);
         });
-        result.push('');
+        result.push("");
         break;
+      }
 
-      case 'hr':
-        result.push('---');
-        result.push('');
+      case "hr":
+        result.push("---");
+        result.push("");
         break;
     }
   }
 
-  return result.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return result
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
@@ -327,8 +341,8 @@ export function serializeToMarkdown(markdown: string): string {
 export function extractCodeBlocks(markdown: string): Array<{ code: string; language: string }> {
   const blocks = parseMarkdownContent(markdown);
   return blocks
-    .filter(b => b.type === 'code')
-    .map(b => ({ code: b.content, language: b.language || 'text' }));
+    .filter((b) => b.type === "code")
+    .map((b) => ({ code: b.content, language: b.language || "text" }));
 }
 
 // ============================================
@@ -340,12 +354,11 @@ export function extractCodeBlocks(markdown: string): Array<{ code: string; langu
  */
 export async function copyMessage(
   content: string,
-  format: CopyFormat = 'markdown'
+  format: CopyFormat = "markdown",
 ): Promise<CopyResult> {
-  const text = format === 'plaintext' 
-    ? serializeToPlainText(content)
-    : serializeToMarkdown(content);
-  
+  const text =
+    format === "plaintext" ? serializeToPlainText(content) : serializeToMarkdown(content);
+
   return copyToClipboard(text);
 }
 
@@ -362,12 +375,10 @@ export async function copyCode(code: string): Promise<CopyResult> {
 export async function copyAllCodeBlocks(markdown: string): Promise<CopyResult> {
   const codeBlocks = extractCodeBlocks(markdown);
   if (codeBlocks.length === 0) {
-    return { success: false, error: 'No code blocks found' };
+    return { success: false, error: "No code blocks found" };
   }
-  
-  const combined = codeBlocks
-    .map(b => `// ${b.language}\n${b.code}`)
-    .join('\n\n');
-  
+
+  const combined = codeBlocks.map((b) => `// ${b.language}\n${b.code}`).join("\n\n");
+
   return copyToClipboard(combined);
 }

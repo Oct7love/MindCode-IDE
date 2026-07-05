@@ -6,7 +6,8 @@
  */
 import { ipcMain } from "electron";
 import { debugSessionManager, detectAdapter, getSupportedLanguages } from "../debugger";
-import type { IPCContext } from "./types";
+import { type IPCContext, validateSender } from "./types";
+import { isWithinWorkspace, sanitizeSecretEnv } from "../security/guards";
 
 export function registerDebugHandlers(ctx: IPCContext): void {
   // 将主窗口引用传递给会话管理器
@@ -14,10 +15,13 @@ export function registerDebugHandlers(ctx: IPCContext): void {
   if (mainWindow) debugSessionManager.setMainWindow(mainWindow);
 
   // 启动调试会话
+  // 安全：debug:start 会让主进程以自定义 program/cwd/env 拉起本地进程，等价于
+  // 代码执行面。必须校验发送者 + 工作区信任门 + 将 program/cwd 限制在受信工作区内，
+  // 并剔除注入 env 中的敏感变量，避免渲染进程借此执行工作区外的任意程序。
   ipcMain.handle(
     "debug:start",
     async (
-      _event,
+      event,
       config: {
         type: string;
         program: string;
@@ -28,15 +32,50 @@ export function registerDebugHandlers(ctx: IPCContext): void {
       },
     ) => {
       try {
+        if (!validateSender(event, ctx)) {
+          return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
+        }
+
+        const workspace = ctx.getWorkspacePath();
+        if (!workspace) {
+          return {
+            success: false,
+            error: "请先打开工作区后再启动调试",
+            errorCode: "ERR_NO_WORKSPACE",
+          };
+        }
+
+        // program 必须位于受信工作区内；cwd 若指定同样受限，未指定则默认工作区根。
+        if (!config.program || !isWithinWorkspace(config.program, workspace)) {
+          return {
+            success: false,
+            error: "Access denied: 调试目标程序必须位于工作区内",
+            errorCode: "ERR_ACCESS_DENIED",
+          };
+        }
+        const cwd = config.cwd ?? workspace;
+        if (!isWithinWorkspace(cwd, workspace)) {
+          return {
+            success: false,
+            error: "Access denied: 调试工作目录必须位于工作区内",
+            errorCode: "ERR_ACCESS_DENIED",
+          };
+        }
+
         // 更新主窗口引用
         const win = ctx.getMainWindow();
         if (win) debugSessionManager.setMainWindow(win);
 
+        // 剔除渲染进程注入 env 中的敏感变量（防止把 API Key 泄露给被调试进程）。
+        const safeEnv = config.env
+          ? (sanitizeSecretEnv(config.env as NodeJS.ProcessEnv) as Record<string, string>)
+          : undefined;
+
         return await debugSessionManager.startSession(config.type, {
           program: config.program,
           args: config.args,
-          cwd: config.cwd,
-          env: config.env,
+          cwd,
+          env: safeEnv,
           stopOnEntry: config.stopOnEntry,
         });
       } catch (err: unknown) {

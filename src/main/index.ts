@@ -14,7 +14,7 @@ import * as _path from "path";
 loadDotenv({ path: _path.resolve(__dirname, "../../../.env") });
 
 import type { MenuItemConstructorOptions } from "electron";
-import { app, BrowserWindow, ipcMain, dialog, Menu, session } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, Menu, session, shell } from "electron";
 import * as path from "path";
 import { markStartup } from "../core/performance";
 import {
@@ -87,6 +87,23 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, "../../renderer/index.html"));
   }
+
+  // 安全：外链一律交给系统浏览器，禁止在应用内新建 Electron 窗口打开（防钓鱼/逃逸）。
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  // 安全：阻止主窗口导航离开应用自身 origin（dev server / 本地 file://）；
+  // 外部 http(s) 链接改由系统浏览器打开，避免顶层导航被污染内容劫持。
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const isDevServer = isDev && url.startsWith(DEV_SERVER_URL);
+    const isLocalFile = url.startsWith("file://");
+    if (!isDevServer && !isLocalFile) {
+      event.preventDefault();
+      if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    }
+  });
 
   mainWindow.on("closed", () => {
     mainWindow = null;

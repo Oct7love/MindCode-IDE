@@ -81,7 +81,9 @@ export class IndexService {
         "**/*.min.js",
       ],
       maxFileSize: 1024 * 1024, // 1MB
-      enableEmbeddings: true, // 启用向量索引增强语义搜索
+      // 安全默认：向量嵌入会把源代码块上传到 embedding 端点（第三方/官方）。
+      // 默认关闭，避免用户在不知情下把私有代码外发；由用户显式开启（开启前应告知目标端点）。
+      enableEmbeddings: false,
       embeddingModel: "text-embedding-3-small",
       incrementalIndex: true,
       concurrency: 4,

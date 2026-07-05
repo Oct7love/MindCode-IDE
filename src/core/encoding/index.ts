@@ -1,10 +1,12 @@
 // 文件编码服务 - 支持多种编码格式（类似 VSCode）
 
-const iconv = require("iconv-lite") as {
+import iconvLite from "iconv-lite";
+import fs from "fs";
+
+const iconv = iconvLite as {
   decode: (buf: Buffer, enc: string) => string;
   encode: (str: string, enc: string) => Buffer;
 };
-import fs from "fs";
 
 // 支持的编码列表（VSCode 风格）
 export const SUPPORTED_ENCODINGS = [

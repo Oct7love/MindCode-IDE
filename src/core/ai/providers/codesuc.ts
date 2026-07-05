@@ -8,15 +8,18 @@ import type {
   ToolCallbacks,
   ToolCallInfo,
 } from "@shared/types/ai";
+import type { net as ElectronNet, IncomingMessage } from "electron";
 import { DEFAULT_BASE_URLS } from "../config";
 import { logger } from "../../logger";
 
 const log = logger.child("Codesuc");
 
 // 延迟导入 electron.net，避免在模块加载阶段访问未初始化的 Electron API
-let electronNet: typeof import("electron").net | null = null;
-function getNet(): typeof import("electron").net {
+let electronNet: typeof ElectronNet | null = null;
+function getNet(): typeof ElectronNet {
   if (!electronNet) {
+    // 延迟到首次调用时才 require electron，避免模块加载阶段访问未初始化的 Electron API
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     electronNet = require("electron").net;
   }
   return electronNet!;
@@ -74,7 +77,8 @@ export class CodesucProvider extends BaseAIProvider {
     super(config);
     this.apiKey = config.apiKey;
     this.baseUrl = (config.baseUrl || DEFAULT_BASE_URLS.codesuc).replace(/\/$/, "");
-    log.info(`Init: baseUrl=${this.baseUrl}, apiKey=${this.apiKey?.slice(0, 10)}...`);
+    // 不记录 API Key 片段：即使前缀也会缩小暴力空间并指纹化用户。
+    log.info(`Init: baseUrl=${this.baseUrl}, apiKey=${this.apiKey ? "set" : "unset"}`);
   }
 
   async probeCapabilities(): Promise<{ tools: boolean; stream: boolean }> {
@@ -195,7 +199,7 @@ export class CodesucProvider extends BaseAIProvider {
     let fullText = "";
     try {
       const result = (await this.request(body, true)) as {
-        response: import("electron").IncomingMessage;
+        response: IncomingMessage;
         statusCode: number;
       };
       const { response, statusCode } = result;
@@ -288,7 +292,7 @@ export class CodesucProvider extends BaseAIProvider {
     let fullText = "";
     try {
       const result = (await this.request(body, true)) as {
-        response: import("electron").IncomingMessage;
+        response: IncomingMessage;
         statusCode: number;
       };
       const { response, statusCode } = result;

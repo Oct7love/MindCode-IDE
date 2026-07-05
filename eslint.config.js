@@ -43,13 +43,16 @@ export default tseslint.config(
           allowConciseArrowFunctionExpressionsStartingWithVoid: true,
         },
       ],
-      "no-empty-catch": "off",
+      // Allow intentional empty catch blocks; still flag other empty blocks.
+      // (Replaces the previous no-op `no-empty-catch` typo rule.)
+      "no-empty": ["error", { allowEmptyCatch: true }],
       "no-useless-catch": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
 
-  // Main process (Node/CommonJS)
+  // Node globals for main/core/shared (main-process or shared/isomorphic code
+  // that may be bundled into the main process).
   {
     files: ["src/main/**/*.ts", "src/core/**/*.ts", "src/shared/**/*.ts"],
     languageOptions: {
@@ -57,6 +60,16 @@ export default tseslint.config(
         ...globals.node,
       },
     },
+  },
+
+  // "No DOM in main process" — scoped to src/main/** only.
+  // src/core/** is intentionally excluded: several core modules are isomorphic
+  // and run inside the renderer (e.g. lsp/client, github/client access
+  // window.mindcode) or feature-detect `window`. Enforcing "core must not
+  // depend on the renderer global" is tracked as an M3 architecture task
+  // (docs/refactor/03_REFACTOR_ROADMAP.md), not a lint gate here.
+  {
+    files: ["src/main/**/*.ts"],
     rules: {
       "no-restricted-globals": [
         "error",

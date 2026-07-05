@@ -168,7 +168,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   );
 
   return (
-    <div className="statusbar">
+    <div className="statusbar" data-testid="status-bar">
       {/* 左侧：Git 信息 */}
       <div className="statusbar-left">
         {gitInfo.isRepo ? (

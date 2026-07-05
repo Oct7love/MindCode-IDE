@@ -1,7 +1,9 @@
 /**
  * 结构化日志系统
- * 分级日志 + Transport 抽象 + traceId + 文件输出
+ * 分级日志 + Transport 抽象 + traceId + 文件输出 + 敏感信息脱敏
  */
+
+import { redact, redactString } from "./redact";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -109,13 +111,15 @@ class Logger {
   private _write(level: LogLevel, message: string, data?: unknown, source?: string): void {
     if (LOG_LEVELS[level] < LOG_LEVELS[this.minLevel]) return;
 
+    // 脱敏：在进入任何 Transport / 缓冲 / 导出前统一掩码 API Key、Token、密码等，
+    // 防止密钥明文落盘或被 "导出日志" 分享出去。
     const entry: LogEntry = {
       level,
-      message,
+      message: redactString(message),
       timestamp: Date.now(),
       source,
       traceId: this._traceId,
-      data,
+      data: data === undefined ? undefined : redact(data),
     };
 
     // 写入所有 Transport

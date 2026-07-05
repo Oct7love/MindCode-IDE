@@ -19,10 +19,32 @@ out/
 Thumbs.db
 nul
 
-# Environment
+# Environment (保留 .env.example 模板；其余一律忽略)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# Secrets / credentials / private keys —— 绝不提交
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*.asc
+secrets.json
+secrets.*.json
+.secrets
+credentials.json
+gha-creds-*.json
+serviceAccount*.json
+# gitleaks 扫描报告（可能含明文命中，禁止提交）
+gitleaks-report.json
+.gitleaks-report.json
 
 # Logs
 logs/

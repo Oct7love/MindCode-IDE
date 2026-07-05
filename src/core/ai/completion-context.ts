@@ -680,16 +680,13 @@ export async function buildCompletionContext(
       /* ignore */
     }
   }
-  if (hoverHint) {
-    userIntent
-      ? undefined
-      : symbols.length > 0 &&
-        symbols.push({
-          name: "_cursor_type_",
-          kind: "type",
-          signature: hoverHint,
-          line: cursorLine + 1,
-        });
+  if (hoverHint && !userIntent && symbols.length > 0) {
+    symbols.push({
+      name: "_cursor_type_",
+      kind: "type",
+      signature: hoverHint,
+      line: cursorLine + 1,
+    });
   }
 
   // 查找相关片段

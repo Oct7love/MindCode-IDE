@@ -5,20 +5,24 @@
  * 使用 spawn 直接执行 git 命令，避免 shell 注入。
  */
 import { ipcMain } from "electron";
+import type { IpcMainInvokeEvent } from "electron";
 import { spawn } from "child_process";
-import type { IPCContext } from "./types";
+import { type IPCContext, validateSender } from "./types";
+import { sanitizeSecretEnv } from "../security/guards";
 
 /** Git 命令超时时间（ms） */
 const GIT_COMMAND_TIMEOUT_MS = 30000;
 
 /**
- * 执行 Git 命令的辅助函数 - 使用 spawn 避免 shell 注入
+ * 执行 Git 命令的辅助函数 - 使用 spawn 避免 shell 注入。
+ * env 经 sanitizeSecretEnv 剔除 AI API Key 等敏感变量，防止恶意仓库的 git hook /
+ * 凭证助手窃取密钥。
  */
 async function execGit(args: string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const proc = spawn("git", args, {
       cwd,
-      env: { ...process.env },
+      env: sanitizeSecretEnv(),
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       timeout: GIT_COMMAND_TIMEOUT_MS,
@@ -48,101 +52,139 @@ async function execGit(args: string[], cwd: string): Promise<{ stdout: string; s
   });
 }
 
-export function registerGitHandlers(_ctx: IPCContext): void {
-  ipcMain.handle("git:isRepo", async (_event, workspacePath: string) => {
-    try {
-      await execGit(["rev-parse", "--git-dir"], workspacePath);
-      return { success: true, data: true };
-    } catch {
-      return { success: true, data: false };
-    }
-  });
-
-  ipcMain.handle("git:status", async (_event, workspacePath: string) => {
-    try {
-      const { stdout } = await execGit(["status", "--porcelain", "-u"], workspacePath);
-      const files = stdout
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => {
-          const status = line.substring(0, 2);
-          const filePath = line.substring(3);
-          let state: "modified" | "added" | "deleted" | "renamed" | "untracked" | "conflicted" =
-            "modified";
-          if (status.includes("?")) state = "untracked";
-          else if (status.includes("A")) state = "added";
-          else if (status.includes("D")) state = "deleted";
-          else if (status.includes("R")) state = "renamed";
-          else if (status.includes("U")) state = "conflicted";
-          else if (status.includes("M")) state = "modified";
-          return { path: filePath, status: state, staged: status[0] !== " " && status[0] !== "?" };
-        });
-      return { success: true, data: files };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("git:currentBranch", async (_event, workspacePath: string) => {
-    try {
-      const { stdout } = await execGit(["branch", "--show-current"], workspacePath);
-      return { success: true, data: stdout.trim() };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("git:branches", async (_event, workspacePath: string) => {
-    try {
-      const { stdout } = await execGit(["branch", "-a"], workspacePath);
-      const branches = stdout
-        .trim()
-        .split("\n")
-        .map((b) => {
-          const isCurrent = b.startsWith("*");
-          const name = b.replace(/^\*?\s+/, "").trim();
-          return { name, current: isCurrent };
-        });
-      return { success: true, data: branches };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("git:stage", async (_event, workspacePath: string, filePaths: string[]) => {
-    try {
-      await execGit(["add", ...filePaths], workspacePath);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("git:unstage", async (_event, workspacePath: string, filePaths: string[]) => {
-    try {
-      await execGit(["reset", "HEAD", ...filePaths], workspacePath);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
-
-  ipcMain.handle("git:commit", async (_event, workspacePath: string, message: string) => {
-    try {
-      if (!message || typeof message !== "string" || message.trim().length === 0) {
-        return { success: false, error: "Commit message cannot be empty" };
+export function registerGitHandlers(ctx: IPCContext): void {
+  /**
+   * 包装每个 git handler：先校验发送者（阻止被注入的 iframe/webview 触发 git 操作，
+   * 尤其是 discard/checkout/reset 等破坏性命令），通过后再执行原逻辑。
+   */
+  const guarded =
+    <A extends unknown[], R>(fn: (event: IpcMainInvokeEvent, ...args: A) => Promise<R>) =>
+    async (event: IpcMainInvokeEvent, ...args: A) => {
+      if (!validateSender(event, ctx)) {
+        return { success: false, error: "Unauthorized sender", errorCode: "ERR_UNAUTHORIZED" };
       }
-      await execGit(["commit", "-m", message], workspacePath);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
+      return fn(event, ...args);
+    };
+
+  ipcMain.handle(
+    "git:isRepo",
+    guarded(async (_event, workspacePath: string) => {
+      try {
+        await execGit(["rev-parse", "--git-dir"], workspacePath);
+        return { success: true, data: true };
+      } catch {
+        return { success: true, data: false };
+      }
+    }),
+  );
+
+  ipcMain.handle(
+    "git:status",
+    guarded(async (_event, workspacePath: string) => {
+      try {
+        const { stdout } = await execGit(["status", "--porcelain", "-u"], workspacePath);
+        const files = stdout
+          .trim()
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => {
+            const status = line.substring(0, 2);
+            const filePath = line.substring(3);
+            let state: "modified" | "added" | "deleted" | "renamed" | "untracked" | "conflicted" =
+              "modified";
+            if (status.includes("?")) state = "untracked";
+            else if (status.includes("A")) state = "added";
+            else if (status.includes("D")) state = "deleted";
+            else if (status.includes("R")) state = "renamed";
+            else if (status.includes("U")) state = "conflicted";
+            else if (status.includes("M")) state = "modified";
+            return {
+              path: filePath,
+              status: state,
+              staged: status[0] !== " " && status[0] !== "?",
+            };
+          });
+        return { success: true, data: files };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
+
+  ipcMain.handle(
+    "git:currentBranch",
+    guarded(async (_event, workspacePath: string) => {
+      try {
+        const { stdout } = await execGit(["branch", "--show-current"], workspacePath);
+        return { success: true, data: stdout.trim() };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
+
+  ipcMain.handle(
+    "git:branches",
+    guarded(async (_event, workspacePath: string) => {
+      try {
+        const { stdout } = await execGit(["branch", "-a"], workspacePath);
+        const branches = stdout
+          .trim()
+          .split("\n")
+          .map((b) => {
+            const isCurrent = b.startsWith("*");
+            const name = b.replace(/^\*?\s+/, "").trim();
+            return { name, current: isCurrent };
+          });
+        return { success: true, data: branches };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
+
+  ipcMain.handle(
+    "git:stage",
+    guarded(async (_event, workspacePath: string, filePaths: string[]) => {
+      try {
+        await execGit(["add", ...filePaths], workspacePath);
+        return { success: true };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
+
+  ipcMain.handle(
+    "git:unstage",
+    guarded(async (_event, workspacePath: string, filePaths: string[]) => {
+      try {
+        await execGit(["reset", "HEAD", ...filePaths], workspacePath);
+        return { success: true };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
+
+  ipcMain.handle(
+    "git:commit",
+    guarded(async (_event, workspacePath: string, message: string) => {
+      try {
+        if (!message || typeof message !== "string" || message.trim().length === 0) {
+          return { success: false, error: "Commit message cannot be empty" };
+        }
+        await execGit(["commit", "-m", message], workspacePath);
+        return { success: true };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
 
   ipcMain.handle(
     "git:diff",
-    async (_event, workspacePath: string, filePath: string, staged: boolean) => {
+    guarded(async (_event, workspacePath: string, filePath: string, staged: boolean) => {
       try {
         const args = staged ? ["diff", "--cached", filePath] : ["diff", filePath];
         const { stdout } = await execGit(args, workspacePath);
@@ -150,60 +192,72 @@ export function registerGitHandlers(_ctx: IPCContext): void {
       } catch (error: unknown) {
         return { success: false, error: (error as Error).message };
       }
-    },
+    }),
   );
 
-  ipcMain.handle("git:checkout", async (_event, workspacePath: string, branchName: string) => {
-    try {
-      await execGit(["checkout", branchName], workspacePath);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
+  ipcMain.handle(
+    "git:checkout",
+    guarded(async (_event, workspacePath: string, branchName: string) => {
+      try {
+        await execGit(["checkout", branchName], workspacePath);
+        return { success: true };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
 
-  ipcMain.handle("git:createBranch", async (_event, workspacePath: string, branchName: string) => {
-    try {
-      await execGit(["checkout", "-b", branchName], workspacePath);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
+  ipcMain.handle(
+    "git:createBranch",
+    guarded(async (_event, workspacePath: string, branchName: string) => {
+      try {
+        await execGit(["checkout", "-b", branchName], workspacePath);
+        return { success: true };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
 
-  ipcMain.handle("git:log", async (_event, workspacePath: string, limit: number = 50) => {
-    try {
-      const { stdout } = await execGit(
-        ["log", `--max-count=${limit}`, "--pretty=format:%H|%h|%an|%ae|%at|%s"],
-        workspacePath,
-      );
-      const commits = stdout
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => {
-          const [hash, shortHash, author, email, timestamp, message] = line.split("|");
-          return {
-            hash,
-            shortHash,
-            author,
-            email,
-            date: new Date(parseInt(timestamp) * 1000).toISOString(),
-            message,
-          };
-        });
-      return { success: true, data: commits };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
+  ipcMain.handle(
+    "git:log",
+    guarded(async (_event, workspacePath: string, limit: number = 50) => {
+      try {
+        const { stdout } = await execGit(
+          ["log", `--max-count=${limit}`, "--pretty=format:%H|%h|%an|%ae|%at|%s"],
+          workspacePath,
+        );
+        const commits = stdout
+          .trim()
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => {
+            const [hash, shortHash, author, email, timestamp, message] = line.split("|");
+            return {
+              hash,
+              shortHash,
+              author,
+              email,
+              date: new Date(parseInt(timestamp) * 1000).toISOString(),
+              message,
+            };
+          });
+        return { success: true, data: commits };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
 
-  ipcMain.handle("git:discard", async (_event, workspacePath: string, filePath: string) => {
-    try {
-      await execGit(["checkout", "--", filePath], workspacePath);
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error).message };
-    }
-  });
+  ipcMain.handle(
+    "git:discard",
+    guarded(async (_event, workspacePath: string, filePath: string) => {
+      try {
+        await execGit(["checkout", "--", filePath], workspacePath);
+        return { success: true };
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
+    }),
+  );
 }

@@ -5,6 +5,7 @@ import {
   saveConversations,
 } from "@services/conversationPersistence";
 import { createNamedLogger } from "../utils/logger";
+import type { FileChange } from "../components/AIPanel/MultiFileChanges";
 
 const log = createNamedLogger("AIStore");
 
@@ -80,7 +81,7 @@ export interface Message {
   plan?: Plan; // Plan 模式生成的计划
   thinkingUI?: ThinkingUIData; // Thinking UI 结构化数据
   thinkingContent?: string; // 思考过程内容（完成后保留用于折叠显示）
-  fileChanges?: import("../components/AIPanel/MultiFileChanges").FileChange[]; // 多文件编辑变更
+  fileChanges?: FileChange[]; // 多文件编辑变更
 }
 
 export interface Conversation {
@@ -207,10 +208,7 @@ interface AIActions {
     decision: { model: string; taskType: string; reason: string } | null,
   ) => void;
   // T22: 多文件编辑
-  updateMessageFileChanges: (
-    messageId: string,
-    changes: import("../components/AIPanel/MultiFileChanges").FileChange[],
-  ) => void;
+  updateMessageFileChanges: (messageId: string, changes: FileChange[]) => void;
 }
 
 const DEFAULT_MODEL = "claude-opus-4-6";
