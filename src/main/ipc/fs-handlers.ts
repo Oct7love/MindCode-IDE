@@ -6,7 +6,6 @@
  */
 import { ipcMain, dialog } from "electron";
 import * as path from "path";
-import * as os from "os";
 import * as fs from "fs";
 import * as fsp from "fs/promises";
 import * as readline from "readline";
@@ -18,6 +17,7 @@ import {
   type EncodingId,
 } from "../../core/encoding";
 import { type IPCContext, validateSender } from "./types";
+import { isDeniedSystemPath } from "../security/guards";
 
 /** @deprecated 使用 ctx.getWorkspacePath() 替代 */
 let currentWorkspacePath: string | null = null;
@@ -103,30 +103,11 @@ function isPathAllowed(targetPath: string, basePath?: string): boolean {
     }
 
     // 未打开工作区时的兜底：拒绝访问系统关键目录 + 用户主目录下的敏感凭据位置。
-    // 注：denylist 本质不完备，仅作深度防御；「未打开工作区仅允许用户经对话框显式
-    // 选择的文件」这一 allowlist 模型属 M3 架构任务（见 03_REFACTOR_ROADMAP.md）。
-    const home = os.homedir();
-    const homeSecretDirs = [
-      ".ssh",
-      ".aws",
-      ".gnupg",
-      ".kube",
-      ".docker",
-      ".config",
-      ".netrc",
-      ".npmrc",
-      ".git-credentials",
-      ".env",
-    ].map((d) => path.join(home, d));
-    const dangerousPaths = (
-      process.platform === "win32"
-        ? ["C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\ProgramData"]
-        : ["/etc", "/usr", "/bin", "/sbin", "/var", "/root", "/boot", "/sys", "/proc"]
-    ).concat(homeSecretDirs);
-
-    return !dangerousPaths.some((dangerous) =>
-      normalizedTarget.toLowerCase().startsWith(dangerous.toLowerCase()),
-    );
+    // 交由 guards.isDeniedSystemPath 处理（denylist 与目标均做 realpath 规范化，
+    // 避免 macOS /etc→/private/etc 之类符号链接绕过）。denylist 本质不完备，仅作深度
+    // 防御；「未打开工作区仅允许用户经对话框显式选择的文件」这一 allowlist 模型属 M3
+    // 架构任务（见 03_REFACTOR_ROADMAP.md）。
+    return !isDeniedSystemPath(normalizedTarget);
   } catch {
     return false;
   }

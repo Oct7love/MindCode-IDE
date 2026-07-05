@@ -9,8 +9,12 @@
 import { describe, it, expect } from "vitest";
 import * as os from "os";
 import * as path from "path";
-import { sanitizeSecretEnv, isWithinWorkspace } from "../../../main/security/guards";
-import { redact, redactString } from "../../../core/logger/redact";
+import {
+  sanitizeSecretEnv,
+  isWithinWorkspace,
+  isDeniedSystemPath,
+} from "../../../main/security/guards";
+import { redact, redactString, isSensitiveKey } from "../../../core/logger/redact";
 
 describe("sanitizeSecretEnv", () => {
   it("剔除 MINDCODE_* 注入的密钥", () => {
@@ -68,6 +72,33 @@ describe("isWithinWorkspace", () => {
   });
 });
 
+// F2：未打开工作区时的兜底 denylist，需抵御 macOS realpath 绕过（/etc→/private/etc）。
+describe("isDeniedSystemPath (F2)", () => {
+  it("系统关键目录被拒（含 macOS /private 映射）", () => {
+    expect(isDeniedSystemPath("/etc/hosts")).toBe(true);
+    expect(isDeniedSystemPath("/private/etc/hosts")).toBe(true);
+    expect(isDeniedSystemPath("/etc/passwd")).toBe(true);
+    expect(isDeniedSystemPath("/usr/bin/env")).toBe(true);
+  });
+
+  it("主目录敏感凭据位置被拒", () => {
+    const home = os.homedir();
+    expect(isDeniedSystemPath(path.join(home, ".ssh", "id_rsa"))).toBe(true);
+    expect(isDeniedSystemPath(path.join(home, ".aws", "credentials"))).toBe(true);
+  });
+
+  it("空路径按拒绝处理", () => {
+    expect(isDeniedSystemPath("")).toBe(true);
+  });
+
+  it("普通工作区文件不被误伤", () => {
+    // os.tmpdir() 在 macOS 解析到 /var/folders/...（/var 是 denylist 项且软链到 /private/var）。
+    // 为避免与系统 denylist 交叠，这里用一个明确不在敏感目录下的临时子目录做正例。
+    const safe = path.join(os.homedir(), "mindcode-workspace-sample", "src", "index.ts");
+    expect(isDeniedSystemPath(safe)).toBe(false);
+  });
+});
+
 describe("日志脱敏 redact", () => {
   it("掩码 sk- 密钥与 Bearer token", () => {
     // 从片段拼接的假凭据（非真实密钥，且不以字面量形式出现，避免被 secret 扫描误报）。
@@ -75,6 +106,88 @@ describe("日志脱敏 redact", () => {
     const fakeToken = "t0ken" + "PLACEHOLDER" + "00";
     expect(redactString(`key=${fakeKey} done`)).not.toContain(fakeKey);
     expect(redactString(`Authorization: Bearer ${fakeToken}`)).not.toContain(fakeToken);
+  });
+
+  // F1：整段掩码必须是干净的 "***"，不得出现 "<偏移>***"（如 "10***"）这类畸形输出。
+  it("F1: sk-/Bearer/gh token 掩码为干净的 *** 而非 <偏移>***", () => {
+    const skKey = "sk-" + "A".repeat(12);
+    const bearer = "b".repeat(16);
+    const ghTok = "ghp_" + "C".repeat(24);
+    const outSk = redactString(`my key is ${skKey} end`);
+    const outBearer = redactString(`Authorization: Bearer ${bearer} x`);
+    const outGh = redactString(`token ${ghTok} y`);
+    // 完整密钥不得残留
+    expect(outSk).not.toContain(skKey);
+    expect(outBearer).not.toContain(bearer);
+    expect(outGh).not.toContain(ghTok);
+    // 输出含 MASK
+    expect(outSk).toContain("***");
+    // 不得出现 "<数字>***" 这类偏移量拼接畸形结果
+    expect(outSk).not.toMatch(/\d+\*\*\*/);
+    expect(outBearer).not.toMatch(/\d+\*\*\*/);
+    expect(outGh).not.toMatch(/\d+\*\*\*/);
+    // 具体形态：sk- 段被替换为 ***
+    expect(outSk).toBe("my key is *** end");
+  });
+
+  // F4：敏感键必须掩码，token 计量字段必须保留。
+  it("F4: 掩码凭据键、保留 token 计量键", () => {
+    const out = redact({
+      // 计量字段——必须原样保留
+      maxTokens: 4096,
+      totalTokens: 1234,
+      inputTokens: 800,
+      outputTokens: 434,
+      tokenCount: 42,
+      // 凭据字段——必须掩码
+      accessToken: "a-secret",
+      refreshToken: "r-secret",
+      idToken: "i-secret",
+      apiKey: "sk-secret",
+      secret: "s",
+      password: "p",
+      authorization: "Bearer z",
+      privateKey: "pk",
+    }) as Record<string, unknown>;
+    // 计量字段保留
+    expect(out.maxTokens).toBe(4096);
+    expect(out.totalTokens).toBe(1234);
+    expect(out.inputTokens).toBe(800);
+    expect(out.outputTokens).toBe(434);
+    expect(out.tokenCount).toBe(42);
+    // 凭据字段掩码
+    for (const k of [
+      "accessToken",
+      "refreshToken",
+      "idToken",
+      "apiKey",
+      "secret",
+      "password",
+      "authorization",
+      "privateKey",
+    ]) {
+      expect(out[k]).toBe("***");
+    }
+  });
+
+  it("F4: isSensitiveKey 分类正确", () => {
+    for (const k of ["maxTokens", "totalTokens", "inputTokens", "outputTokens", "tokenCount"]) {
+      expect(isSensitiveKey(k)).toBe(false);
+    }
+    for (const k of [
+      "accessToken",
+      "refreshToken",
+      "idToken",
+      "apiKey",
+      "api_key",
+      "secret",
+      "password",
+      "authorization",
+      "privateKey",
+      "token",
+    ]) {
+      expect(isSensitiveKey(k)).toBe(true);
+    }
   });
 
   it("对象中的敏感字段名整值掩码", () => {

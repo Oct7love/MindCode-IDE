@@ -9,6 +9,7 @@
  * （见 docs/refactor/03_REFACTOR_ROADMAP.md）。
  */
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 /** 敏感环境变量匹配（API Key / Token / Secret / 密码 / 凭据） */
@@ -67,4 +68,54 @@ export function isWithinWorkspace(target: string, root: string | null): boolean 
   } catch {
     return false;
   }
+}
+
+/** 系统关键目录（未打开工作区时的兜底 denylist 基础项）。 */
+function systemDenyDirs(): string[] {
+  return process.platform === "win32"
+    ? ["C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\ProgramData"]
+    : ["/etc", "/usr", "/bin", "/sbin", "/var", "/root", "/boot", "/sys", "/proc"];
+}
+
+/** 用户主目录下的敏感凭据位置（.ssh / .aws / .env 等）。 */
+function homeSecretDirs(): string[] {
+  const home = os.homedir();
+  return [
+    ".ssh",
+    ".aws",
+    ".gnupg",
+    ".kube",
+    ".docker",
+    ".config",
+    ".netrc",
+    ".npmrc",
+    ".git-credentials",
+    ".env",
+  ].map((d) => path.join(home, d));
+}
+
+/**
+ * 判断路径是否落在「未打开工作区时」应拒绝的敏感位置（系统关键目录 + 主目录凭据位置）。
+ *
+ * 关键点：denylist 条目与目标路径都做 realpath 规范化后再比对，避免 macOS 上
+ * /etc→/private/etc、/var→/private/var、/tmp→/private/tmp 等符号链接导致 startsWith 失效
+ * 而被绕过（历史缺陷）。空路径按拒绝处理。
+ */
+export function isDeniedSystemPath(target: string): boolean {
+  if (!target) return true;
+  const real = resolveRealPath(target).toLowerCase();
+  const denied = new Set<string>();
+  for (const d of [...systemDenyDirs(), ...homeSecretDirs()]) {
+    denied.add(d);
+    try {
+      // 目录存在则加入其 realpath 规范化形式（覆盖 /etc→/private/etc 之类映射）。
+      denied.add(fs.realpathSync(d));
+    } catch {
+      // 目录不存在则忽略其 realpath 形式。
+    }
+  }
+  return [...denied].some((d) => {
+    const dd = d.toLowerCase();
+    return real === dd || real.startsWith(dd + path.sep);
+  });
 }
