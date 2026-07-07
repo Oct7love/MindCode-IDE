@@ -14,7 +14,7 @@ interface EditorTabsProps {
   openFiles: EditorFile[];
   activeFileId: string | null;
   onSwitchFile: (id: string) => void;
-  onCloseFile: (id: string, e?: React.MouseEvent) => void;
+  onCloseFile: (id: string) => void;
 }
 
 export const EditorTabs: React.FC<EditorTabsProps> = ({
@@ -62,7 +62,13 @@ export const EditorTabs: React.FC<EditorTabsProps> = ({
                 )}
               </span>
               <span className="tab-label">{file.name}</span>
-              <button className="tab-close" onClick={(e) => onCloseFile(file.id, e)}>
+              <button
+                className="tab-close"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCloseFile(file.id);
+                }}
+              >
                 <AppIcons.Close16 />
               </button>
             </div>
