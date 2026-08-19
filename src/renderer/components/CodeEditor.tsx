@@ -3,7 +3,14 @@
  * 基于 Monaco Editor 的专业代码编辑器
  */
 
-import React, { useRef, useEffect, useCallback, useState } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import * as monaco from "monaco-editor";
 import { InlineEditWidget } from "./InlineEditWidget";
 import type { CompletionRequest } from "../services/completionService";
@@ -308,25 +315,56 @@ const _createLocalCompletionProvider = (): monaco.languages.InlineCompletionsPro
   },
 });
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({
-  file,
-  onContentChange,
-  onSave,
-  onCursorPositionChange,
-  readOnly = false,
-  minimap = true,
-  lineNumbers = "on",
-  wordWrap = "off",
-  fontSize = 12, // 紧凑模式
-  enableGhostText = true,
-  completionModel: _completionModel = "gemini-2.5-flash-lite", // 使用 Gemini 2.5 Flash Lite 做代码补全
-  workspacePath,
-  onLSPStatusChange,
-  onAIEdit,
-}) => {
+/** 暴露给父组件的编辑器句柄，供菜单/命令面板保存读取当前真实文本。 */
+export type CodeEditorHandle = { getValue: () => string; setValue: (v: string) => void };
+
+export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
+  {
+    file,
+    onContentChange,
+    onSave,
+    onCursorPositionChange,
+    readOnly = false,
+    minimap = true,
+    lineNumbers = "on",
+    wordWrap = "off",
+    fontSize = 12, // 紧凑模式
+    enableGhostText = true,
+    completionModel: _completionModel = "gemini-2.5-flash-lite", // 使用 Gemini 2.5 Flash Lite 做代码补全
+    workspacePath,
+    onLSPStatusChange,
+    onAIEdit,
+  },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [isReady, setIsReady] = useState(false);
+
+  // 回调 ref：初始化 effect 依赖为空，只在挂载时注册一次监听器/命令。若直接闭包捕获
+  // onContentChange/onSave，会永久绑定挂载那一刻的版本（P0-4 陈旧闭包：切 tab 后所有
+  // 编辑/保存都被路由到第一个打开的文件，破坏未保存内容）。用 ref 保存最新回调，
+  // 监听器内调 ref.current，保证永远走「当前 active 文件」的 action。
+  const onContentChangeRef = useRef(onContentChange);
+  const onSaveRef = useRef(onSave);
+  onContentChangeRef.current = onContentChange;
+  onSaveRef.current = onSave;
+  // 程序化变更抑制：切 tab 时用 setValue 写入新文件内容会触发 onDidChangeModelContent，
+  // 若不抑制会把「新文件内容」当成用户输入回写到当前 active（数据破坏）并产生假 dirty。
+  const isProgrammaticChangeRef = useRef(false);
+  // 每文件独立 model：切 tab 用 setModel 而不是在同一 model 上 setValue，undo/选区才互不污染。
+  const modelsRef = useRef<Map<string, monaco.editor.ITextModel>>(new Map());
+  const lastSyncedPathRef = useRef<string | null>(null);
+
+  // 向父组件暴露真实编辑器文本（菜单/命令面板保存据此取当前内容，而非陈旧 state）。
+  useImperativeHandle(
+    ref,
+    () => ({
+      getValue: () => editorRef.current?.getValue() ?? "",
+      setValue: (v: string) => editorRef.current?.setValue(v),
+    }),
+    [],
+  );
 
   // 内联编辑状态
   const [showInlineEdit, setShowInlineEdit] = useState(false);
@@ -418,6 +456,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     });
 
     editorRef.current = editor;
+    if (file?.path) {
+      const initialModel = editor.getModel();
+      if (initialModel) modelsRef.current.set(file.path, initialModel);
+      lastSyncedPathRef.current = file.path;
+    }
     setIsReady(true);
 
     // 监听光标位置变化
@@ -470,16 +513,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     };
     window.addEventListener("theme-changed", handleThemeChange as EventListener);
 
-    // 内容变化监听
+    // 内容变化监听（调用 ref.current 保证永远走当前 active 的 onContentChange；
+    // 程序化变更（切 tab 的 setValue）不回写，避免破坏内容与假 dirty）。
     const disposable = editor.onDidChangeModelContent(() => {
+      if (isProgrammaticChangeRef.current) return;
       const content = editor.getValue();
-      onContentChange?.(content);
+      onContentChangeRef.current?.(content);
     });
 
-    // 保存快捷键
+    // 保存快捷键（同样走 ref.current，避免陈旧闭包把内容存到别的 tab）
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const content = editor.getValue();
-      onSave?.(content);
+      onSaveRef.current?.(content);
     });
 
     // ========== 补全快捷键 (Cursor 风格) ==========
@@ -573,30 +618,56 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => {
       cursorDisposable.dispose();
       disposable.dispose();
+      for (const model of modelsRef.current.values()) {
+        try {
+          model.dispose();
+        } catch {
+          /* already disposed */
+        }
+      }
+      modelsRef.current.clear();
       editor.dispose();
       window.removeEventListener("theme-changed", handleThemeChange as EventListener);
     };
   }, []);
 
-  // 更新文件内容和路径
+  // 按文件切换独立 model；同一文件的外部内容更新才 setValue。
   useEffect(() => {
     if (!editorRef.current || !file) return;
 
-    // 更新当前文件路径（供补全服务使用）
     currentFilePath = file.path;
-
-    const currentModel = editorRef.current.getModel();
+    const editor = editorRef.current;
     const language = file.language || getLanguageFromPath(file.path);
+    const pathChanged = lastSyncedPathRef.current !== file.path;
+    lastSyncedPathRef.current = file.path;
 
-    if (currentModel) {
-      // 更新内容
-      if (currentModel.getValue() !== file.content) {
-        currentModel.setValue(file.content);
-      }
-      // 更新语言
-      monaco.editor.setModelLanguage(currentModel, language);
+    let model = modelsRef.current.get(file.path);
+    if (!model || model.isDisposed()) {
+      model = monaco.editor.createModel(file.content, language);
+      modelsRef.current.set(file.path, model);
     }
-  }, [file?.path, file?.content]);
+
+    if (editor.getModel() !== model) {
+      isProgrammaticChangeRef.current = true;
+      try {
+        editor.setModel(model);
+      } finally {
+        isProgrammaticChangeRef.current = false;
+      }
+    }
+
+    monaco.editor.setModelLanguage(model, language);
+
+    // 切 tab 复用已有 model（保留 undo）；仅同一 path 上父组件推入的新内容才回写。
+    if (!pathChanged && model.getValue() !== file.content) {
+      isProgrammaticChangeRef.current = true;
+      try {
+        model.setValue(file.content);
+      } finally {
+        isProgrammaticChangeRef.current = false;
+      }
+    }
+  }, [file?.path, file?.content, file?.language]);
 
   // 更新编辑器选项
   useEffect(() => {
@@ -676,7 +747,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const currentLanguage = file?.language || getLanguageFromPath(file?.path || "");
 
   return (
-    <div className="code-editor-container">
+    <div className="code-editor-container" data-testid="code-editor">
       <div ref={containerRef} className="code-editor" />
       {!isReady && (
         <div className="code-editor-loading">
@@ -700,6 +771,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       />
     </div>
   );
-};
+});
 
 export default CodeEditor;

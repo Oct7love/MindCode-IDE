@@ -108,6 +108,18 @@ const App: React.FC = () => {
     setLanguageSelectorTargetRef.current = setLanguageSelectorTarget;
   });
 
+  // 关闭文件（带未保存保护）：dirty 文件需用户确认后才丢弃，避免静默丢失内容。
+  const requestCloseFile = useCallback((id: string) => {
+    const ed = editorRef.current;
+    const result = ed.closeFile(id);
+    if (result.requiresConfirm) {
+      const discard = window.confirm("该文件有未保存的更改，关闭将丢弃这些更改。确定关闭吗？");
+      if (discard) ed.closeFile(id, { force: true });
+    }
+  }, []);
+  const requestCloseFileRef = useRef(requestCloseFile);
+  requestCloseFileRef.current = requestCloseFile;
+
   // --- Menu event listener ---
   useEffect(() => {
     if (!window.mindcode?.onMenuEvent) return;
@@ -145,7 +157,7 @@ const App: React.FC = () => {
           break;
         }
         case "menu:closeEditor":
-          if (activeFileIdRef.current) closeFileRef.current(activeFileIdRef.current);
+          if (activeFileIdRef.current) requestCloseFileRef.current(activeFileIdRef.current);
           break;
         case "menu:commandPalette":
           setCommandPaletteMode("commands");
@@ -242,6 +254,12 @@ const App: React.FC = () => {
         if (activeFileIdRef.current) closeFileRef.current(activeFileIdRef.current);
         return;
       }
+      if (ctrl && e.shiftKey && (e.key === "s" || e.key === "S")) {
+        // 保存全部（只写 dirty 文件）
+        e.preventDefault();
+        void editorRef.current.saveAllFiles();
+        return;
+      }
       if (ctrl && e.key === "s") {
         e.preventDefault();
         const currentFile = activeFileRef.current;
@@ -313,7 +331,7 @@ const App: React.FC = () => {
         label: "关闭文件",
         keybinding: "Ctrl+W",
         handler: () => {
-          if (editor.activeFileId) editor.closeFile(editor.activeFileId);
+          if (editor.activeFileId) requestCloseFile(editor.activeFileId);
         },
       },
       {
@@ -554,12 +572,12 @@ const App: React.FC = () => {
         )}
 
         {/* Editor Area */}
-        <div className="editor-area">
+        <div className="editor-area" data-testid="editor-area">
           <EditorTabs
             openFiles={openFiles}
             activeFileId={editor.activeFileId}
             onSwitchFile={editor.switchFile}
-            onCloseFile={editor.closeFile}
+            onCloseFile={requestCloseFile}
           />
 
           <div
@@ -573,6 +591,7 @@ const App: React.FC = () => {
             {activeFile ? (
               <EditorErrorBoundary>
                 <CodeEditor
+                  ref={editor.editorRef}
                   file={{ path: activeFile.path, content: activeFile.content }}
                   onContentChange={editor.updateFileContent}
                   onSave={editor.saveFile}
