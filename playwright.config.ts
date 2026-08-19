@@ -10,9 +10,14 @@ export default defineConfig({
   timeout: 30000,
   retries: 1,
   workers: 1, // Electron 测试必须串行
-  reporter: [["list"], ["html", { open: "never", outputFolder: "e2e-report" }]],
+  fullyParallel: false,
+  forbidOnly: !!process.env.CI,
+  outputDir: "test-results",
+  reporter: process.env.CI
+    ? [["list"], ["github"], ["html", { open: "never", outputFolder: "e2e-report" }]]
+    : [["list"], ["html", { open: "never", outputFolder: "e2e-report" }]],
   use: {
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
 });

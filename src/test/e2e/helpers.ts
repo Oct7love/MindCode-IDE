@@ -14,8 +14,11 @@ export async function launchApp(): Promise<{ app: ElectronApplication; page: Pag
     throw new Error(`构建产物不存在: ${mainEntry}\n请先执行 npm run build`);
   }
 
+  // GitHub Linux runner 的 Chromium sandbox 不可用；仅 CI 追加，不改变发行版启动参数。
+  const ciArgs = process.env.CI === "true" ? ["--no-sandbox"] : [];
+
   const app = await electron.launch({
-    args: [mainEntry],
+    args: [mainEntry, ...ciArgs],
     env: {
       ...process.env,
       NODE_ENV: "production",
