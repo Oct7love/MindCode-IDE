@@ -457,6 +457,14 @@ contextBridge.exposeInMainWorld("mindcode", {
     uninstall: (pluginId: string) => ipcRenderer.invoke("plugins:uninstall", pluginId),
     getDir: () => ipcRenderer.invoke("plugins:getDir"),
   },
+
+  // Open VSX 市场（主进程代理，渲染进程不得直连）
+  marketplace: {
+    search: (params: { query: string; category?: string; size?: number }) =>
+      ipcRenderer.invoke("marketplace:search", params),
+    getExtension: (namespace: string, name: string) =>
+      ipcRenderer.invoke("marketplace:getExtension", { namespace, name }),
+  },
 });
 
 // ─── 全局类型声明 ────────────────────────────────────────
@@ -673,6 +681,14 @@ declare global {
         verify: (pluginId: string) => Promise<MainIPCResult>;
         uninstall: (pluginId: string) => Promise<MainIPCResult>;
         getDir: () => Promise<MainIPCResult<string>>;
+      };
+      marketplace: {
+        search: (params: {
+          query: string;
+          category?: string;
+          size?: number;
+        }) => Promise<MainIPCResult>;
+        getExtension: (namespace: string, name: string) => Promise<MainIPCResult>;
       };
     };
   }

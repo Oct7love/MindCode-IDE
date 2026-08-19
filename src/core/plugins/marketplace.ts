@@ -1,10 +1,7 @@
 /**
  * 扩展市场服务
- * 集成 Open VSX Registry (VSCode 兼容扩展市场)
- * API: https://open-vsx.org/api
+ * 经主进程 IPC 访问 Open VSX，渲染进程不得直连外网。
  */
-
-const OPEN_VSX_API = "https://open-vsx.org/api";
 
 export interface ExtensionInfo {
   id: string; // namespace.name 格式
@@ -14,7 +11,7 @@ export interface ExtensionInfo {
   version: string;
   author: string;
   icon?: string;
-  iconUrl?: string; // Open VSX 图标 URL
+  iconUrl?: string; // 仅本地/离线项；主进程代理不回传远程图标 URL
   category: "theme" | "language" | "snippet" | "tool" | "ai" | "other";
   tags: string[];
   downloads: number;
@@ -22,29 +19,8 @@ export interface ExtensionInfo {
   repository?: string;
   installed?: boolean;
   enabled?: boolean;
-  downloadUrl?: string; // .vsix 下载地址
+  downloadUrl?: string; // 仅本地缓存兼容字段；主进程代理不回传下载地址
   namespace?: string; // 发布者命名空间
-}
-
-// Open VSX API 响应类型
-interface OpenVSXExtension {
-  namespace: string;
-  name: string;
-  displayName?: string;
-  description?: string;
-  version: string;
-  publishedBy?: { loginName: string };
-  files?: { icon?: string; download?: string };
-  downloadCount?: number;
-  averageRating?: number;
-  categories?: string[];
-  tags?: string[];
-  repository?: string;
-}
-
-interface OpenVSXSearchResult {
-  extensions: OpenVSXExtension[];
-  totalSize: number;
 }
 
 // 扩展功能实现
@@ -219,62 +195,24 @@ class MarketplaceService {
     });
   }
 
-  /** 转换 Open VSX 响应为 ExtensionInfo */
-  private convertExtension(ext: OpenVSXExtension): ExtensionInfo {
-    const category = this.detectCategory(ext.categories || [], ext.tags || []);
-    return {
-      id: `${ext.namespace}.${ext.name}`,
-      name: ext.name,
-      namespace: ext.namespace,
-      displayName: ext.displayName || ext.name,
-      description: ext.description || "",
-      version: ext.version,
-      author: ext.publishedBy?.loginName || ext.namespace,
-      iconUrl: ext.files?.icon,
-      downloadUrl: ext.files?.download,
-      category,
-      tags: ext.tags || [],
-      downloads: ext.downloadCount || 0,
-      rating: ext.averageRating || 0,
-      repository: ext.repository,
-      installed: this.installed.has(`${ext.namespace}.${ext.name}`),
-      enabled: this.installed.get(`${ext.namespace}.${ext.name}`)?.enabled,
-    };
-  }
-
-  /** 检测扩展分类 */
-  private detectCategory(categories: string[], tags: string[]): ExtensionInfo["category"] {
-    const all = [...categories, ...tags].map((s) => s.toLowerCase());
-    if (all.some((t) => t.includes("theme"))) return "theme";
-    if (all.some((t) => t.includes("snippet"))) return "snippet";
-    if (all.some((t) => t.includes("language") || t.includes("linter") || t.includes("formatter")))
-      return "language";
-    if (all.some((t) => t.includes("ai") || t.includes("copilot"))) return "ai";
-    return "tool";
-  }
-
-  /** 从 Open VSX 搜索扩展 */
+  /** 从 Open VSX 搜索扩展（主进程代理） */
   async searchOnline(query: string, category?: string, size = 20): Promise<ExtensionInfo[]> {
     try {
       const cacheKey = `search:${query}:${category}:${size}`;
       const cached = this.cache.get(cacheKey);
       if (cached && Date.now() - cached.time < this.cacheTimeout) return cached.data;
 
-      const params = new URLSearchParams({
-        query,
-        size: size.toString(),
-        sortBy: "downloadCount",
-        sortOrder: "desc",
-      });
-      if (category && category !== "all") params.append("category", category);
-
-      const res = await fetch(`${OPEN_VSX_API}/-/search?${params}`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-
-      const data: OpenVSXSearchResult = await res.json();
-      const extensions = data.extensions.map((ext) => this.convertExtension(ext));
+      const api = window.mindcode?.marketplace;
+      if (!api?.search) throw new Error("marketplace IPC unavailable");
+      const res = await api.search({ query, category, size });
+      if (!res.success || !Array.isArray(res.data)) {
+        throw new Error(res.error || "search failed");
+      }
+      const extensions = (res.data as ExtensionInfo[]).map((ext) => ({
+        ...ext,
+        installed: this.installed.has(ext.id),
+        enabled: this.installed.get(ext.id)?.enabled,
+      }));
       this.cache.set(cacheKey, { data: extensions, time: Date.now() });
       return extensions;
     } catch (err) {
@@ -297,22 +235,27 @@ class MarketplaceService {
     if (cached && Date.now() - cached.time < this.cacheTimeout) return cached.data;
 
     try {
+      const api = window.mindcode?.marketplace;
+      if (!api?.getExtension) throw new Error("marketplace IPC unavailable");
       const extensions = await Promise.all(
         POPULAR_EXTENSIONS.map(async (id) => {
           const [namespace, name] = id.split(".");
+          if (!namespace || !name) return null;
           try {
-            const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`, {
-              signal: AbortSignal.timeout(5000),
-            });
-            if (!res.ok) return null;
-            const ext: OpenVSXExtension = await res.json();
-            return this.convertExtension(ext);
+            const res = await api.getExtension(namespace, name);
+            if (!res.success || !res.data) return null;
+            const ext = res.data as ExtensionInfo;
+            return {
+              ...ext,
+              installed: this.installed.has(ext.id),
+              enabled: this.installed.get(ext.id)?.enabled,
+            };
           } catch {
             return null;
           }
         }),
       );
-      const result = extensions.filter((e): e is ExtensionInfo => e !== null);
+      const result = extensions.filter((e): e is NonNullable<typeof e> => e !== null);
       if (result.length > 0) {
         this.cache.set(cacheKey, { data: result, time: Date.now() });
         return result;
@@ -365,10 +308,9 @@ class MarketplaceService {
       const [namespace, name] = extensionId.split(".");
       if (!namespace || !name) return false;
       try {
-        const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`);
-        if (!res.ok) return false;
-        const data: OpenVSXExtension = await res.json();
-        ext = this.convertExtension(data);
+        const res = await window.mindcode?.marketplace?.getExtension(namespace, name);
+        if (!res?.success || !res.data) return false;
+        ext = res.data as ExtensionInfo;
       } catch {
         return false;
       }
@@ -417,13 +359,11 @@ class MarketplaceService {
       try {
         const [namespace, name] = id.split(".");
         if (!namespace || !name) continue;
-        const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`, {
-          signal: AbortSignal.timeout(3000),
-        });
-        if (!res.ok) continue;
-        const data: OpenVSXExtension = await res.json();
-        if (data.version && data.version !== ext.version) {
-          updates.push({ id, current: ext.version, latest: data.version });
+        const res = await window.mindcode?.marketplace?.getExtension(namespace, name);
+        if (!res?.success || !res.data) continue;
+        const latest = (res.data as ExtensionInfo).version;
+        if (latest && latest !== ext.version) {
+          updates.push({ id, current: ext.version, latest });
         }
       } catch {
         // 网络错误跳过
@@ -440,12 +380,9 @@ class MarketplaceService {
     const [namespace, name] = extensionId.split(".");
     if (!namespace || !name) return false;
     try {
-      const res = await fetch(`${OPEN_VSX_API}/${namespace}/${name}`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) return false;
-      const data: OpenVSXExtension = await res.json();
-      const updated = this.convertExtension(data);
+      const res = await window.mindcode?.marketplace?.getExtension(namespace, name);
+      if (!res?.success || !res.data) return false;
+      const updated = res.data as ExtensionInfo;
       this.installed.set(extensionId, { ...updated, installed: true, enabled: ext.enabled });
       this.saveInstalled();
       this.emit("update", { ...updated, installed: true, enabled: ext.enabled });
