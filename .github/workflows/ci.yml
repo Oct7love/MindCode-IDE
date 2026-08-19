@@ -8,8 +8,6 @@ on:
       - main
       - develop
   pull_request:
-    branches:
-      - main
 
 jobs:
   secret-scan:
