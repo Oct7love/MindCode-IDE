@@ -352,6 +352,9 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   // 程序化变更抑制：切 tab 时用 setValue 写入新文件内容会触发 onDidChangeModelContent，
   // 若不抑制会把「新文件内容」当成用户输入回写到当前 active（数据破坏）并产生假 dirty。
   const isProgrammaticChangeRef = useRef(false);
+  // 每文件独立 model：切 tab 用 setModel 而不是在同一 model 上 setValue，undo/选区才互不污染。
+  const modelsRef = useRef<Map<string, monaco.editor.ITextModel>>(new Map());
+  const lastSyncedPathRef = useRef<string | null>(null);
 
   // 向父组件暴露真实编辑器文本（菜单/命令面板保存据此取当前内容，而非陈旧 state）。
   useImperativeHandle(
@@ -453,6 +456,11 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
     });
 
     editorRef.current = editor;
+    if (file?.path) {
+      const initialModel = editor.getModel();
+      if (initialModel) modelsRef.current.set(file.path, initialModel);
+      lastSyncedPathRef.current = file.path;
+    }
     setIsReady(true);
 
     // 监听光标位置变化
@@ -610,35 +618,56 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
     return () => {
       cursorDisposable.dispose();
       disposable.dispose();
+      for (const model of modelsRef.current.values()) {
+        try {
+          model.dispose();
+        } catch {
+          /* already disposed */
+        }
+      }
+      modelsRef.current.clear();
       editor.dispose();
       window.removeEventListener("theme-changed", handleThemeChange as EventListener);
     };
   }, []);
 
-  // 更新文件内容和路径
+  // 按文件切换独立 model；同一文件的外部内容更新才 setValue。
   useEffect(() => {
     if (!editorRef.current || !file) return;
 
-    // 更新当前文件路径（供补全服务使用）
     currentFilePath = file.path;
-
-    const currentModel = editorRef.current.getModel();
+    const editor = editorRef.current;
     const language = file.language || getLanguageFromPath(file.path);
+    const pathChanged = lastSyncedPathRef.current !== file.path;
+    lastSyncedPathRef.current = file.path;
 
-    if (currentModel) {
-      // 更新内容（程序化写入，抑制 onDidChangeModelContent 回写以免破坏当前 buffer / 假 dirty）
-      if (currentModel.getValue() !== file.content) {
-        isProgrammaticChangeRef.current = true;
-        try {
-          currentModel.setValue(file.content);
-        } finally {
-          isProgrammaticChangeRef.current = false;
-        }
-      }
-      // 更新语言
-      monaco.editor.setModelLanguage(currentModel, language);
+    let model = modelsRef.current.get(file.path);
+    if (!model || model.isDisposed()) {
+      model = monaco.editor.createModel(file.content, language);
+      modelsRef.current.set(file.path, model);
     }
-  }, [file?.path, file?.content]);
+
+    if (editor.getModel() !== model) {
+      isProgrammaticChangeRef.current = true;
+      try {
+        editor.setModel(model);
+      } finally {
+        isProgrammaticChangeRef.current = false;
+      }
+    }
+
+    monaco.editor.setModelLanguage(model, language);
+
+    // 切 tab 复用已有 model（保留 undo）；仅同一 path 上父组件推入的新内容才回写。
+    if (!pathChanged && model.getValue() !== file.content) {
+      isProgrammaticChangeRef.current = true;
+      try {
+        model.setValue(file.content);
+      } finally {
+        isProgrammaticChangeRef.current = false;
+      }
+    }
+  }, [file?.path, file?.content, file?.language]);
 
   // 更新编辑器选项
   useEffect(() => {
@@ -718,7 +747,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
   const currentLanguage = file?.language || getLanguageFromPath(file?.path || "");
 
   return (
-    <div className="code-editor-container">
+    <div className="code-editor-container" data-testid="code-editor">
       <div ref={containerRef} className="code-editor" />
       {!isReady && (
         <div className="code-editor-loading">

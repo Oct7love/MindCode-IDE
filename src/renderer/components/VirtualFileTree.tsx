@@ -107,6 +107,7 @@ const TreeLine = React.memo(function TreeLine({
   return (
     <div
       className={`tree-row${selected === node.path ? " selected" : ""}${contextMenuPath === node.path ? " context-active" : ""}`}
+      data-testid={`tree-node-${node.name}`}
       style={{ paddingLeft }}
       onClick={handleClick}
       onContextMenu={handleContextMenu}

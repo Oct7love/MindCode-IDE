@@ -47,6 +47,8 @@ export const EditorTabs: React.FC<EditorTabsProps> = ({
             <div
               key={file.id}
               className={`tab${file.id === activeFileId ? " active" : ""}${file.isDirty ? " modified" : ""}${file.isPreview ? " preview" : ""}`}
+              data-testid={`editor-tab-${file.name}`}
+              data-dirty={file.isDirty ? "true" : "false"}
               onClick={() => onSwitchFile(file.id)}
               title={file.isPreview ? `预览: ${file.originalPath || file.path}` : file.path}
             >
@@ -64,6 +66,7 @@ export const EditorTabs: React.FC<EditorTabsProps> = ({
               <span className="tab-label">{file.name}</span>
               <button
                 className="tab-close"
+                data-testid={`editor-tab-close-${file.name}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onCloseFile(file.id);

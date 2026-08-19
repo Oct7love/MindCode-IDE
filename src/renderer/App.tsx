@@ -572,7 +572,7 @@ const App: React.FC = () => {
         )}
 
         {/* Editor Area */}
-        <div className="editor-area">
+        <div className="editor-area" data-testid="editor-area">
           <EditorTabs
             openFiles={openFiles}
             activeFileId={editor.activeFileId}

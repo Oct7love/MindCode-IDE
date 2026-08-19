@@ -6,8 +6,22 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const emptyWorker = path.resolve(__dirname, "./src/test/mocks/empty-worker.ts");
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    {
+      name: "mock-monaco-workers",
+      enforce: "pre",
+      resolveId(id) {
+        if (id.includes("monaco-editor") && id.includes("worker")) {
+          return emptyWorker;
+        }
+        return undefined;
+      },
+    },
+    react(),
+  ],
   test: {
     globals: true,
     environment: "jsdom",

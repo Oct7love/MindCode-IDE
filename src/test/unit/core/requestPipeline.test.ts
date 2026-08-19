@@ -54,18 +54,56 @@ describe("RequestPipeline (AI 管道)", () => {
       expect(maxConcurrent).toBeLessThanOrEqual(2);
     });
 
-    it("setMaxConcurrent 动态调整", () => {
-      pipeline.setMaxConcurrent(5);
-      const stats = pipeline.getStats();
-      // 不抛异常即成功
-      expect(stats).toBeDefined();
+    it("setMaxConcurrent 动态提高后，后续完成可按新上限并发", async () => {
+      const p = new RequestPipeline(1);
+      let concurrent = 0;
+      let maxSeen = 0;
+      const started: number[] = [];
+      const release: Array<() => void> = [];
+
+      const make = (id: number) =>
+        p.add(async () => {
+          concurrent++;
+          maxSeen = Math.max(maxSeen, concurrent);
+          started.push(id);
+          await new Promise<void>((resolve) => {
+            release[id] = resolve;
+          });
+          concurrent--;
+        });
+
+      const running = [make(0), make(1), make(2)];
+      await vi.waitFor(() => expect(started).toEqual([0]));
+      expect(maxSeen).toBe(1);
+
+      p.setMaxConcurrent(3);
+      release[0]();
+      await vi.waitFor(() => expect(started).toHaveLength(3));
+      expect(maxSeen).toBeLessThanOrEqual(3);
+      expect(maxSeen).toBeGreaterThan(1);
+
+      release[1]();
+      release[2]();
+      await Promise.all(running);
     });
 
-    it("setMaxConcurrent 最小值为 1", () => {
-      pipeline.setMaxConcurrent(0);
-      pipeline.setMaxConcurrent(-5);
-      // 内部会 Math.max(1, max)
-      expect(true).toBe(true);
+    it("setMaxConcurrent 最小值为 1", async () => {
+      const p = new RequestPipeline(3);
+      p.setMaxConcurrent(0);
+      p.setMaxConcurrent(-5);
+
+      let concurrent = 0;
+      let maxSeen = 0;
+      const make = () =>
+        p.add(async () => {
+          concurrent++;
+          maxSeen = Math.max(maxSeen, concurrent);
+          await new Promise((r) => setTimeout(r, 30));
+          concurrent--;
+        });
+
+      await Promise.all([make(), make(), make()]);
+      expect(maxSeen).toBe(1);
     });
   });
 
