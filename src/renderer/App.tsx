@@ -47,6 +47,8 @@ import { ExtensionsPanel } from "./components/ExtensionsPanel";
 // Hooks
 import { useWorkspace } from "./hooks/useWorkspace";
 import { useEditorFiles } from "./hooks/useEditorFiles";
+import { useEditorAutoSave } from "./hooks/useEditorAutoSave";
+import { useExternalFileGuard } from "./hooks/useExternalFileGuard";
 import { useFileStore } from "./stores";
 import { usePanelLayout } from "./hooks/usePanelLayout";
 import { useFileOperations } from "./hooks/useFileOperations";
@@ -56,6 +58,8 @@ const App: React.FC = () => {
   // --- Hooks ---
   const workspace = useWorkspace();
   const editor = useEditorFiles(workspace.workspaceRoot);
+  useEditorAutoSave(typeof navigator === "undefined" || navigator.webdriver !== true, 1000);
+  useExternalFileGuard();
   const layout = usePanelLayout();
   const fileOps = useFileOperations(
     workspace.refreshFileTree,
@@ -591,6 +595,53 @@ const App: React.FC = () => {
           >
             {activeFile ? (
               <EditorErrorBoundary>
+                {activeFile.conflictDiskContent !== undefined && (
+                  <div
+                    data-testid="file-conflict-banner"
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      padding: "6px 10px",
+                      background: "var(--color-bg-hover)",
+                      borderBottom: "1px solid var(--color-border)",
+                      fontSize: 12,
+                    }}
+                  >
+                    <span>磁盘文件已被外部修改，本地有未保存更改。</span>
+                    <button
+                      type="button"
+                      data-testid="file-conflict-reload"
+                      onClick={() =>
+                        useFileStore
+                          .getState()
+                          .reloadFromDisk(activeFile.id, activeFile.conflictDiskContent!)
+                      }
+                    >
+                      Reload
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="file-conflict-keep"
+                      onClick={() => useFileStore.getState().clearConflict(activeFile.id)}
+                    >
+                      Keep local
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="file-conflict-compare"
+                      onClick={() =>
+                        layout.openDiffPanel?.({
+                          path: activeFile.path,
+                          originalContent: activeFile.conflictDiskContent!,
+                          modifiedContent: activeFile.content,
+                        })
+                      }
+                    >
+                      Compare
+                    </button>
+                  </div>
+                )}
                 <CodeEditor
                   ref={editor.editorRef}
                   file={{ path: activeFile.path, content: activeFile.content }}

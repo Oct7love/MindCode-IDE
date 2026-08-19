@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { rememberOwnWrite } from '../services/ownWriteMemory';
 
 export interface TreeNode {
   name: string;
@@ -20,6 +21,8 @@ export interface EditorFile {
   isPreview?: boolean;         // 是否为预览文件
   originalPath?: string;       // 原始文件路径（预览文件用）
   previewSource?: 'ai' | 'diff'; // 预览来源
+  generation?: number;         // 内容版本，autoSave 用来识别保存期间的再编辑
+  conflictDiskContent?: string; // 外部改盘且本地 dirty 时的磁盘内容
 }
 
 // 支持的语言列表
@@ -90,6 +93,9 @@ interface FileActions {
   pinPreview: (id: string) => void;
   closePreviewFiles: () => void;
   savePreviewFile: (id: string) => Promise<boolean>;
+  setConflict: (id: string, diskContent: string) => void;
+  clearConflict: (id: string) => void;
+  reloadFromDisk: (id: string, diskContent: string) => void;
 }
 
 export const useFileStore = create<FileState & FileActions>((set, get) => ({
@@ -201,7 +207,9 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
     const dirty = content !== baseline;
     return {
       openFiles: state.openFiles.map((f) =>
-        f.id === id ? { ...f, content, isDirty: dirty } : f,
+        f.id === id
+          ? { ...f, content, isDirty: dirty, generation: (f.generation ?? 0) + 1 }
+          : f,
       ),
     };
   }),
@@ -350,6 +358,7 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
         ),
         lastSavedById: { ...s.lastSavedById, [id]: file.content },
       }));
+      rememberOwnWrite(savePath);
       return true;
     }
     return false;
@@ -376,6 +385,7 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
         ),
         lastSavedById: { ...s.lastSavedById, [fileId]: content },
       }));
+      rememberOwnWrite(path);
     }
     return ok;
   },
@@ -446,6 +456,33 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
       : state.activeFileId;
     return { openFiles: nonPreviewFiles, activeFileId: newActiveId };
   }),
+
+  setConflict: (id, diskContent) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id ? { ...f, conflictDiskContent: diskContent } : f,
+    ),
+  })),
+
+  clearConflict: (id) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id ? { ...f, conflictDiskContent: undefined } : f,
+    ),
+  })),
+
+  reloadFromDisk: (id, diskContent) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id
+        ? {
+            ...f,
+            content: diskContent,
+            isDirty: false,
+            conflictDiskContent: undefined,
+            generation: (f.generation ?? 0) + 1,
+          }
+        : f,
+    ),
+    lastSavedById: { ...state.lastSavedById, [id]: diskContent },
+  })),
 
   savePreviewFile: async (id) => {
     const state = get();
