@@ -47,6 +47,7 @@ import { ExtensionsPanel } from "./components/ExtensionsPanel";
 // Hooks
 import { useWorkspace } from "./hooks/useWorkspace";
 import { useEditorFiles } from "./hooks/useEditorFiles";
+import { useFileStore } from "./stores";
 import { usePanelLayout } from "./hooks/usePanelLayout";
 import { useFileOperations } from "./hooks/useFileOperations";
 
@@ -647,11 +648,8 @@ const App: React.FC = () => {
                   if (result?.success) {
                     const file = openFiles.find((f) => f.path === layout.diffData!.path);
                     if (file) {
-                      editor.setOpenFiles((prev) =>
-                        prev.map((f) =>
-                          f.path === layout.diffData!.path ? { ...f, content, isDirty: false } : f,
-                        ),
-                      );
+                      useFileStore.getState().updateFileContent(file.id, content);
+                      useFileStore.getState().markFileSaved(file.id);
                     }
                     layout.closeDiffPanel();
                   }
@@ -755,20 +753,9 @@ const App: React.FC = () => {
       <LanguageSelector
         isOpen={showLanguageSelector}
         targetFileId={languageSelectorTarget}
-        onSelect={(langId, ext) => {
+        onSelect={(langId) => {
           if (languageSelectorTarget) {
-            editor.setOpenFiles((prev) =>
-              prev.map((f) => {
-                if (f.id !== languageSelectorTarget) return f;
-                const baseName = f.name.replace(/\.[^.]+$/, "");
-                return {
-                  ...f,
-                  language: langId,
-                  name: `${baseName}${ext}`,
-                  path: `${baseName}${ext}`,
-                };
-              }),
-            );
+            editor.setFileLanguage(languageSelectorTarget, langId);
           }
           setShowLanguageSelector(false);
           setLanguageSelectorTarget(null);
