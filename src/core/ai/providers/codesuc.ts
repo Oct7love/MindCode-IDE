@@ -123,6 +123,7 @@ export class CodesucProvider extends BaseAIProvider {
   private async request(
     body: Record<string, unknown>,
     stream: boolean,
+    signal?: AbortSignal,
   ): Promise<Record<string, unknown>> {
     const url = `${this.baseUrl}/v1/messages`;
     const bodyStr = JSON.stringify(body);
@@ -132,6 +133,18 @@ export class CodesucProvider extends BaseAIProvider {
       request.setHeader("Content-Type", "application/json");
       request.setHeader("x-api-key", this.apiKey); // Anthropic 标准认证
       request.setHeader("anthropic-version", "2023-06-01");
+      if (signal) {
+        const onAbort = () => {
+          request.abort();
+        };
+        if (signal.aborted) {
+          onAbort();
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          return;
+        }
+        signal.addEventListener("abort", onAbort, { once: true });
+        request.on("close", () => signal.removeEventListener("abort", onAbort));
+      }
       let responseData = "";
       let statusCode = 0;
       request.on("response", (response) => {
@@ -198,7 +211,7 @@ export class CodesucProvider extends BaseAIProvider {
     };
     let fullText = "";
     try {
-      const result = (await this.request(body, true)) as {
+      const result = (await this.request(body, true, callbacks.signal)) as {
         response: IncomingMessage;
         statusCode: number;
       };
@@ -291,7 +304,7 @@ export class CodesucProvider extends BaseAIProvider {
     }; // 不传 tools 字段
     let fullText = "";
     try {
-      const result = (await this.request(body, true)) as {
+      const result = (await this.request(body, true, callbacks.signal)) as {
         response: IncomingMessage;
         statusCode: number;
       };

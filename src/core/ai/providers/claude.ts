@@ -58,6 +58,7 @@ export class ClaudeProvider extends BaseAIProvider {
   private request(
     body: string,
     stream: boolean,
+    signal?: AbortSignal,
   ): Promise<{
     data?: { content?: Array<{ type: string; text?: string }> };
     stream?: http.IncomingMessage;
@@ -118,6 +119,17 @@ export class ClaudeProvider extends BaseAIProvider {
       });
 
       req.on("error", (e) => resolve({ error: e.message }));
+      if (signal) {
+        const onAbort = () => {
+          req.destroy(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        };
+        if (signal.aborted) {
+          onAbort();
+          return;
+        }
+        signal.addEventListener("abort", onAbort, { once: true });
+        req.on("close", () => signal.removeEventListener("abort", onAbort));
+      }
       req.write(body);
       req.end();
     });
@@ -156,7 +168,7 @@ export class ClaudeProvider extends BaseAIProvider {
     let fullText = "";
 
     try {
-      const result = await this.request(body, true);
+      const result = await this.request(body, true, callbacks.signal);
       if (result.error) {
         callbacks.onError(new Error(result.error));
         return;
@@ -280,7 +292,7 @@ export class ClaudeProvider extends BaseAIProvider {
     const toolCalls: ToolCallInfo[] = [];
     let currentToolUse: { id: string; name: string; input: string } | null = null;
     try {
-      const result = await this.request(body, true);
+      const result = await this.request(body, true, callbacks.signal);
       if (result.error) {
         callbacks.onError(new Error(result.error));
         return;

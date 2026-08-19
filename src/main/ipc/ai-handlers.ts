@@ -26,6 +26,15 @@ import { DEFAULT_COMPLETION_REQUEST_CONFIG } from "../../core/ai/completion-conf
 import { completionCache as perfCompletionCache } from "../../core/performance";
 import type { AIProvider } from "../../shared/types/ai";
 import type { IPCContext } from "./types";
+import { validateSender } from "./types";
+import {
+  abortAllStreamSessions,
+  cancelStreamSession,
+  finishStreamSession,
+  startStreamSession,
+} from "./ai-stream-sessions";
+
+export { abortAllStreamSessions };
 
 /** AI 并发请求限制 */
 const AI_MAX_CONCURRENT = 2;
@@ -52,9 +61,6 @@ const FAST_MODEL_TIMEOUT_MS = 2000;
 // 初始化请求管道
 const aiPipeline = getRequestPipeline();
 aiPipeline.setMaxConcurrent(AI_MAX_CONCURRENT);
-
-/** 活跃流式请求跟踪（用于取消） */
-const activeStreams = new Map<string, { buffer: StreamBuffer; cancelled: boolean }>();
 
 // 懒加载 AI Providers
 let _providers: Record<string, AIProvider> | null = null;
@@ -136,7 +142,7 @@ export function warmupAIProviders(): void {
   });
 }
 
-export function registerAIHandlers(_ctx: IPCContext): void {
+export function registerAIHandlers(ctx: IPCContext): void {
   // AI 聊天（非流式）
   ipcMain.handle("ai-chat", async (_event, { model, messages }) => {
     const result = await aiPipeline.add(() => getLLMClient().chat({ model, messages }), 1);
@@ -157,29 +163,29 @@ export function registerAIHandlers(_ctx: IPCContext): void {
 
   // AI 聊天（流式）
   ipcMain.on("ai-chat-stream", async (event, { model, messages, requestId }) => {
-    const streamState = { buffer: null as unknown as StreamBuffer, cancelled: false };
+    if (!validateSender(event, ctx)) return;
+    const session = startStreamSession(requestId);
     const buffer = new StreamBuffer((text) => {
-      if (!streamState.cancelled) {
+      if (!session.cancelled) {
         event.sender.send("ai-stream-token", { requestId, token: text });
       }
     }, STREAM_BUFFER_INTERVAL_MS);
-    streamState.buffer = buffer;
-    activeStreams.set(requestId, streamState);
+    session.buffer = buffer;
 
     aiPipeline
       .add(
         () =>
           getLLMClient().chatStream(
-            { model, messages },
+            { model, messages, signal: session.abort.signal },
             {
               onToken: (token) => {
-                if (streamState.cancelled) return;
+                if (session.cancelled) return;
                 buffer.push(token);
               },
               onComplete: (fullText, meta) => {
                 buffer.destroy();
-                activeStreams.delete(requestId);
-                if (!streamState.cancelled) {
+                finishStreamSession(requestId);
+                if (!session.cancelled) {
                   event.sender.send("ai-stream-complete", {
                     requestId,
                     fullText,
@@ -190,8 +196,8 @@ export function registerAIHandlers(_ctx: IPCContext): void {
               },
               onError: (error) => {
                 buffer.destroy();
-                activeStreams.delete(requestId);
-                if (!streamState.cancelled) {
+                finishStreamSession(requestId);
+                if (!session.cancelled) {
                   event.sender.send("ai-stream-error", {
                     requestId,
                     error: getUserFriendlyError(error),
@@ -200,7 +206,7 @@ export function registerAIHandlers(_ctx: IPCContext): void {
                 }
               },
               onFallback: (from, to) => {
-                if (!streamState.cancelled) {
+                if (!session.cancelled) {
                   event.sender.send("ai-stream-fallback", { requestId, from, to });
                 }
               },
@@ -210,8 +216,8 @@ export function registerAIHandlers(_ctx: IPCContext): void {
       )
       .catch((e) => {
         buffer.destroy();
-        activeStreams.delete(requestId);
-        if (!streamState.cancelled) {
+        finishStreamSession(requestId);
+        if (!session.cancelled) {
           event.sender.send("ai-stream-error", {
             requestId,
             error: (e as Error)?.message || "Request failed",
@@ -223,32 +229,32 @@ export function registerAIHandlers(_ctx: IPCContext): void {
 
   // AI 聊天（流式 + 工具调用）
   ipcMain.on("ai-chat-stream-with-tools", async (event, { model, messages, tools, requestId }) => {
-    const streamState = { buffer: null as unknown as StreamBuffer, cancelled: false };
+    if (!validateSender(event, ctx)) return;
+    const session = startStreamSession(requestId);
     const buffer = new StreamBuffer((text) => {
-      if (!streamState.cancelled) {
+      if (!session.cancelled) {
         event.sender.send("ai-stream-token", { requestId, token: text });
       }
     }, STREAM_BUFFER_INTERVAL_MS);
-    streamState.buffer = buffer;
-    activeStreams.set(requestId, streamState);
+    session.buffer = buffer;
 
     try {
       await getLLMClient().chatStream(
-        { model, messages, tools },
+        { model, messages, tools, signal: session.abort.signal },
         {
           onToken: (token) => {
-            if (streamState.cancelled) return;
+            if (session.cancelled) return;
             buffer.push(token);
           },
           onToolCall: (calls) => {
-            if (!streamState.cancelled) {
+            if (!session.cancelled) {
               event.sender.send("ai-stream-tool-call", { requestId, toolCalls: calls });
             }
           },
           onComplete: (fullText, meta) => {
             buffer.destroy();
-            activeStreams.delete(requestId);
-            if (!streamState.cancelled) {
+            finishStreamSession(requestId);
+            if (!session.cancelled) {
               event.sender.send("ai-stream-complete", {
                 requestId,
                 fullText,
@@ -259,8 +265,8 @@ export function registerAIHandlers(_ctx: IPCContext): void {
           },
           onError: (error) => {
             buffer.destroy();
-            activeStreams.delete(requestId);
-            if (!streamState.cancelled) {
+            finishStreamSession(requestId);
+            if (!session.cancelled) {
               event.sender.send("ai-stream-error", {
                 requestId,
                 error: getUserFriendlyError(error),
@@ -269,7 +275,7 @@ export function registerAIHandlers(_ctx: IPCContext): void {
             }
           },
           onFallback: (from, to) => {
-            if (!streamState.cancelled) {
+            if (!session.cancelled) {
               event.sender.send("ai-stream-fallback", { requestId, from, to });
             }
           },
@@ -277,8 +283,8 @@ export function registerAIHandlers(_ctx: IPCContext): void {
       );
     } catch (e) {
       buffer.destroy();
-      activeStreams.delete(requestId);
-      if (!streamState.cancelled) {
+      finishStreamSession(requestId);
+      if (!session.cancelled) {
         event.sender.send("ai-stream-error", {
           requestId,
           error: (e as Error)?.message || "Request failed",
@@ -292,13 +298,9 @@ export function registerAIHandlers(_ctx: IPCContext): void {
   ipcMain.handle("ai-stats", () => getLLMClient().getStats());
 
   // AI 流式请求取消
-  ipcMain.on("ai-stream-cancel", (_event, { requestId }: { requestId: string }) => {
-    const stream = activeStreams.get(requestId);
-    if (stream) {
-      stream.cancelled = true;
-      stream.buffer.destroy();
-      activeStreams.delete(requestId);
-    }
+  ipcMain.on("ai-stream-cancel", (event, { requestId }: { requestId: string }) => {
+    if (!validateSender(event, ctx)) return;
+    cancelStreamSession(requestId);
   });
 
   // 代码补全

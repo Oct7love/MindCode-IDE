@@ -141,6 +141,7 @@ contextBridge.exposeInMainWorld("mindcode", {
         ipcRenderer.removeListener("ai-stream-complete", completeHandler);
         ipcRenderer.removeListener("ai-stream-error", errorHandler);
         ipcRenderer.removeListener("ai-stream-fallback", fallbackHandler);
+        ipcRenderer.send("ai-stream-cancel", { requestId });
       };
       ipcRenderer.on("ai-stream-token", tokenHandler);
       ipcRenderer.on("ai-stream-complete", completeHandler);
@@ -188,6 +189,7 @@ contextBridge.exposeInMainWorld("mindcode", {
         ipcRenderer.removeListener("ai-stream-complete", completeHandler);
         ipcRenderer.removeListener("ai-stream-error", errorHandler);
         ipcRenderer.removeListener("ai-stream-fallback", fallbackHandler);
+        ipcRenderer.send("ai-stream-cancel", { requestId });
       };
       ipcRenderer.on("ai-stream-token", tokenHandler);
       ipcRenderer.on("ai-stream-tool-call", toolCallHandler);
