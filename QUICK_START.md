@@ -1,7 +1,7 @@
 # MindCode 快速开始指南
 
-> 版本: v0.2.0  
-> 更新: 2026-02-04
+> 版本: 0.1.0（以 `package.json` 为准）  
+> 状态: 开发中，仅本地 `npm run dev`。**不是**生产就绪。
 
 ---
 
@@ -11,6 +11,8 @@
 
 ```bash
 npm install
+cp .env.example .env
+# 在 .env 中填入至少一个 MINDCODE_*_API_KEY。不要编辑 src/core/ai/config.ts。
 ```
 
 ### 2. 启动开发模式
@@ -21,24 +23,13 @@ npm run dev
 
 应用将在 `http://localhost:5173` 启动
 
-### 3. 构建应用
+### 3. 构建（开发验证）
 
 ```bash
-# 构建所有平台
 npm run build
-
-# 仅构建当前平台
-npm run dist
-
-# Windows
-npm run dist:win
-
-# macOS
-npm run dist:mac
-
-# Linux
-npm run dist:linux
 ```
+
+`npm run dist` 目前会因缺少 `resources/icons` 失败，且打包后读不到仓库根 `.env`。在发行工程完成前不要当作可分发安装包。
 
 ---
 
@@ -232,20 +223,24 @@ MindCode/
 
 ## 🔧 配置
 
-### AI模型配置
+### AI 密钥配置
 
-编辑 `src/core/ai/config.ts`:
+**禁止**修改 `src/core/ai/config.ts` 填入 Key。该文件只读环境变量。
 
-```typescript
-export const defaultAIConfig = {
-  claude: {
-    apiKey: 'your-api-key',
-    baseUrl: 'https://api.anthropic.com',
-    model: 'claude-sonnet-4-5'
-  },
-  // ... 其他模型
-};
+```bash
+cp .env.example .env
 ```
+
+在 `.env` 中设置例如：
+
+```
+MINDCODE_CLAUDE_API_KEY=
+MINDCODE_OPENAI_API_KEY=
+MINDCODE_DEEPSEEK_API_KEY=
+```
+
+默认走官方端点。若要用中转，显式设置对应 `MINDCODE_*_BASE_URL`。  
+`.env` 不会进 Git。误提交后立即吊销，见 `docs/refactor/04_SECRET_REMEDIATION_PLAN.md`。
 
 ### LSP配置
 
@@ -326,30 +321,19 @@ rustup component add rust-analyzer
 
 ## 📚 更多文档
 
-- `MASTER_PLAN.md` - 详细开发计划
-- `ARCHITECTURE.md` - 架构文档
-- `EXECUTION_COMPLETE.md` - 执行报告
-- `docs/` - API文档
+- [README.md](README.md) — 密钥约定与安全要求
+- [docs/refactor/03_REFACTOR_ROADMAP.md](docs/refactor/03_REFACTOR_ROADMAP.md) — 重构路线图
+- [docs/refactor/01_BUG_AND_RISK_REGISTER.md](docs/refactor/01_BUG_AND_RISK_REGISTER.md) — 已知风险
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 架构说明（部分过时）
 
 ---
 
-## 🎉 开始使用
+## 开始使用
 
 ```bash
-# 克隆项目
-git clone https://github.com/your-repo/MindCode.git
-cd MindCode
-
-# 安装依赖
+git clone https://github.com/Oct7love/MindCode-IDE.git
+cd MindCode-IDE
 npm install
-
-# 启动开发
+cp .env.example .env
 npm run dev
 ```
-
-**享受AI原生的编程体验!** 🚀
-
----
-
-*更新时间: 2026-02-04*  
-*版本: v0.2.0*

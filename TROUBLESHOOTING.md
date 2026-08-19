@@ -159,16 +159,12 @@ npm install -g typescript-language-server typescript
 
 ## 📝 当前状态总结
 
-### ✅ 已完成 (92%)
+### 开发中（不要当作 92% / 生产就绪）
 
-- ✅ LSP系统完整实现
-- ✅ 调试器完整实现
-- ✅ 所有UI组件创建
-- ✅ IPC通信完善
-- ✅ 性能优化(除懒加载)
-- ✅ Bug修复系统
-- ✅ 测试覆盖
-- ✅ 文档完善
+- 编辑器打开 / 切 tab / 保存：M5 已修并有回归
+- LSP、调试器、插件市场、GitHub、协作等：代码存在，但不少路径未接线或为占位
+- 测试：Vitest + 部分 Electron e2e；CI 跑 lint/test/build，不跑 e2e
+- 文档：以 `docs/refactor/` 为准，根目录营销文档正在纠偏
 
 ### ⚠️ 小问题
 

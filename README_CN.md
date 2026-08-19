@@ -1,14 +1,14 @@
-# 🎊 MindCode - 超越Cursor的AI原生IDE
+# MindCode — AI 原生代码编辑器
 
-> **版本**: v0.2.0  
-> **状态**: 🚀 **生产就绪**  
-> **完成度**: 92%
+> **版本**: `package.json` 为 **0.1.0**（文档里出现的 0.2.0 / 0.3.0 已过时）  
+> **状态**: **开发中**，可本地 `npm run dev` 启动；**不是**生产就绪、也未提供可安装发行包  
+> **事实来源**: 以当前代码和 `docs/refactor/` 为准，不要把下文旧功能清单当成已全部落地
 
 ---
 
 ## 🌟 项目亮点
 
-### 🏆 已超越Cursor的功能
+### 已实现或规划中的能力（清单不等于全部可用）
 
 1. **多AI模型支持** (7个模型)
    - Claude (Opus 4.5, Sonnet 4.5)
@@ -42,7 +42,7 @@
 
 ---
 
-## ✨ 核心功能 (对标Cursor)
+## ✨ 核心功能清单（历史文档，含未完成项）
 
 ### 编辑器 (95%)
 - ✅ Monaco Editor 内核
@@ -103,9 +103,10 @@
 ### 安装
 
 ```bash
-git clone https://github.com/your-repo/MindCode.git
-cd MindCode
+git clone https://github.com/Oct7love/MindCode-IDE.git
+cd MindCode-IDE
 npm install
+cp .env.example .env   # 按需填入 MINDCODE_*_API_KEY，不要改源码
 ```
 
 ### 启动
@@ -185,29 +186,10 @@ npm run dist:win
 
 ---
 
-## 🎯 与Cursor对比
+## 🎯 当前阶段（请勿当作完成度）
 
-### 功能完整性: 92% ✅
-
-```
-编辑器:   █████████░ 95%
-LSP:      █████████░ 95% ✨
-调试器:   █████████░ 90% ✨
-AI功能:   █████████░ 95%
-Git:      █████████░ 90%
-性能:     █████████░ 90%
-```
-
-### AI能力: 120% 🏆 (超越)
-
-```
-多模型:   ██████████ 100% (Cursor: 0%)
-AI模式:   ██████████ 100% (Cursor: 0%)
-AI审查:   ██████████ 100% (Cursor: 0%)
-智能学习: ██████████ 100% (Cursor: 0%)
-```
-
-**结论: MindCode在AI能力上全面超越Cursor!**
+编辑器核心路径（打开 / 编辑 / 切 tab / 保存）可用，并有 M5 回归。  
+LSP、调试器、插件市场、GitHub、协作、SSH、崩溃恢复等界面仍有半实现或未接线部分，详见 `docs/refactor/01_BUG_AND_RISK_REGISTER.md`。
 
 ---
 
@@ -215,7 +197,7 @@ AI审查:   ██████████ 100% (Cursor: 0%)
 
 | 层级 | 技术 |
 |------|------|
-| 桌面框架 | Electron 40 |
+| 桌面框架 | Electron 30.5.1 |
 | 前端框架 | React 18 + TypeScript 5 |
 | 编辑器 | Monaco Editor |
 | 状态管理 | Zustand |
@@ -278,19 +260,20 @@ export const LANGUAGE_SERVERS = {
 };
 ```
 
-### AI模型配置
+### AI 密钥配置
 
-编辑 `src/core/ai/config.ts`:
+**禁止**把 API Key 写进 `src/core/ai/config.ts` 或任何源码。`config.ts` 只从环境变量读取。
 
-```typescript
-export const defaultAIConfig = {
-  claude: {
-    apiKey: 'sk-ant-...',
-    model: 'claude-sonnet-4-5'
-  },
-  // ...
-};
+```bash
+cp .env.example .env
+# 编辑 .env，至少配置一个：
+# MINDCODE_CLAUDE_API_KEY=
+# MINDCODE_OPENAI_API_KEY=
+# MINDCODE_DEEPSEEK_API_KEY=
 ```
+
+`.env` 已被 `.gitignore` 忽略。默认 Base URL 是各厂商官方端点；中转必须显式设置对应的 `MINDCODE_*_BASE_URL`。
+若不慎提交密钥：立即吊销，并参见 `docs/refactor/04_SECRET_REMEDIATION_PLAN.md`。
 
 ---
 
@@ -312,10 +295,10 @@ npm run test:coverage
 ## 📚 文档
 
 - [快速开始](QUICK_START.md)
-- [开发计划](MASTER_PLAN.md)
-- [架构文档](docs/ARCHITECTURE.md)
-- [API文档](docs/API.md)
-- [最终报告](FINAL_REPORT.md)
+- [英文 README](README.md)
+- [重构路线图](docs/refactor/03_REFACTOR_ROADMAP.md)
+- [风险登记](docs/refactor/01_BUG_AND_RISK_REGISTER.md)
+- [架构说明](docs/ARCHITECTURE.md)（部分过时，以代码为准）
 
 ---
 
@@ -345,44 +328,12 @@ MIT License
 
 ---
 
-## 🎊 项目成就
-
-### ✅ 今日完成 (2026-02-04)
-
-- ✅ **LSP完整实现** (6文件, 1,013行)
-- ✅ **调试器完整实现** (8文件, 1,096行)
-- ✅ **性能优化** (3文件, 442行)
-- ✅ **Bug修复** (1文件, 268行)
-- ✅ **测试覆盖** (3套件, 20+用例)
-- ✅ **文档完善** (8份文档)
-
-**总计: 26个新文件, 5,653行新代码, 1天完成**
-
-### 🏆 对标成果
-
-```
-MindCode vs Cursor 综合评分:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MindCode:  98.75/100 🏆
-Cursor:    95.00/100
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-结论: MindCode已超越Cursor!
-```
-
----
-
-## 🚀 立即开始使用
+## 🚀 立即开始
 
 ```bash
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-**享受超越Cursor的AI编程体验!** 🎉
-
----
-
-*Made with ❤️ by MindCode Team*  
-*Powered by Claude Sonnet 4.5*  
-*Version: 0.2.0*  
-*Date: 2026-02-04*
+发行打包（`npm run dist`）当前缺少 `resources/icons`，且打包后无法按开发路径读取 `.env`。在这些修好之前，请只作本地开发使用。

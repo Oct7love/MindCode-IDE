@@ -33,13 +33,18 @@
 - **修复**：`enableEmbeddings` 默认 **false**；首次开启弹窗告知数据将发往哪个端点；未配置 key 时直接短路不发请求（而非靠异常吞掉）。
 - **验证**：全新配置下索引工作区，抓包确认无 embedding 出站请求；开启开关前有明确告知弹窗。
 
-### P0-4 · CodeEditor 陈旧闭包：切 tab 把新文件内容写进上一个文件的缓冲，数据破坏 ✅CONFIRMED
+### P0-4 · CodeEditor 陈旧闭包：切 tab 把新文件内容写进上一个文件的缓冲，数据破坏 ✅CLOSED（2026-08-19）
 - **影响**：多文件切换场景（IDE 核心操作），静默污染编辑缓冲，autoSave 生效时可写盘。
 - **位置**：`src/renderer/components/CodeEditor.tsx:474`（`onDidChangeModelContent` 回调）、`:582`（init effect 依赖 `[]`）、`App.tsx:577`、`useEditorFiles.ts:99`。
 - **证据**：init effect 依赖数组为空 `[]`，其内 `editor.onDidChangeModelContent(() => onContentChange?.(editor.getValue()))` 闭包捕获**挂载时**的 `onContentChange`；切文件用 `setValue` 触发该事件，但回调仍指向旧 `activeFileId`，把新文件内容写进上一个文件的 state 并置 `isDirty=true`。全文件无 ref 同步、无程序化变更抑制标志。
 - **风险**：A 文件被静默改写成 B 的内容，autoSave 可进一步落盘 → 用户代码丢失。这是数据破坏，故对抗验证将其从 P1 上调为 **P0**。
 - **修复**：用 ref 保存最新 `onContentChange/onSave`（每次渲染同步 ref），监听器内调 `ref.current`；或在 `setValue` 前后用标志位抑制程序化变更触发 `onDidChangeModelContent`。
 - **验证**：打开 A、B 两文件，在 A 编辑后切到 B 再切回，A 内容不被污染；autoSave 开启下多次切换后逐文件校验磁盘内容正确。
+- **关闭说明（2026-08-19）**：
+  - 修复：`onContentChangeRef`/`onSaveRef`；程序化写入 `isProgrammaticChangeRef`；dirty 用 lastSaved 基线；每文件独立 Monaco model（`setModel`）；dirty tab 关闭确认；`saveAllFiles`。
+  - 回归：`useEditorFiles.test.ts`（9）、`CodeEditor.test.tsx`（回调/抑制/独立 model）、`editor-tab-integrity.spec.ts`（Electron：缓冲隔离、保存路径、假 dirty、关闭确认、undo）。
+  - 当日实跑：`npm run test` 291 通过；`npm run test:e2e` 18 通过。
+  - **仍开放**：`useEditorFiles` / `useFileStore` 双真源（P1-6）；`autoSave` 未接线。
 
 ---
 
@@ -174,11 +179,11 @@
 | P3-3 | 无关目录混入仓库（python_examples、.kiro 空 tasks.md） | `python_examples/`、`.kiro/` | 移出仓库或归入 docs/examples 说明用途 |
 | P3-4 | .prettierrc/.editorconfig 强制 CRLF 但无 .gitattributes，跨平台行尾抖动 | `.prettierrc:9` | 改 `endOfLine:lf` + 加 `.gitattributes (* text=auto eol=lf)` |
 | P3-5 | ESLint 规则偏弱（no-explicit-any 仅 warn 且无 --max-warnings；no-empty-catch 笔误规则） | `eslint.config.js:31/46` | any 升 error 或 lint 加 --max-warnings=0；修 no-empty 配置 |
-| P3-6 | Monaco 单 model + setValue 切文件，丢每文件 undo/滚动/选区 | `CodeEditor.tsx:582/363` | 每文件独立 model，切换用 setModel |
+| P3-6 | ~~Monaco 单 model + setValue 切文件~~ ✅CLOSED 随 P0-4（每文件独立 model） | `CodeEditor.tsx` | — |
 | P3-7 | 轮询：DebugPanel 每 1s、StatusBar 每 5s IPC 轮询 | `DebugPanel.tsx:28`、`StatusBar.tsx:136` | 改事件驱动或仅活动会话时轮询 |
-| P3-8 | 占位/凑数断言（`expect(true).toBe(true)`、测内联函数） | `requestPipeline.test.ts:68`、`example.test.ts:96` | 改为断言真实源码行为，删无价值用例 |
-| P3-9 | 文档系统性夸大与矛盾：生产就绪/92%、版本号、API.md 幽灵接口、模型清单 | `README*.md`、`docs/API.md`、`docs/ARCHITECTURE_AUDIT.md` | 以单一事实源为准；删无依据结论；API.md 对齐 preload 实际契约 |
-| P3-10 | 无 LICENSE 文件但声明 MIT；多处文档链接断链 | `README.md:164` | 补 LICENSE；修断链 |
+| P3-8 | 占位/凑数断言 | `requestPipeline.test.ts` 空断言已改为真实并发上限（2026-08-19）；`example.test.ts` 内联 debounce 仍在 | 删无价值用例 |
+| P3-9 | 文档系统性夸大与矛盾 | `README*.md` / `QUICK_START.md` 已去掉「生产就绪/92%」和源码填 Key 指引（2026-08-19）；`docs/API.md` 幽灵接口、模型清单仍待对齐 | API.md 对齐 preload |
+| P3-10 | 无 LICENSE 文件但声明 MIT；断链 | README 已标明 LICENSE 未入库；`MASTER_PLAN.md`/`FINAL_REPORT.md` 死链已改为 `docs/refactor/` | 补 LICENSE |
 
 ---
 
