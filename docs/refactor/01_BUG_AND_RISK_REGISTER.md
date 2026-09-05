@@ -74,13 +74,10 @@
 - **修复**：① dotenv 移入 dependencies（或改用 electron 内建方式）；② `.env` 路径用 `app.isPackaged` 分支；③ 打包场景改为从 `userData` 读用户配置 + 设置 UI + `safeStorage`/keytar 存储。
 - **验证**：`npm run pack` 后启动发行版，能读到配置且不崩溃；设置 UI 可输入 key。
 
-### P1-4 · AI 停止/取消是假取消，provider 请求从不 abort，token 继续烧 ✅CONFIRMED
+### P1-4 · AI 停止/取消是假取消，provider 请求从不 abort，token 继续烧 ✅CLOSED
 - **影响**：所有 AI 流式请求。
-- **位置**：`src/main/preload.ts:84/109`、`ai-handlers.ts:295`、`useChatEngine.ts:1276`、`providers/claude.ts:58`。
-- **证据**：preload `chatStream` 内部自造 `requestId` 不外泄，cleanup 仅 `removeListener`；`ai-stream-cancel` handler 只置 `cancelled` 标志 + 销毁 buffer，`activeStreams` 从不保存请求句柄/AbortController，底层 provider 请求继续跑到服务端完成。整条 AbortController 链缺失。
-- **风险**：点"停止"后 UI 解锁但上游持续计费/占用并发槽；工具循环模式下 stop 只能等当前一轮返回。
-- **修复**：每个 provider 的 chat/chatStream/chatWithTools 接入 `AbortSignal`；`ai-handlers` 在 activeStreams 保存 `AbortController`，cancel 时 `controller.abort()` + `res.destroy()`；preload 把 requestId 返回给调用方以便 cancel 可达。
-- **验证**：发起长响应后点停止，抓包确认上游连接被 RST/关闭，token 计数停止增长。
+- **关闭说明**：`ai-stream-sessions` 为每个 requestId 保存 `AbortController`。preload cleanup 先摘监听再发 `ai-stream-cancel`。cancel 调用 `abort()`，OpenAI 系 SDK 走 `signal`，Claude/Codesuc 销毁/abort 底层请求，GLM 调 `stream.abort()`。`classifyError` 将 AbortError 标为 `cancelled`（不重试、不降级）。窗口关闭 `abortAllStreamSessions()`。
+- **验证**：`ai-stream-sessions` 4 测（abort 置位、幂等）；`llm-client-abort` mock provider 收到 abort 且无 fallback/retry。未做真实厂商抓包。
 
 ### P1-5 · Composer 盲写整文件：从不读原文，假 diff，内存 checkpoint ✅CONFIRMED
 - **影响**：Composer 多文件编辑（数据破坏面）。

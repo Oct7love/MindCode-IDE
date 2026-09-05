@@ -77,18 +77,21 @@ export class GeminiProvider extends BaseAIProvider {
   async chatStream(messages: ChatMessage[], callbacks: StreamCallbacks): Promise<void> {
     let fullText = "";
     try {
-      const stream = await this.client.chat.completions.create({
-        model: this.getModel(),
-        max_tokens: this.getMaxTokens(),
-        temperature: this.getTemperature(),
-        stream: true,
-        messages: messages
-          .filter((m) => m.role !== "tool")
-          .map((m) => ({
-            role: m.role as "system" | "user" | "assistant",
-            content: m.content,
-          })) as ChatCompletionMessageParam[],
-      });
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.getModel(),
+          max_tokens: this.getMaxTokens(),
+          temperature: this.getTemperature(),
+          stream: true,
+          messages: messages
+            .filter((m) => m.role !== "tool")
+            .map((m) => ({
+              role: m.role as "system" | "user" | "assistant",
+              content: m.content,
+            })) as ChatCompletionMessageParam[],
+        },
+        { signal: callbacks.signal },
+      );
       for await (const chunk of stream) {
         const token = chunk.choices[0]?.delta?.content || "";
         if (token) {
@@ -152,14 +155,17 @@ export class GeminiProvider extends BaseAIProvider {
         }
       }
       console.log("[Gemini] Requesting stream...");
-      const stream = await this.client.chat.completions.create({
-        model: this.getModel(),
-        max_tokens: this.getMaxTokens(),
-        temperature: this.getTemperature(),
-        stream: true,
-        messages: openaiMsgs as ChatCompletionMessageParam[],
-        tools: openaiTools,
-      });
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.getModel(),
+          max_tokens: this.getMaxTokens(),
+          temperature: this.getTemperature(),
+          stream: true,
+          messages: openaiMsgs as ChatCompletionMessageParam[],
+          tools: openaiTools,
+        },
+        { signal: callbacks.signal },
+      );
       console.log("[Gemini] Stream received, processing chunks...");
       const toolCallMap = new Map<number, { id: string; name: string; args: string }>();
       let chunkCount = 0;

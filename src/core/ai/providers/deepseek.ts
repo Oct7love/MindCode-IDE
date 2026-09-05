@@ -91,13 +91,16 @@ export class DeepSeekProvider extends BaseAIProvider {
         });
 
       resetTimeout(); // 开始计时
-      const stream = await this.client.chat.completions.create({
-        model: this.getModel(),
-        max_tokens: this.getMaxTokens(),
-        temperature: this.getTemperature(),
-        stream: true,
-        messages: openaiMsgs as ChatCompletionMessageParam[],
-      });
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.getModel(),
+          max_tokens: this.getMaxTokens(),
+          temperature: this.getTemperature(),
+          stream: true,
+          messages: openaiMsgs as ChatCompletionMessageParam[],
+        },
+        { signal: callbacks.signal },
+      );
 
       for await (const chunk of stream) {
         resetTimeout(); // 每收到一个 chunk 重置超时
@@ -175,14 +178,17 @@ export class DeepSeekProvider extends BaseAIProvider {
       }
 
       resetTimeout(); // 开始计时
-      const stream = await this.client.chat.completions.create({
-        model: this.getModel(),
-        max_tokens: this.getMaxTokens(),
-        temperature: this.getTemperature(),
-        stream: true,
-        messages: openaiMsgs as ChatCompletionMessageParam[],
-        tools: openaiTools,
-      });
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.getModel(),
+          max_tokens: this.getMaxTokens(),
+          temperature: this.getTemperature(),
+          stream: true,
+          messages: openaiMsgs as ChatCompletionMessageParam[],
+          tools: openaiTools,
+        },
+        { signal: callbacks.signal },
+      );
       const toolCallMap = new Map<number, { id: string; name: string; args: string }>();
 
       for await (const chunk of stream) {

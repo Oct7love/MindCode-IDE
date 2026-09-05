@@ -39,6 +39,7 @@ export interface StreamCallbacks {
   onThinkingComplete?: () => void; // 思考完成回调
   onComplete: (fullText: string) => void;
   onError: (error: Error) => void;
+  signal?: AbortSignal;
 }
 
 export interface AIProvider {

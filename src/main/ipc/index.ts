@@ -4,7 +4,7 @@
  * 统一注册所有 IPC 处理器模块。
  */
 export { registerFSHandlers } from "./fs-handlers";
-export { registerAIHandlers, warmupAIProviders } from "./ai-handlers";
+export { registerAIHandlers, warmupAIProviders, abortAllStreamSessions } from "./ai-handlers";
 export { registerGitHandlers } from "./git-handlers";
 export { registerTerminalHandlers } from "./terminal-handlers";
 export { registerSettingsHandlers, getSettingsCache } from "./settings-handlers";

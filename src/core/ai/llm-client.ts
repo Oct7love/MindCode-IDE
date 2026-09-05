@@ -37,7 +37,14 @@ export const LLM_CONFIG = {
 };
 
 // === 错误分类 ===
-export type LLMErrorType = "rate_limit" | "capacity" | "timeout" | "network" | "auth" | "unknown";
+export type LLMErrorType =
+  | "rate_limit"
+  | "capacity"
+  | "timeout"
+  | "network"
+  | "auth"
+  | "cancelled"
+  | "unknown";
 export interface LLMError {
   type: LLMErrorType;
   message: string;
@@ -48,8 +55,17 @@ export interface LLMError {
 
 export function classifyError(error: unknown): LLMError {
   const err = error as Record<string, unknown> | undefined;
+  const name = String(err?.name || "");
   const msg = String(err?.message || error || "").toLowerCase();
   const code = err?.status || err?.statusCode || (msg.match(/(\d{3})/) || [])[1];
+  if (
+    name === "AbortError" ||
+    msg.includes("aborted") ||
+    msg.includes("aborterror") ||
+    (typeof err?.code === "string" && err.code === "ABORT_ERR")
+  ) {
+    return { type: "cancelled", message: "请求已取消", retryable: false };
+  }
   if (code === 429 || msg.includes("rate") || msg.includes("limit") || msg.includes("too many"))
     return {
       type: "rate_limit",
@@ -197,6 +213,7 @@ export interface LLMRequest {
   tools?: ToolSchema[];
   userId?: string;
   requestId?: string;
+  signal?: AbortSignal;
 }
 export interface LLMResponse {
   success: boolean;
@@ -291,6 +308,10 @@ export class LLMClient extends EventEmitter {
     const triedModels = new Set<string>();
     let currentModel = request.model;
     const tryStream = async (): Promise<void> => {
+      if (request.signal?.aborted) {
+        callbacks.onError({ type: "cancelled", message: "请求已取消", retryable: false });
+        return;
+      }
       triedModels.add(currentModel);
       if (this.breaker.isOpen(currentModel)) {
         const fallback = getFallbackModel(currentModel, triedModels);
@@ -322,6 +343,7 @@ export class LLMClient extends EventEmitter {
             const wrappedCallbacks = {
               onToken: callbacks.onToken,
               onToolCall: callbacks.onToolCall || (() => {}),
+              signal: request.signal,
               onComplete: (text: string) => {
                 this.breaker.recordSuccess(currentModel);
                 callbacks.onComplete(text, {
@@ -332,6 +354,11 @@ export class LLMClient extends EventEmitter {
               },
               onError: async (error: Error) => {
                 const classified = classifyError(error);
+                if (classified.type === "cancelled") {
+                  callbacks.onError(classified);
+                  resolve();
+                  return;
+                }
                 this.breaker.recordFailure(currentModel);
                 if (classified.suggestFallback) {
                   const fallback = getFallbackModel(currentModel, triedModels);
@@ -387,6 +414,8 @@ export function getUserFriendlyError(error: LLMError): string {
       return "🌐 网络连接失败，请检查：1) 网络连接 2) 代理设置 3) API 地址";
     case "auth":
       return "🔑 API 密钥无效，请在设置中检查 API Key 配置";
+    case "cancelled":
+      return "已停止";
     default:
       return error.message || "❌ 请求失败，请稍后重试";
   }

@@ -65,6 +65,13 @@ export class GLMProvider extends BaseAIProvider {
         system: systemMsg,
         messages: chatMsgs as MessageParam[],
       });
+      if (callbacks.signal) {
+        const onAbort = () => {
+          if (typeof stream.abort === "function") stream.abort();
+        };
+        if (callbacks.signal.aborted) onAbort();
+        else callbacks.signal.addEventListener("abort", onAbort, { once: true });
+      }
       for await (const event of stream) {
         if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
           fullText += event.delta.text;
@@ -143,6 +150,13 @@ export class GLMProvider extends BaseAIProvider {
         messages: chatMsgs as MessageParam[],
         tools: glmTools,
       });
+      if (callbacks.signal) {
+        const onAbort = () => {
+          if (typeof stream.abort === "function") stream.abort();
+        };
+        if (callbacks.signal.aborted) onAbort();
+        else callbacks.signal.addEventListener("abort", onAbort, { once: true });
+      }
       let currentToolUse: { id: string; name: string; input: string } | null = null;
       for await (const event of stream) {
         if (event.type === "content_block_start" && event.content_block.type === "tool_use") {

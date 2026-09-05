@@ -761,6 +761,10 @@ ${thinkingProtocol}`;
         return true; // 返回 true 表示已入队
       }
 
+      stopStreamRef.current?.();
+      stopStreamRef.current = null;
+      abortRef.current = false;
+
       let finalContent = userContent;
       if (contexts.length > 0) {
         finalContent =

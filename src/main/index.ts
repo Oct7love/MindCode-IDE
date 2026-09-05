@@ -29,6 +29,7 @@ import {
   registerDashboardHandlers,
   registerPluginHandlers,
   warmupAIProviders,
+  abortAllStreamSessions,
   type IPCContext,
 } from "./ipc";
 import { initLogging } from "./log-setup";
@@ -520,7 +521,12 @@ app.whenReady().then(() => {
   warmupAIProviders();
 });
 
+app.on("before-quit", () => {
+  abortAllStreamSessions();
+});
+
 app.on("window-all-closed", () => {
+  abortAllStreamSessions();
   if (process.platform !== "darwin") {
     app.quit();
   }
