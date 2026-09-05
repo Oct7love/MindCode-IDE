@@ -156,7 +156,7 @@
 
 **涉及文件**：`src/test/**`、`.github/workflows/ci.yml`、`vitest.config.ts`。
 
-**任务列表**：① P2-25 核心链路单测（executor/rollback/llm/fs）；② P2-26/27 删死组件测试、重命名 integration；③ P2-28 e2e 进 CI（build+xvfb）；④ IPC 契约测试；⑤ gitleaks pre-commit + CI；⑥ coverage 阈值门禁。
+**任务列表**：① P2-25 核心链路单测（executor/rollback/llm/fs）；② P2-26/27 删死组件测试、重命名 integration；③ P2-28 e2e 进 CI（build+xvfb）✅；④ IPC 契约测试；⑤ gitleaks pre-commit + CI；⑥ coverage 阈值门禁。
 
 **验收**：核心模块有测试；CI 跑 lint+typecheck+unit+integration+e2e+audit+gitleaks 全绿。
 **验证命令**：CI 全流程。

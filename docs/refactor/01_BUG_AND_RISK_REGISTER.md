@@ -166,7 +166,7 @@
 | P2-25 | 产品核心链路（AI 调用/IPC/Agent 文件写入）0 测试，256 用例集中外围 | `ai/tools/executor.ts`、`rollback.ts`、`fs-handlers.ts`、`llm-client.ts` | 优先补 executor/rollback 写入回滚单测 + fs 路径穿越 + llm 降级 |
 | P2-26 | StatusBar.test 测死组件 StatusBarEnhanced，生产 StatusBar 0 测试 | `test/components/StatusBar.test.tsx:7` | 删死组件、测试改指生产 StatusBar |
 | P2-27 | integration 目录名不副实（jsdom+mock 单测冒充集成） | `test/integration/*` | 重命名 unit 或补真跨进程集成 |
-| P2-28 | e2e 从不进 CI，多个条件断言元素缺失时静默通过 | `.github/workflows/ci.yml:35`、`app-launch.spec.ts:36` | e2e（至少 app-launch）纳入 CI（build+xvfb）；去条件断言 |
+| P2-28 | e2e 从不进 CI，多个条件断言元素缺失时静默通过 | `.github/workflows/ci.yml` e2e job、`file-operations.spec.ts` | **CLOSED**：Linux xvfb Electron e2e 已进 CI；发现全部 `src/test/e2e/*.spec.ts`、禁止 skip/fixme、失败上传 report/trace；Explorer/Search/命令面板/版本号改为硬断言。M5 切 tab 与 Open VSX CSP 规格随 PR #3/#4 合入后自动被同一 job 拾取。 |
 
 ---
 

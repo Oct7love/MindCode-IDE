@@ -8,8 +8,6 @@ on:
       - main
       - develop
   pull_request:
-    branches:
-      - main
 
 jobs:
   secret-scan:
@@ -66,6 +64,108 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run test
+
+  # 真实 Electron + Playwright。发现 src/test/e2e/*.spec.ts 全部用例，不按名字过滤。
+  # 只跑 Linux+xvfb；与本地 macOS/Windows 规格相同，平台差异见 PR 说明。
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # 只缓存 Electron 官方 zip，不缓存 node_modules/electron/dist，避免把缺失二进制当成命中。
+      - name: Cache Electron download
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install xvfb and Electron OS libraries
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            xvfb \
+            libnss3 \
+            libnspr4 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libgtk-3-0 \
+            libx11-xcb1 \
+            libxss1 \
+            libxtst6 \
+            fonts-liberation
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libasound2t64 \
+            || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libasound2
+
+      - run: npm ci
+
+      - name: Verify Electron binary exists
+        run: |
+          set -euo pipefail
+          DIST="node_modules/electron/dist"
+          if [ ! -x "$DIST/electron" ] && [ ! -d "$DIST/Electron.app" ]; then
+            echo "Electron binary missing; running installer"
+            ls -la node_modules/electron || true
+            ls -la "$DIST" || true
+            node node_modules/electron/install.js
+          fi
+          if [ ! -x "$DIST/electron" ] && [ ! -d "$DIST/Electron.app" ]; then
+            echo "ERROR: Electron binary still missing after installer"
+            ls -la "$DIST" || true
+            exit 1
+          fi
+          echo "Electron dist:"
+          ls -la "$DIST"
+
+      - name: Discover e2e specs (no skips)
+        run: |
+          set -euo pipefail
+          mapfile -t SPECS < <(find src/test/e2e -name '*.spec.ts' | sort)
+          echo "Discovered ${#SPECS[@]} spec file(s):"
+          printf '  %s\n' "${SPECS[@]}"
+          if [ "${#SPECS[@]}" -lt 1 ]; then
+            echo "ERROR: no e2e specs found under src/test/e2e"
+            exit 1
+          fi
+          if grep -RInE 'test\.(skip|fixme)\(|describe\.(skip|fixme)\(' src/test/e2e --include='*.ts'; then
+            echo "ERROR: e2e must not skip/fixme tests to stay green"
+            exit 1
+          fi
+
+      - run: npm run build
+
+      - name: Run Electron e2e under xvfb
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" npm run test:e2e
+
+      - name: Upload e2e artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7
 
   build:
     needs: [secret-scan, lint, test]

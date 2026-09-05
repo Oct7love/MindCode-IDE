@@ -56,7 +56,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh', zIndex: 1000 }} onClick={onClose}>
+    <div data-testid="command-palette" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh', zIndex: 1000 }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ width: '50vw', maxWidth: 600, background: 'var(--color-bg-elevated)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
         {/* 搜索框 */}
         <div style={{ padding: 12, borderBottom: '1px solid var(--color-border)' }}>

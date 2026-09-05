@@ -15,6 +15,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ tab, onTabChange }) =>
         className={`activity-action${tab === "files" ? " active" : ""}`}
         onClick={() => onTabChange("files")}
         title="Explorer"
+        data-testid="activity-explorer"
       >
         <AppIcons.Files />
       </button>
@@ -22,6 +23,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({ tab, onTabChange }) =>
         className={`activity-action${tab === "search" ? " active" : ""}`}
         onClick={() => onTabChange("search")}
         title="Search"
+        data-testid="activity-search"
       >
         <AppIcons.Search />
       </button>
