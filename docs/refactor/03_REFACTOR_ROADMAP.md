@@ -109,14 +109,17 @@
 
 ## M5 · 编辑器与工作区稳定化
 
+**状态（2026-08-19）**：P0-4 **已关闭**。① ref + 抑制、② 每文件独立 model、切 tab e2e 已落地。  
+**仍开放**：split-brain（`useEditorFiles` / `useFileStore`）；`autoSave` 未接线。
+
 **目标**：修 P0-4 切 tab 数据破坏、每文件 model、文件树/tab/保存/搜索稳定。
 
 **涉及文件**：`CodeEditor.tsx`、`useEditorFiles`/editorStore、`App.tsx`。
 
-**任务列表**：① **P0-4** onContentChange ref 化 + 程序化变更抑制；② P3-6 每文件独立 model（setModel 切换，保 undo/滚动/选区）；③ 保存/搜索链路回归。
+**任务列表**：① **P0-4** onContentChange ref 化 + 程序化变更抑制 ✅；② P3-6 每文件独立 model（setModel 切换，保 undo/滚动/选区）✅；③ 保存/搜索链路回归（e2e 已覆盖保存路径；autoSave 未接线）。
 
-**验收**：切 tab 不污染缓冲（回归测试）；每文件 undo 独立；autoSave 不写错文件。
-**验证命令**：`npm run test:e2e`（切 tab 回归用例）。
+**验收**：切 tab 不污染缓冲（回归测试）；每文件 undo 独立。autoSave 不写错文件 — **未做**。
+**验证命令**：`npm run test` && `npm run test:e2e`（含 `editor-tab-integrity.spec.ts`）。
 **回滚**：editor 层改动，revert 恢复。
 
 ---

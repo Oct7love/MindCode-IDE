@@ -1,5 +1,9 @@
 # M5 · 编辑器状态完整性审查（P0-4）
 
+> **P0-4 状态：✅ CLOSED（2026-08-19）**  
+> 关闭证据：`da93eba` + `7f55f97`；单测 `useEditorFiles` / `CodeEditor`；e2e `editor-tab-integrity.spec.ts`（缓冲隔离、保存路径、假 dirty、关闭确认、独立 undo）。  
+> 未纳入关闭：split-brain（`useEditorFiles` vs `useFileStore`）、`autoSave` 接线、外部文件冲突检测。
+
 > 日期：2026-07-07 · 分支 `refactor/m5-editor-state-integrity` · 基点 main `0e2a614`
 > 方法：4 路并行只读审查（buffer/state · Monaco 生命周期 · 保存逻辑 · tab/关闭/外部变更）+ 本人一手核实。
 > 目标：修复 P0-4「编辑器切 tab 数据破坏」，把编辑器核心数据流修稳。
@@ -107,8 +111,18 @@ autoSave.dirtyFiles + localStorage ───────────────
 
 ## 8. 不做事项（M5 明确不碰，记为后续）
 
-- **split-brain 收敛**（①②统一真源）：涉及 AI 面板 / StatusBar / Composer 大面积改动，属跨切面重构，**本次不做**（另立 PR；边界禁止碰 AI）。
-- **每文件独立 Monaco model**（保留 undo/滚动/选区）：更彻底但更大，本次用 ref+suppress 先根治**数据破坏**；model-per-tab 记为后续优化。
-- **外部文件变更 watcher / 冲突检测**：需暴露 fs.watch / 接 chokidar 事件，本次不做，记为后续。
-- **autoSave 接线 / Editor.tsx 死代码清理 / fileWatcher.ts 死代码**：本次不动（避免无关重构）。
+- **split-brain 收敛**（①②统一真源）：涉及 AI 面板 / StatusBar / Composer 大面积改动，属跨切面重构，**仍开放**（另立 PR）。
+- ~~**每文件独立 Monaco model**~~：**已在关闭提交落地**（`CodeEditor` 按 path 持有 model，切 tab `setModel`）。
+- **外部文件变更 watcher / 冲突检测**：需暴露 fs.watch / 接 chokidar 事件，仍开放。
+- **autoSave 接线 / Editor.tsx 死代码清理 / fileWatcher.ts 死代码**：仍开放。
 - 不碰 AI Provider/Model/SDK、不接 key/network、不做 UI 美化、不改主题。
+
+## 9. 关闭记录（2026-08-19）
+
+| 项 | 结果 |
+|---|---|
+| 陈旧闭包 / 假 dirty / 存错文件 | 已修，组件测试覆盖 ref + 抑制 |
+| 每文件独立 model / undo | 已修，e2e 覆盖 |
+| 状态层 dirty/save/close | `useEditorFiles.test.ts` |
+| Electron 切 tab | `src/test/e2e/editor-tab-integrity.spec.ts` |
+| 验证 | lint 0 error；build 通过；unit 291；e2e 18 |

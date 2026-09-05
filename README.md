@@ -7,7 +7,7 @@
 
 ## ✨ 特性
 
-### 编辑器 (95% 完成)
+### 编辑器
 - 🎨 Monaco Editor 内核 - VS Code 同款编辑体验
 - 📁 文件树 + 多标签 + 分屏
 - 🔍 全局搜索 + 符号跳转
@@ -16,7 +16,7 @@
 - 🔗 **LSP 语言服务器** - 定义跳转/类型提示/自动导入 ✨ **NEW**
 - 🐛 **完整调试器** - 断点/变量/调用栈/单步执行 ✨ **NEW**
 
-### AI 能力 (超越 Cursor)
+### AI 能力（开发中）
 - 💬 多模型对话 (Claude/GPT/Gemini/DeepSeek/GLM/Codesuc) - **7个模型**
 - ✨ 智能代码补全 (Ghost Text) - 多级缓存+预取+<100ms响应
 - 🔧 代码解释/修复/重构
@@ -28,7 +28,7 @@
 - 🔎 **AI代码审查** - 安全/性能/规范检查+一键修复
 - 🎯 **四种AI模式** - Chat/Plan/Agent/Debug
 
-### 开发工具 (90% 完成)
+### 开发工具（部分可用 / 部分未接线）
 - 🔀 Git 集成 (分支/提交/暂存/冲突解决)
 - 🐙 GitHub 集成 (PR/Issue/CI)
 - 🔌 插件系统
@@ -163,7 +163,7 @@ export function activate(api) {
 
 ## 🛠️ 技术栈
 
-- **框架**: Electron 40 + React 18 + TypeScript 5
+- **框架**: Electron 30.5.1 + React 18 + TypeScript 5
 - **编辑器**: Monaco Editor
 - **状态**: Zustand + React Context
 - **样式**: Tailwind CSS + CSS Variables
@@ -171,19 +171,16 @@ export function activate(api) {
 - **构建**: Vite + electron-builder
 - **测试**: Vitest + Testing Library
 
-## 📊 统计 (更新: 2026-02-04)
+## 📊 当前状态
 
-- 组件: 80+ (新增: LSP, 调试器, 性能优化)
-- Hooks: 25+
-- 类型定义: 60+
-- 代码行数: 55,000+
-- 测试覆盖: 25%
-- 完成度: **92%**
-- **状态: 生产就绪** ✅
+- **阶段**: 开发中。可本地 `npm run dev` / `npm run build`；**不是生产就绪**。
+- **发行**: `npm run dist` 因缺少 `resources/icons` 且打包后读不到 `.env`，尚不能当作安装包。
+- **已知风险**: 见 [docs/refactor/01_BUG_AND_RISK_REGISTER.md](docs/refactor/01_BUG_AND_RISK_REGISTER.md)。
+- 仓库暂无 `LICENSE` 文件。
 
 ## 📄 许可
 
-MIT License - 详见 [LICENSE](LICENSE)
+拟采用 MIT。正式 LICENSE 文件尚未入库。
 
 ## 🤝 贡献
 
