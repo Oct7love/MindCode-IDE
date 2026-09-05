@@ -28,6 +28,7 @@ import {
   registerIndexHandlers,
   registerDashboardHandlers,
   registerPluginHandlers,
+  registerMarketplaceHandlers,
   warmupAIProviders,
   abortAllStreamSessions,
   type IPCContext,
@@ -516,6 +517,7 @@ app.whenReady().then(() => {
   registerIndexHandlers(ipcContext);
   registerDashboardHandlers(ipcContext);
   registerPluginHandlers(ipcContext);
+  registerMarketplaceHandlers(ipcContext);
 
   // 并行预热 AI Provider
   warmupAIProviders();

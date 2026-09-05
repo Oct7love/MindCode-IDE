@@ -247,6 +247,19 @@ const mindcodeMock = {
     onFileIndexed: vi.fn().mockReturnValue(() => {}),
     onComplete: vi.fn().mockReturnValue(() => {}),
   },
+
+  marketplace: {
+    search: vi.fn().mockResolvedValue({
+      success: false,
+      error: "not mocked",
+      errorCode: "ERR_NETWORK",
+    }),
+    getExtension: vi.fn().mockResolvedValue({
+      success: false,
+      error: "not mocked",
+      errorCode: "ERR_NETWORK",
+    }),
+  },
 };
 
 Object.defineProperty(window, "mindcode", {
