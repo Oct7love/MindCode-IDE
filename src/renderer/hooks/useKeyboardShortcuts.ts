@@ -3,7 +3,7 @@ import { useUIStore, useFileStore, useAIStore } from '../stores';
 
 export function useKeyboardShortcuts() {
   const { openCommandPalette, closeCommandPalette, showCommandPalette, toggleAIPanel, toggleTerminal } = useUIStore();
-  const { activeFileId, closeFile, getActiveFile, openFiles } = useFileStore();
+  const { activeFileId, requestCloseFile, getActiveFile, openFiles } = useFileStore();
   const { createConversation } = useAIStore();
 
   useEffect(() => {
@@ -42,7 +42,12 @@ export function useKeyboardShortcuts() {
       }
       if (ctrl && e.key === 'w') { // Ctrl+W - 关闭当前文件
         e.preventDefault();
-        if (activeFileId) closeFile(activeFileId);
+        if (activeFileId) {
+          const res = requestCloseFile(activeFileId);
+          if (res.requiresConfirm && window.confirm("有未保存的更改，确定关闭？")) {
+            requestCloseFile(activeFileId, { force: true });
+          }
+        }
         return;
       }
       if (ctrl && e.key === 'n') { // Ctrl+N - 新建对话
@@ -59,5 +64,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeFileId, showCommandPalette, openCommandPalette, closeCommandPalette, toggleAIPanel, toggleTerminal, closeFile, createConversation]);
+  }, [activeFileId, showCommandPalette, openCommandPalette, closeCommandPalette, toggleAIPanel, toggleTerminal, requestCloseFile, createConversation]);
 }

@@ -149,4 +149,49 @@ describe("useFileStore", () => {
       expect(names).toContain("Untitled-2.txt");
     });
   });
+
+  describe("单一状态源不变量", () => {
+    it("改回基线后 isDirty 为 false", () => {
+      act(() => useFileStore.getState().openFile(makeFile("f1", "/a.ts")));
+      const original = useFileStore.getState().openFiles[0].content;
+      act(() => useFileStore.getState().updateFileContent("f1", "x"));
+      expect(useFileStore.getState().openFiles[0].isDirty).toBe(true);
+      act(() => useFileStore.getState().updateFileContent("f1", original));
+      expect(useFileStore.getState().openFiles[0].isDirty).toBe(false);
+    });
+
+    it("requestCloseFile 对 dirty 文件要求确认", () => {
+      act(() => useFileStore.getState().openFile(makeFile("f1", "/a.ts")));
+      act(() => useFileStore.getState().updateFileContent("f1", "dirty"));
+      const res = useFileStore.getState().requestCloseFile("f1");
+      expect(res).toEqual({ closed: false, requiresConfirm: true });
+      expect(useFileStore.getState().openFiles).toHaveLength(1);
+    });
+
+    it("saveAllDirty 只写 dirty 非 untitled", async () => {
+      const writes: string[] = [];
+      window.mindcode!.fs.writeFile = async (p: string) => {
+        writes.push(p);
+        return { success: true };
+      };
+      act(() => useFileStore.getState().openFile(makeFile("a", "/A.ts")));
+      act(() => useFileStore.getState().openFile(makeFile("b", "/B.ts")));
+      act(() => useFileStore.getState().updateFileContent("a", "A2"));
+      await useFileStore.getState().saveAllDirty();
+      expect(writes).toEqual(["/A.ts"]);
+      expect(useFileStore.getState().openFiles.find((f) => f.id === "a")?.isDirty).toBe(false);
+      expect(useFileStore.getState().openFiles.find((f) => f.id === "b")?.isDirty).toBe(false);
+    });
+
+    it("pinPreview 把预览转为普通 tab 且不丢内容", () => {
+      act(() => useFileStore.getState().openPreviewFile("/ws/x.ts", "body", "ai"));
+      const id = useFileStore.getState().activeFileId!;
+      expect(useFileStore.getState().openFiles[0].isPreview).toBe(true);
+      act(() => useFileStore.getState().pinPreview(id));
+      const file = useFileStore.getState().openFiles[0];
+      expect(file.isPreview).toBe(false);
+      expect(file.content).toBe("body");
+      expect(file.path).toBe("/ws/x.ts");
+    });
+  });
 });

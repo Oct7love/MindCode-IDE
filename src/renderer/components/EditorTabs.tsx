@@ -50,6 +50,7 @@ export const EditorTabs: React.FC<EditorTabsProps> = ({
               data-testid={`editor-tab-${file.name}`}
               data-dirty={file.isDirty ? "true" : "false"}
               onClick={() => onSwitchFile(file.id)}
+              onDoubleClick={() => onSwitchFile(file.id)}
               title={file.isPreview ? `预览: ${file.originalPath || file.path}` : file.path}
             >
               <span className="tab-icon">

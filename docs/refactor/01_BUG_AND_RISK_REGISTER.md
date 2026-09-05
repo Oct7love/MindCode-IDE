@@ -87,13 +87,11 @@
 - **修复**：analyze 前读原文作为 `context.relatedCode` 传入；预览改真实 old vs new diff；写盘前落盘持久化 checkpoint（或走 git stash/备份）；对无原文的"整文件覆盖"给高危确认。
 - **验证**：对已有文件跑 Composer，AI 上下文含原文；预览显示真实增删；kill 应用后仍可回滚。
 
-### P1-6 · 文件状态双真源（split-brain），AI 核心链路实际失效 ✅CONFIRMED
+### P1-6 · 文件状态双真源（split-brain），AI 核心链路实际失效 ✅CLOSED
 - **影响**：AI 上下文/应用代码/agent/debug 读"当前文件"全链路。**架构阻塞。**
-- **位置**：`useEditorFiles.ts:16`（本地 useState openFiles/activeFileId）、`App.tsx:57`、`useApplyCode.ts:33/65`、`useFileStore.ts:56`。
-- **证据**：用户通过文件树打开/编辑用 `useEditorFiles` 的本地 state，而 AI 侧读写 `useFileStore.openFiles/activeFileId`，两者无桥接。故用户操作时 `useFileStore.openFiles` 恒空，AI 的 `getActiveFile()`、`editor_getActiveFile` 工具、"当前文件加入上下文"、applyCode 落点全拿到 undefined/错误目标。
-- **风险**：AI 核心链路（上下文/应用/agent/debug 读当前文件）在真实使用中失效。
-- **修复**：收敛为单一数据源——让 `useEditorFiles` 以 `useFileStore` 为唯一源（openFiles/activeFileId/操作迁进 store，hook 只订阅）；或最小改动下在 useEditorFiles 的 openFile/switchFile/updateFileContent 里同步镜像 store。
-- **验证**：文件树打开文件后，AI"加入当前文件到上下文"能拿到正确内容；applyCode 落到正确文件。
+- **位置**：`useEditorFiles.ts`、`useFileStore.ts`。
+- **关闭说明**：`useFileStore` 为唯一权威源（openFiles / activeFileId / lastSavedById / dirty）。`useEditorFiles` 改为订阅+委托，不再维护可独立变化的 React state。预览、搜索跳转、AI apply 与主编辑器同一份列表。
+- **验证**：`useEditorFiles` 12 + `useFileStore` 17 单测；hook 与 store 的 openFiles/activeFileId 断言同一引用内容；M5 Electron e2e 18 passed（含切 tab 完整性）。
 
 ### P1-7 · 本地插件加载链路永不运行（半实现），UI 显示可用实则死路径 ✅CONFIRMED
 - **位置**：`loader.ts:191`、`preload.ts:424`、`manager.ts:112`、`PluginPanel.tsx:14`。

@@ -232,3 +232,49 @@ describe("useEditorFiles · 文件 id 唯一 (M5 新增)", () => {
     }
   });
 });
+
+describe("useEditorFiles · 与 useFileStore 不存在分叉", () => {
+  it("hook 与 store 的 openFiles/activeFileId/content 始终同一份", async () => {
+    const { result } = setup();
+    await act(async () => {
+      await result.current.openFile("/ws/A.ts", "A.ts");
+    });
+    act(() => result.current.updateFileContent("A-edit"));
+    expect(result.current.openFiles).toEqual(useFileStore.getState().openFiles);
+    expect(result.current.activeFileId).toBe(useFileStore.getState().activeFileId);
+    expect(useFileStore.getState().openFiles[0].content).toBe("A-edit");
+  });
+
+  it("搜索再次打开同一路径只切 active，不覆盖 buffer、不读盘", async () => {
+    const { result } = setup();
+    await act(async () => {
+      await result.current.openFile("/ws/A.ts", "A.ts");
+    });
+    act(() => result.current.updateFileContent("unsaved"));
+    const fs = window.mindcode!.fs as unknown as { readFile: ReturnType<typeof vi.fn> };
+    const reads = fs.readFile.mock.calls.length;
+    await act(async () => {
+      await result.current.openFile("/ws/A.ts", "A.ts");
+    });
+    expect(fs.readFile.mock.calls.length).toBe(reads);
+    expect(result.current.openFiles).toHaveLength(1);
+    expect(result.current.openFiles[0].content).toBe("unsaved");
+  });
+
+  it("预览 tab 再切一次即 pin，随后与普通文件同一套状态", () => {
+    const { result } = setup();
+    act(() => {
+      useFileStore.getState().openPreviewFile("/ws/gen.ts", "preview-body", "ai", "typescript");
+    });
+    const preview = result.current.openFiles.find((f) => f.isPreview);
+    expect(preview).toBeTruthy();
+    expect(result.current.activeFileId).toBe(preview!.id);
+    act(() => result.current.switchFile(preview!.id));
+    const pinned = result.current.openFiles.find((f) => f.id === preview!.id);
+    expect(pinned?.isPreview).toBe(false);
+    expect(pinned?.content).toBe("preview-body");
+    expect(useFileStore.getState().openFiles.find((f) => f.id === preview!.id)?.isPreview).toBe(
+      false,
+    );
+  });
+});

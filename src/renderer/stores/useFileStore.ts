@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { rememberOwnWrite } from '../services/ownWriteMemory';
 
 export interface TreeNode {
   name: string;
@@ -20,6 +21,8 @@ export interface EditorFile {
   isPreview?: boolean;         // 是否为预览文件
   originalPath?: string;       // 原始文件路径（预览文件用）
   previewSource?: 'ai' | 'diff'; // 预览来源
+  generation?: number;         // 内容版本，autoSave 用来识别保存期间的再编辑
+  conflictDiskContent?: string; // 外部改盘且本地 dirty 时的磁盘内容
 }
 
 // 支持的语言列表
@@ -53,31 +56,46 @@ interface FileState {
   workspaceRoot: string | null; // 工作区根路径
   workspaceName: string; // 工作区名称
   fileTree: TreeNode[]; // 文件树
-  openFiles: EditorFile[]; // 打开的文件列表
+  openFiles: EditorFile[]; // 打开的文件列表（权威源）
   activeFileId: string | null; // 当前活动文件 ID
   selectedPath: string; // 选中的文件路径
+  lastSavedById: Record<string, string>; // 保存基线：dirty = content !== baseline
+  fileIdSeq: number;
 }
+
+export type CloseFileResult = { closed: boolean; requiresConfirm: boolean };
 
 interface FileActions {
   setWorkspace: (root: string | null, name?: string) => void;
   setFileTree: (tree: TreeNode[]) => void;
   openFile: (file: EditorFile) => void;
+  openFileByPath: (path: string, name: string) => Promise<void>;
   closeFile: (id: string) => void;
+  requestCloseFile: (id: string, opts?: { force?: boolean }) => CloseFileResult;
   setActiveFile: (id: string | null) => void;
   setSelectedPath: (path: string) => void;
   updateFileContent: (id: string, content: string) => void;
+  updateActiveFileContent: (content: string) => void;
   markFileSaved: (id: string) => void;
   updateFilePath: (id: string, newPath: string, newName: string) => void;
+  updateFilePathByPath: (path: string, newPath: string, newName: string) => void;
+  closeFilesStartingWith: (pathPrefix: string) => void;
+  clearOpenFiles: () => void;
   getActiveFile: () => EditorFile | undefined;
-  // 新建文件支持
-  createNewFile: (language?: string) => string; // 返回新文件的 id
+  nextFileId: () => string;
+  createNewFile: (language?: string) => string;
   setFileLanguage: (id: string, language: string) => void;
-  setFileEncoding: (id: string, encoding: string) => void; // 设置文件编码
+  setFileEncoding: (id: string, encoding: string) => void;
   saveFile: (id: string, targetPath?: string) => Promise<boolean>;
-  // Phase 2: 预览文件支持
+  saveFileById: (fileId: string, path: string, content: string) => Promise<boolean>;
+  saveAllDirty: () => Promise<void>;
   openPreviewFile: (originalPath: string, content: string, source: 'ai' | 'diff', language?: string) => void;
+  pinPreview: (id: string) => void;
   closePreviewFiles: () => void;
   savePreviewFile: (id: string) => Promise<boolean>;
+  setConflict: (id: string, diskContent: string) => void;
+  clearConflict: (id: string) => void;
+  reloadFromDisk: (id: string, diskContent: string) => void;
 }
 
 export const useFileStore = create<FileState & FileActions>((set, get) => ({
@@ -87,33 +105,95 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
   openFiles: [],
   activeFileId: null,
   selectedPath: '',
+  lastSavedById: {},
+  fileIdSeq: 0,
 
   setWorkspace: (root, name) => set({ 
     workspaceRoot: root, 
     workspaceName: name || root?.split(/[/\\]/).pop() || 'Workspace',
     openFiles: [],
     activeFileId: null,
-    selectedPath: ''
+    selectedPath: '',
+    lastSavedById: {},
   }),
 
   setFileTree: (fileTree) => set({ fileTree }),
 
+  nextFileId: () => {
+    const seq = get().fileIdSeq + 1;
+    set({ fileIdSeq: seq });
+    return `f-${Date.now()}-${seq}`;
+  },
+
   openFile: (file) => set((state) => {
     const existing = state.openFiles.find(f => f.path === file.path);
-    if (existing) return { activeFileId: existing.id, selectedPath: file.path };
-    return { openFiles: [...state.openFiles, file], activeFileId: file.id, selectedPath: file.path };
+    if (existing) return { activeFileId: existing.id, selectedPath: existing.path };
+    const baseline = file.content;
+    return {
+      openFiles: [...state.openFiles, { ...file, isDirty: file.isDirty ?? false }],
+      activeFileId: file.id,
+      selectedPath: file.path,
+      lastSavedById: { ...state.lastSavedById, [file.id]: baseline },
+    };
   }),
 
-  closeFile: (id) => set((state) => {
-    const newFiles = state.openFiles.filter(f => f.id !== id);
+  openFileByPath: async (path, name) => {
+    const existing = get().openFiles.find((f) => f.path === path);
+    if (existing) {
+      set({ activeFileId: existing.id, selectedPath: existing.path });
+      return;
+    }
+    let content = `// ${name}\n// 文件内容加载中...`;
+    if (window.mindcode?.fs) {
+      const result = await window.mindcode.fs.readFile(path);
+      if (result.success && result.data !== undefined) {
+        content = result.data;
+      } else {
+        content = `// 无法读取文件: ${result.error || "未知错误"}`;
+      }
+    }
+    const again = get().openFiles.find((f) => f.path === path);
+    if (again) {
+      set({ activeFileId: again.id, selectedPath: again.path });
+      return;
+    }
+    const id = get().nextFileId();
+    const newFile: EditorFile = { id, path, name, content, isDirty: false };
+    set((state) => ({
+      openFiles: [...state.openFiles, newFile],
+      activeFileId: id,
+      selectedPath: path,
+      lastSavedById: { ...state.lastSavedById, [id]: content },
+    }));
+  },
+
+  closeFile: (id) => {
+    get().requestCloseFile(id, { force: true });
+  },
+
+  requestCloseFile: (id, opts) => {
+    const state = get();
+    const target = state.openFiles.find((f) => f.id === id);
+    if (target?.isDirty && !opts?.force) {
+      return { closed: false, requiresConfirm: true };
+    }
+    const newFiles = state.openFiles.filter((f) => f.id !== id);
     let newActiveId = state.activeFileId;
     if (state.activeFileId === id) {
-      const closedIndex = state.openFiles.findIndex(f => f.id === id);
+      const closedIndex = state.openFiles.findIndex((f) => f.id === id);
       const newIndex = Math.min(closedIndex, newFiles.length - 1);
       newActiveId = newFiles[newIndex]?.id || null;
     }
-    return { openFiles: newFiles, activeFileId: newActiveId, selectedPath: newFiles.find(f => f.id === newActiveId)?.path || '' };
-  }),
+    const lastSavedById = { ...state.lastSavedById };
+    delete lastSavedById[id];
+    set({
+      openFiles: newFiles,
+      activeFileId: newActiveId,
+      selectedPath: newFiles.find((f) => f.id === newActiveId)?.path || "",
+      lastSavedById,
+    });
+    return { closed: true, requiresConfirm: false };
+  },
 
   setActiveFile: (activeFileId) => set((state) => {
     const file = state.openFiles.find(f => f.id === activeFileId);
@@ -122,17 +202,64 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
 
   setSelectedPath: (selectedPath) => set({ selectedPath }),
 
-  updateFileContent: (id, content) => set((state) => ({
-    openFiles: state.openFiles.map(f => f.id === id ? { ...f, content, isDirty: true } : f)
-  })),
+  updateFileContent: (id, content) => set((state) => {
+    const baseline = state.lastSavedById[id] ?? "";
+    const dirty = content !== baseline;
+    return {
+      openFiles: state.openFiles.map((f) =>
+        f.id === id
+          ? { ...f, content, isDirty: dirty, generation: (f.generation ?? 0) + 1 }
+          : f,
+      ),
+    };
+  }),
 
-  markFileSaved: (id) => set((state) => ({
-    openFiles: state.openFiles.map(f => f.id === id ? { ...f, isDirty: false } : f)
-  })),
+  updateActiveFileContent: (content) => {
+    const id = get().activeFileId;
+    if (!id) return;
+    get().updateFileContent(id, content);
+  },
+
+  markFileSaved: (id) => set((state) => {
+    const file = state.openFiles.find((f) => f.id === id);
+    return {
+      openFiles: state.openFiles.map((f) => (f.id === id ? { ...f, isDirty: false } : f)),
+      lastSavedById: file
+        ? { ...state.lastSavedById, [id]: file.content }
+        : state.lastSavedById,
+    };
+  }),
 
   updateFilePath: (id, newPath, newName) => set((state) => ({
     openFiles: state.openFiles.map(f => f.id === id ? { ...f, path: newPath, name: newName } : f)
   })),
+
+  updateFilePathByPath: (path, newPath, newName) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.path === path ? { ...f, path: newPath, name: newName } : f,
+    ),
+  })),
+
+  closeFilesStartingWith: (pathPrefix) => set((state) => {
+    const removed = state.openFiles.filter((f) => f.path.startsWith(pathPrefix));
+    const openFiles = state.openFiles.filter((f) => !f.path.startsWith(pathPrefix));
+    const lastSavedById = { ...state.lastSavedById };
+    for (const f of removed) delete lastSavedById[f.id];
+    const activeGone = state.activeFileId
+      ? removed.some((f) => f.id === state.activeFileId)
+      : false;
+    return {
+      openFiles,
+      lastSavedById,
+      activeFileId: activeGone ? (openFiles[0]?.id || null) : state.activeFileId,
+    };
+  }),
+
+  clearOpenFiles: () => set({
+    openFiles: [],
+    activeFileId: null,
+    lastSavedById: {},
+  }),
 
   getActiveFile: () => {
     const state = get();
@@ -151,7 +278,7 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
     const newNum = maxNum + 1;
 
     const langInfo = SUPPORTED_LANGUAGES.find(l => l.id === language) || SUPPORTED_LANGUAGES[0];
-    const newId = `untitled_${Date.now()}`;
+    const newId = get().nextFileId();
     const newFile: EditorFile = {
       id: newId,
       path: `Untitled-${newNum}${langInfo.ext}`,
@@ -165,6 +292,7 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
     set((s) => ({
       openFiles: [...s.openFiles, newFile],
       activeFileId: newId,
+      lastSavedById: { ...s.lastSavedById, [newId]: "" },
     }));
 
     return newId;
@@ -225,31 +353,68 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
       set((s) => ({
         openFiles: s.openFiles.map(f =>
           f.id === id
-            ? { ...f, path: savePath, name: newName, isDirty: false, isUntitled: false }
+            ? { ...f, path: savePath, name: newName, content: file.content, isDirty: false, isUntitled: false }
             : f
         ),
+        lastSavedById: { ...s.lastSavedById, [id]: file.content },
       }));
+      rememberOwnWrite(savePath);
       return true;
     }
     return false;
   },
 
-  // Phase 2: 预览文件支持
-  openPreviewFile: (originalPath, content, source, language) => set((state) => {
-    const previewId = `preview_${originalPath}_${Date.now()}`;
-    const fileName = originalPath.split(/[/\\]/).pop() || 'preview';
+  saveFileById: async (fileId, path, content) => {
+    let ok = true;
+    if (window.mindcode?.fs) {
+      const result = await window.mindcode.fs.writeFile(path, content);
+      ok = !!result.success;
+      if (!ok) {
+        console.error("[Editor] Save failed:", result.error);
+        window.mindcode?.dialog?.showMessageBox?.({
+          type: "error",
+          title: "保存失败",
+          message: `无法保存文件: ${result.error || "未知错误"}`,
+        });
+      }
+    }
+    if (ok) {
+      set((s) => ({
+        openFiles: s.openFiles.map((f) =>
+          f.id === fileId ? { ...f, content, isDirty: false, isUntitled: false } : f,
+        ),
+        lastSavedById: { ...s.lastSavedById, [fileId]: content },
+      }));
+      rememberOwnWrite(path);
+    }
+    return ok;
+  },
 
-    // 检查是否已有该路径的预览文件，如果有则更新
+  saveAllDirty: async () => {
+    const dirtyFiles = get().openFiles.filter((f) => f.isDirty && !f.isUntitled && !f.isPreview);
+    for (const f of dirtyFiles) {
+      await get().saveFileById(f.id, f.path, f.content);
+    }
+  },
+
+  // Phase 2: 预览文件支持
+  openPreviewFile: (originalPath, content, source, language) => {
+    const state = get();
+    const fileName = originalPath.split(/[/\\]/).pop() || 'preview';
     const existingPreview = state.openFiles.find(f => f.isPreview && f.originalPath === originalPath);
     if (existingPreview) {
-      return {
+      set({
         openFiles: state.openFiles.map(f =>
           f.id === existingPreview.id ? { ...f, content, isDirty: true } : f
         ),
-        activeFileId: existingPreview.id
-      };
+        activeFileId: existingPreview.id,
+        lastSavedById: { ...state.lastSavedById, [existingPreview.id]: content },
+      });
+      return;
     }
 
+    const previewId = get().nextFileId();
+    set((s) => {
     const previewFile: EditorFile = {
       id: previewId,
       path: `[Preview] ${originalPath}`,
@@ -263,11 +428,26 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
     };
 
     return {
-      openFiles: [...state.openFiles, previewFile],
+      openFiles: [...s.openFiles, previewFile],
       activeFileId: previewId,
-      selectedPath: originalPath
+      selectedPath: originalPath,
+      lastSavedById: { ...s.lastSavedById, [previewId]: content },
     };
-  }),
+    });
+  },
+
+  pinPreview: (id) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id && f.isPreview
+        ? {
+            ...f,
+            isPreview: false,
+            path: f.originalPath || f.path.replace(/^\[Preview\]\s*/, ""),
+            name: (f.originalPath || f.name).split(/[/\\]/).pop() || f.name.replace(/^\[Preview\]\s*/, ""),
+          }
+        : f,
+    ),
+  })),
 
   closePreviewFiles: () => set((state) => {
     const nonPreviewFiles = state.openFiles.filter(f => !f.isPreview);
@@ -276,6 +456,33 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
       : state.activeFileId;
     return { openFiles: nonPreviewFiles, activeFileId: newActiveId };
   }),
+
+  setConflict: (id, diskContent) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id ? { ...f, conflictDiskContent: diskContent } : f,
+    ),
+  })),
+
+  clearConflict: (id) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id ? { ...f, conflictDiskContent: undefined } : f,
+    ),
+  })),
+
+  reloadFromDisk: (id, diskContent) => set((state) => ({
+    openFiles: state.openFiles.map((f) =>
+      f.id === id
+        ? {
+            ...f,
+            content: diskContent,
+            isDirty: false,
+            conflictDiskContent: undefined,
+            generation: (f.generation ?? 0) + 1,
+          }
+        : f,
+    ),
+    lastSavedById: { ...state.lastSavedById, [id]: diskContent },
+  })),
 
   savePreviewFile: async (id) => {
     const state = get();
@@ -297,7 +504,8 @@ export const useFileStore = create<FileState & FileActions>((set, get) => ({
             previewSource: undefined,
             isDirty: false
           } : f
-        )
+        ),
+        lastSavedById: { ...s.lastSavedById, [id]: file.content },
       }));
       return true;
     }
